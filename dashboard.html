@@ -1,0 +1,1586 @@
+<div id="dashboardSection" class="hidden">
+            <!-- 🔍 بحث شامل في كل لوحة الإدارة: أعلى حاجة في الصفحة (فوق الجرس وأي أيقونة
+                 تانية)، وبيدوّر في كل الأقسام (كل details.dash-accordion) جوه اللوحة دي كلها،
+                 مش بند واحد بس. بيفلتر ويخفي أي قسم مالوش نتيجة ويسيب اللي فيه نتيجة بس ظاهر. -->
+            <div style="position:relative; margin-bottom:10px;">
+                <input type="text" id="settingsSearchInput" oninput="searchInSettings(this.value, 'dashboardSection')" data-i18n-ph="settings_search_ph" placeholder="🔍 بحث في لوحة الإدارة" onfocus="this.scrollLeft=0" onblur="this.scrollLeft=0" style="padding-inline-end:70px;">
+                <span id="settingsSearchCount" class="hidden" style="position:absolute; inset-inline-end:8px; top:50%; transform:translateY(-50%); font-size:11px; color:var(--text-muted); background:var(--bg-body); padding:2px 6px; border-radius:6px;"></span>
+            </div>
+            <!-- 🔔 جرس تنبيه الطلبات الجديدة: عداد دقيق للطلبات اللي التاجر لسه ماشافهاش بس (مش
+                 كل طلبات المتجر)، بيتصفّر أول ما يفتح الجرس، والطلبات القديمة تتعلّم كمقروءة
+                 (باهتة) زي فيسبوك بالظبط. زر ⚙️ جنبه فيه كتم الصوت وإخفاء التنبيهات ومدة حذف
+                 القديم منها تلقائيًا. -->
+            <div style="display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-bottom:8px; position:relative;">
+                <!-- 💬 أيقونة الشات بقت موحّدة في الشريط العلوي (topHeaderChatBtn) بدل ما تتكرر
+                     هنا كمان - نفس الشكل عند التاجر والأدمن والمشرفين في مكان واحد ثابت. -->
+                <button type="button" onclick="toggleNewOrdersSettingsBox()" id="newOrderSettingsBtn" title="إعدادات التنبيهات" style="width:auto; margin:0; padding:6px 10px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); font-size:14px;"><i class="fa fa-gear"></i></button>
+                <button type="button" onclick="toggleNewOrdersBell()" style="width:auto; margin:0; padding:6px 12px; background:#fff; border:1px solid var(--border-color); color:var(--text-main); font-size:17px; position:relative;">
+                    <i class="fa fa-bell"></i>
+                    <span id="newOrdersBadge" class="hidden" style="position:absolute; top:-6px; left:-6px; background:#dc2626; color:#fff; font-size:10px; min-width:18px; height:18px; border-radius:9px; display:flex; align-items:center; justify-content:center; padding:0 4px;">0</span>
+                </button>
+                <div id="newOrdersSettingsBox" class="hidden" style="position:absolute; top:38px; right:0; z-index:51; background:#fff; border:1px solid var(--border-color); border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.15); width:250px; padding:12px; font-size:12.5px;">
+                    <label style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;"><span data-i18n="notif_sound_label">🔊 صوت التنبيه</span>
+                        <input type="checkbox" id="notifSoundToggle" onchange="toggleNewOrderSound()" style="width:auto; margin:0;">
+                    </label>
+                    <label style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;"><span data-i18n="notif_visible_label">👁️ إظهار التنبيهات</span>
+                        <input type="checkbox" id="notifVisibleToggle" onchange="toggleNewOrderVisibility()" style="width:auto; margin:0;">
+                    </label>
+                    <hr style="margin:8px 0; border-color:var(--border-color);">
+                    <label data-i18n="notif_autodel_label" style="font-size:11.5px; font-weight:bold;">🗑️ حذف الإشعارات المقروءة تلقائيًا بعد:</label>
+                    <div style="display:flex; gap:6px; margin-top:4px;">
+                        <input type="number" id="notifAutoDeleteDaysInput" min="0" data-i18n-ph="notif_autodel_ph" placeholder="مثال: 7" style="margin:0;" oninput="markNotifAutoDeleteDirty()">
+                        <span data-i18n="notif_autodel_unit" style="align-self:center; white-space:nowrap;">يوم (اتركه فاضي = أبدًا)</span>
+                        <button id="notifAutoDeleteConfirmBtn" type="button" onclick="saveNotifAutoDeleteDays()" title="" data-i18n-title="notif_autodel_confirm_btn" style="width:auto; margin:0; padding:5px 9px; flex-shrink:0;"><i class="fa fa-check"></i></button>
+                    </div>
+                </div>
+                <div id="newOrdersDropdown" class="hidden" style="position:absolute; top:38px; left:0; z-index:50; background:#fff; border:1px solid var(--border-color); border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.15); width:270px; max-height:340px; overflow:auto; padding:8px;"></div>
+            </div>
+
+            <!-- 👤 شريط توضيحي بيظهر بس لما اللي داخل مساعد (مش صاحب المتجر نفسه)، عشان يبقى
+                 واضح دايمًا مين الداخل وبأي صلاحيات، وميحصلش لبس مع صاحب المتجر. -->
+            <!-- 👤 شريط توضيحي بيظهر بس لما اللي داخل مساعد (مش صاحب المتجر نفسه)، عشان يبقى
+                 واضح دايمًا مين الداخل وبأي صلاحيات، وميحصلش لبس مع صاحب المتجر. -->
+            <div id="staffSessionBanner" class="hidden" style="margin-bottom:12px; background: linear-gradient(135deg, #fef9c3, #fef3c7); border:1px solid #fbbf24; border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:10px; font-size:12.5px;">
+                <i class="fa fa-user-shield" style="color:#b45309; font-size:18px;"></i>
+                <div><strong data-i18n="dash_staff_banner_label" style="color:#92400e;">داخل كمساعد:</strong> <span id="staffSessionUsername" style="color:#78350f;"></span></div>
+            </div>
+
+            <div id="dashboardGuideCard" class="hidden" onclick="openUsageGuideModal()" style="cursor:pointer; margin-bottom:12px; background: linear-gradient(135deg, #eff6ff, #dbeafe); border:1px solid #93c5fd; border-radius:14px; padding:14px; display:flex; align-items:center; gap:12px;">
+                <div style="width:40px; height:40px; border-radius:10px; background:#3b82f6; color:#fff; display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0;"><i class="fa fa-book"></i></div>
+                <div style="flex:1;">
+                    <h4 data-i18n="dash_guide_title" style="margin:0 0 2px; font-size:13.5px; color:#1e40af;">دليل الاستخدام</h4>
+                    <p data-i18n="dash_guide_desc" style="margin:0; font-size:11px; color:#1e3a8a; opacity:0.85;">محتاج مساعدة في استخدام متجرك؟ اضغط هنا</p>
+                </div>
+                <i class="fa fa-chevron-left" style="color:#3b82f6;"></i>
+            </div>
+
+            <!-- 🔐 بانر "فعّل حسابك بالبريد" — بند مضغوط جدًا (سطر واحد قابل للطي)، يظهر بس
+                 للتاجر اللي لسه ماوثقش بريده، وبيختفي أوتوماتيك بمجرد ما يوثّقه. الهدف إنه
+                 يشجّعه يستخدم البريد كطريقة دخول بدل اسم الدخول، عشان مايستناش أو ينسى اسمه. -->
+            <details id="activateAccountBanner" class="hidden" style="margin-bottom:12px; background: linear-gradient(135deg, #f0fdf4, #dcfce7); border:1px solid #86efac; border-radius:14px; overflow:hidden;">
+                <summary style="cursor:pointer; padding:12px 14px; display:flex; align-items:center; gap:10px; list-style:none;">
+                    <span style="font-size:18px;">🔐</span>
+                    <span style="flex:1; font-size:12.5px; font-weight:bold; color:#15803d;" data-i18n="activate_banner_title">فعّل حسابك بالبريد الإلكتروني</span>
+                    <i class="fa fa-chevron-down" style="color:#15803d; font-size:11px;"></i>
+                </summary>
+                <div style="padding:0 14px 14px; font-size:11.5px; color:#166534; line-height:1.8;">
+                    <p style="margin:0 0 8px;" data-i18n="activate_banner_body">اسم الدخول ممكن تنساه أو حد يلعب بيه ويوقفك تستنى دقايق قبل ما تحاول تاني. لو وثّقت بريدك وخليت الدخول بيه بس، تدخل فورًا من غير أي انتظار ومحدش هيقدر يعطلك. تقدر تفعّلها بنفسك في أي وقت من "🏪 إدارة المتجر والإعدادات ← تأمين الحساب بالبريد الإلكتروني" تحت.</p>
+                </div>
+            </details>
+
+            <!-- 📋 سجل الطلبات: من أكثر الأقسام استخدامًا، فتم وضعه أول حاجة في اللوحة -->
+            <details class="dash-accordion" id="ordersLogAccordion" open>
+            <summary><span><i class="fa fa-clipboard-list"></i> <span data-i18n="dash_orders_title">سجل الطلبات</span></span></summary>
+            <div class="box">
+                <div style="background:var(--bg-body); border:1px solid var(--border-color); border-radius:8px; padding:8px 10px; margin-bottom:10px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:12px;">
+                    <span data-i18n="orders_autodel_label">🧹 امسح الطلب تلقائيًا بعد</span>
+                    <input type="number" id="autoDeleteOrdersValueInput" min="1" style="width:60px; margin:0; padding:5px;" onchange="saveAutoDeleteOrdersTime()">
+                    <select id="autoDeleteOrdersUnitInput" style="width:auto; margin:0; padding:5px;" onchange="saveAutoDeleteOrdersTime()">
+                        <option value="minutes" data-i18n="unit_minute">دقيقة</option>
+                        <option value="hours" data-i18n="unit_hour">ساعة</option>
+                        <option value="days" selected data-i18n="unit_day">يوم</option>
+                    </select>
+                    <span data-i18n="orders_autodel_from">من تسجيله</span>
+                    <button class="secondary" data-i18n-html="orders_cleanup_now_btn" style="width:auto; margin:0; padding:5px 10px; font-size:11px;" onclick="runOrdersCleanupNow()"><i class="fa fa-broom"></i> تنظيف الآن</button>
+                </div>
+                <p data-i18n="orders_completed_autodel_note" style="font-size:11px; color:var(--text-muted); margin:-6px 0 8px;">أي طلب بتحدده "✅ تم التسليم" بيتمسح تلقائيًا من القائمة بعد ساعة واحدة من تسليمه، بغض النظر عن الرقم اللي فوق.</p>
+                <div id="merchantOrderHistoryList" style="max-height:280px; overflow-y:auto;"></div>
+            </div>
+            </details>
+
+            <!-- ============================================================
+                 📦 المنتجات بقى ليها زرار مخصص بيفتح شاشة مستقلة بالكامل (مش جزء
+                 من سكرول اللوحة). التاجر يضغط الزرار، يشوف كل حاجة خاصة بإضافة/تعديل
+                 منتجاته بس، من غير ما يشوف سجل الطلبات أو إعدادات المتجر خالص في
+                 نفس الوقت — وبيقفل يرجع للوحة تاني بضغطة X واحدة.
+                 ============================================================ -->
+            <button class="dash-quick-btn" onclick="openProductsModal()">
+                <span><i class="fa fa-box"></i> <span data-i18n="dash_products_btn">المنتجات</span></span>
+                <span style="display:flex; align-items:center; gap:6px;">
+                    <span id="stockAlertBadge" class="hidden" style="background:#dc2626; color:#fff; font-size:10px; font-weight:bold; padding:2px 7px; border-radius:20px;"></span>
+                    <i class="fa fa-chevron-left" style="font-size:12px; color:var(--text-muted);"></i>
+                </span>
+            </button>
+
+            <div id="productsModal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <h3 style="margin:0; color: var(--primary-color); font-size:16px;"><i class="fa fa-box"></i> <span data-i18n="dash_products_btn">المنتجات</span></h3>
+                    <span class="modal-close-chip" onclick="closeProductsModal()"><i class="fa fa-times"></i> <span data-i18n="close_label">إغلاق</span></span>
+                </div>
+                <h4 style="color: var(--primary-color); margin-top: 0;" id="prodFormHeader" data-i18n="prod_add_new_h">📦 إضافة منتج جديد</h4>
+                <div id="prodFormError" class="hidden" style="background:#fee2e2; border:1px solid #ef4444; color:#991b1b; font-weight:bold; font-size:12.5px; padding:9px 12px; border-radius:8px; margin-bottom:10px; display:flex; align-items:center; gap:6px;"><i class="fa fa-triangle-exclamation"></i> <span id="prodFormErrorText"></span></div>
+                <input type="hidden" id="editProductIndex" value="-1">
+
+                <!-- ============================================================
+                     ⚡ الحاجات الأساسية بس عشان تقدر تنشر منتج بسرعة: القسم، الاسم،
+                     الصورة، والسعر (مع اختيار العملة جنبه مباشرة). باقي الحقول
+                     (سعر التكلفة، الخصم، المخزون، العداد...) كلها اختيارية وموجودة
+                     تحت لو احتجتها، لكن مش لازم تتعامل معاها عشان تنشر منتجك.
+                     ============================================================ -->
+                <select id="prodCategorySelect"></select>
+                <input type="text" id="prodName" data-i18n-ph="prod_name_ph" placeholder="اسم المنتج">
+
+                <div class="upload-btn-wrapper">
+                    <label class="custom-file-upload">
+                        <i class="fa fa-image"></i> <span data-i18n="prod_main_image_btn">اختر صورة المنتج الرئيسية</span>
+                        <input type="file" id="prodImageFile" accept="image/*" style="display:none;" onchange="previewImage(this, 'prodPreviewImg')">
+                    </label>
+                    <img id="prodPreviewImg" class="img-preview-box">
+                </div>
+
+                <div style="display:flex; gap:8px; align-items:stretch;">
+                    <input type="number" id="prodPrice" data-i18n-ph="prod_price_ph" placeholder="السعر" oninput="updateProductProfitPreview()" style="flex:2; margin:0;">
+                    <select id="prodCurrencyQuickSelect" onchange="quickChangeStoreCurrency(this.value)" style="flex:1; margin:0;" title="عملة متجرك (بتتطبق على كل المنتجات والفواتير)"></select>
+                </div>
+                <input type="text" id="prodCurrencyManualInput" class="hidden" data-i18n-ph="currency_manual_ph" placeholder="مثال: ر.ي — ريال يمني" onchange="quickChangeStoreCurrency(this.value)" style="margin-top:6px;">
+                <p style="font-size:11px; margin-top:2px;">
+                    <a href="#" onclick="toggleCurrencyInputMode('prodCurrencyQuickSelect', 'prodCurrencyManualInput', event)" data-i18n="currency_toggle_manual" style="color:var(--primary-color); text-decoration:underline; cursor:pointer;">✏️ لو عملتك مش في القائمة أو الاسم غلط، اكتبها يدويًا هنا</a>
+                </p>
+                <p data-i18n="prod_currency_note" style="font-size:10.5px; color:var(--text-muted); margin:2px 0 12px;"><i class="fa fa-circle-info"></i> اختيار العملة هنا بيغيّر عملة متجرك كله فورًا (مش بس المنتج ده)، عشان كل أسعارك تفضل بعملة واحدة موحدة.</p>
+
+                <div style="display:flex; gap:8px; margin-bottom:10px;">
+                    <button onclick="saveProduct()" id="saveProductBtn" data-i18n-html="prod_publish_btn">نشر المنتج <i class="fa fa-cloud-upload-alt"></i></button>
+                    <button id="cancelProductEditBtn" class="secondary hidden" data-i18n="cancel_btn" onclick="cancelEditProduct()">إلغاء</button>
+                </div>
+                <p data-i18n="prod_basic_done_note" style="font-size:10.5px; color:var(--text-muted); text-align:center; margin-top:-4px;">اكتفيت بالاسم والصورة والسعر؟ اضغط "نشر المنتج" فوق وخلاص. الحقول اللي تحت كلها اختيارية بالكامل.</p>
+
+                <hr style="border-color: var(--border-color); margin: 18px 0;">
+
+                <input type="number" id="prodCostPrice" data-i18n-ph="prod_cost_price_ph" placeholder="سعر التكلفة للوحدة (اختياري - لحساب صافي ربحك الحقيقي)" min="0" style="margin-top:0;" oninput="updateProductProfitPreview()">
+                <small data-i18n="prod_cost_price_note" style="color:var(--text-muted); font-size:10.5px; display:block; margin:-6px 0 8px;">لو حددته، هيدخل في حساب "صافي الربح" في تقرير الأرباح (مش بس إجمالي المبيعات). سرّي وبيظهر لك بس، مش للعميل.</small>
+
+                <!-- ============================================================
+                     🧮 حاسبة تكلفة الوحدة من دفعة/كرتونة بالجملة (اختياري بالكامل):
+                     مفيدة جدًا لما التاجر يشتري كمية كبيرة بسعر إجمالي واحد
+                     (مثال: كرتونة فيها 200 موبايل بسعر إجمالي معين + مصاريف شحن)
+                     ويريد يعرف تكلفة القطعة الواحدة منها بدل ما يحسبها يدوي بالآلة الحاسبة.
+                     الناتج بيتحط تلقائيًا في حقل "سعر التكلفة للوحدة" فوق بضغطة زرار واحدة.
+                     ============================================================ -->
+                <div class="box" style="background:var(--bg-body); padding:10px; margin:8px 0;">
+                    <label style="font-size:11.5px; display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                        <input type="checkbox" id="prodBulkCalcEnabled" style="width:auto; margin:0;" onchange="document.getElementById('prodBulkCalcBox').classList.toggle('hidden', !this.checked)">
+                        <span style="font-weight:bold;" data-i18n-html="prod_bulk_calc_label"><i class="fa fa-calculator"></i> اشتريت الكمية دي بالجملة (كرتونة/دفعة)؟ احسب تكلفة القطعة تلقائيًا</span>
+                    </label>
+                    <div id="prodBulkCalcBox" class="hidden">
+                        <small data-i18n="prod_bulk_calc_example" style="color:var(--text-muted); font-size:10.5px; display:block; margin-bottom:6px;">مثال: اشتريت كرتونة فيها 200 موبايل بـ 40000 جنيه، وصرفت 1000 جنيه شحن. اكتب الأرقام دي وهي هتحسبلك تكلفة الموبايل الواحد أوتوماتيك.</small>
+                        <input type="number" id="bulkTotalCost" data-i18n-ph="prod_bulk_total_ph" placeholder="إجمالي سعر الدفعة/الكرتونة كاملة" min="0" style="margin:0 0 8px;" oninput="calcBulkUnitCost()">
+                        <input type="number" id="bulkUnitsCount" data-i18n-ph="prod_bulk_units_ph" placeholder="عدد القطع في الدفعة (مثلاً 200)" min="1" style="margin:0 0 8px;" oninput="calcBulkUnitCost()">
+                        <input type="number" id="bulkExtraCost" data-i18n-ph="prod_bulk_extra_ph" placeholder="مصاريف إضافية (شحن/جمارك...) - اختياري" min="0" style="margin:0 0 8px;" oninput="calcBulkUnitCost()">
+                        <div id="bulkUnitCostResult" style="font-size:12.5px; font-weight:bold; color:var(--text-main); background:#fff; border:1px dashed var(--border-color); border-radius:8px; padding:8px; margin-bottom:8px;">تكلفة القطعة الواحدة: —</div>
+                        <button type="button" class="secondary" style="margin:0;" data-i18n-html="prod_bulk_apply_btn" onclick="applyBulkUnitCost()"><i class="fa fa-arrow-down"></i> استخدم هذا الرقم كسعر تكلفة الوحدة</button>
+                    </div>
+                </div>
+
+                <!-- 💚 معاينة الربح الفورية: بتتحدث تلقائيًا وانت بتكتب السعر وسعر التكلفة، من غير ما تحتاج تحفظ المنتج الأول عشان تشوف ربحك -->
+                <div id="prodProfitPreviewBox" class="hidden" style="border-radius:10px; padding:10px 12px; margin:0 0 10px; font-size:12.5px; font-weight:bold;"></div>
+
+                <!-- ============================================================
+                     🏷️ قسم الخصم (اختياري بالكامل): نسبة الخصم + لون شارة الخصم
+                     نسبة الخصم تُطبَّق تلقائياً على السعر في كل الواجهة (الكارت،
+                     صفحة التفاصيل، وسعر السلة/الطلب) — راجع دالة getEffectivePrice
+                     ============================================================ -->
+                <div class="box" style="background:var(--bg-body); padding:10px; margin:8px 0;">
+                    <label style="font-size:12px; font-weight:bold; display:block; margin-bottom:4px;" data-i18n-html="prod_discount_label"><i class="fa fa-percent"></i> خصم على المنتج (اختياري)</label>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <input type="number" id="prodDiscount" data-i18n-ph="prod_discount_ph" placeholder="نسبة الخصم % (مثلاً 20)" min="0" max="95" style="margin:0; flex:1; min-width:140px;">
+                        <label style="font-size:11px; display:flex; align-items:center; gap:4px; white-space:nowrap;" data-i18n="prod_discount_color_label">لون شارة الخصم:
+                            <input type="color" id="prodDiscountColor" value="#ef4444" style="width:32px; height:26px; padding:0; margin:0; border:none;">
+                        </label>
+                    </div>
+                    <small data-i18n="prod_discount_note" style="color:var(--text-muted); font-size:10.5px;">اتركها فارغة لو مفيش خصم على المنتج ده. لو حطيت رقم، السعر بعد الخصم هيتحسب ويتظهر تلقائي بدل السعر الأصلي.</small>
+                </div>
+
+                <!-- ============================================================
+                     ↩️ قسم مدة الإرجاع (اختياري): يظهر في صفحة تفاصيل المنتج للعميل
+                     ============================================================ -->
+                <div class="box" style="background:var(--bg-body); padding:10px; margin:8px 0;">
+                    <label style="font-size:12px; font-weight:bold; display:block; margin-bottom:4px;" data-i18n-html="prod_return_days_label"><i class="fa fa-undo"></i> مدة الإرجاع (اختياري)</label>
+                    <input type="number" id="prodReturnDays" data-i18n-ph="prod_return_days_ph" placeholder="عدد أيام السماح بالإرجاع (مثلاً 3)" min="0" style="margin:0;">
+                    <small data-i18n="prod_return_days_note" style="color:var(--text-muted); font-size:10.5px;">اتركها فارغة لو مفيش سياسة إرجاع محددة لهذا المنتج.</small>
+                </div>
+
+                <!-- ============================================================
+                     📦 قسم إدارة المخزون (اختياري بالكامل): كمية المتوفر + تنبيه
+                     مخزون منخفض قابل للتفعيل/الإيقاف وبرقم يحدده التاجر بنفسه.
+                     لو اتركت الكمية فاضية، المنتج هيفضل شغال زي أي وقت من غير أي
+                     تتبع للمخزون خالص (سلوك المنصة الافتراضي والقديم زي ما هو).
+                     ============================================================ -->
+                <div class="box" style="background:var(--bg-body); padding:10px; margin:8px 0;">
+                    <label style="font-size:12px; font-weight:bold; display:block; margin-bottom:4px;" data-i18n-html="prod_stock_label"><i class="fa fa-boxes-stacked"></i> إدارة المخزون (اختياري)</label>
+                    <input type="number" id="prodStock" data-i18n-ph="prod_stock_ph" placeholder="الكمية المتوفرة حاليًا (اتركها فارغة لعدم تتبع المخزون)" min="0" style="margin:0 0 8px;">
+                    <input type="text" id="prodStockUnitLabel" data-i18n-ph="prod_stock_unit_ph" placeholder="وحدة العد (اختياري - مثلاً: قطعة، كرتونة، كيلو، متر...)" maxlength="15" style="margin:0 0 8px;">
+                    <small data-i18n="prod_stock_unit_note" style="color:var(--text-muted); font-size:10.5px; display:block; margin:-6px 0 8px;">لو حددتها، هتتضاف بعد الرقم في كل مكان بيظهر فيه ("متبقي 20 كرتونة" بدل "متبقي 20" بس). اتركها فاضية لو مش محتاجها.</small>
+                    <label style="font-size:11.5px; display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                        <input type="checkbox" id="prodStockAlertEnabled" style="width:auto; margin:0;" onchange="document.getElementById('prodStockAlertThresholdBox').classList.toggle('hidden', !this.checked)">
+                        <span data-i18n="prod_stock_alert_label">تنبيهي لما الكمية توصل حد معين (مخزون منخفض)</span>
+                    </label>
+                    <div id="prodStockAlertThresholdBox" class="hidden">
+                        <input type="number" id="prodStockAlertThreshold" data-i18n-ph="prod_stock_threshold_ph" placeholder="نبهني لو الكمية وصلت لـ (مثلاً 5)" min="0" style="margin:0;">
+                    </div>
+                    <label style="font-size:11.5px; display:flex; align-items:center; gap:6px; margin:8px 0 0;">
+                        <input type="checkbox" id="prodShowStockToCustomer" style="width:auto; margin:0;">
+                        <span data-i18n="prod_show_stock_label">اظهار الكمية المتبقية للعميل على صفحة المنتج (مثلاً "متبقي 3 قطع فقط")</span>
+                    </label>
+                    <small data-i18n="prod_show_stock_note" style="color:var(--text-muted); font-size:10.5px;">اختياري بالكامل - سيبها من غير تفعيل لو حابب الكمية تفضل معلومة داخلية بينك وبين نفسك بس.</small>
+                    <small data-i18n="prod_stock_track_note" style="color:var(--text-muted); font-size:10.5px; display:block; margin-top:6px;">لو فعّلت التتبع، الكمية بتقل تلقائيًا لما تحدد طلب فيه المنتج ده بـ "✅ تم التسليم" من سجل الطلبات (مش لحظة إرسال الطلب، عشان الطلب ممكن ميتمش).</small>
+                </div>
+
+                <!-- ============================================================
+                     ⏳ قسم عداد العرض الزمني (اختياري بالكامل): عداد تنازلي لنهاية
+                     عرض/خصم محدد بوقت. مستقل تمامًا عن عداد الكمية (المخزون) فوق —
+                     التاجر حر يفعّل الاتنين مع بعض، واحد بس، أو ولا واحد.
+                     ============================================================ -->
+                <div class="box" style="background:var(--bg-body); padding:10px; margin:8px 0;">
+                    <label style="font-size:11.5px; display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                        <input type="checkbox" id="prodCountdownEnabled" style="width:auto; margin:0;" onchange="document.getElementById('prodCountdownBox').classList.toggle('hidden', !this.checked)">
+                        <span style="font-weight:bold;" data-i18n-html="prod_countdown_label"><i class="fa fa-hourglass-half"></i> فعّل عداد تنازلي لعرض بوقت محدد (اختياري)</span>
+                    </label>
+                    <div id="prodCountdownBox" class="hidden">
+                        <label style="font-size:11px; display:block; margin-bottom:3px;" data-i18n="prod_countdown_end_label">العرض بينتهي في:</label>
+                        <input type="datetime-local" id="prodCountdownEnd" style="margin:0 0 8px;">
+                        <input type="text" id="prodCountdownLabel" data-i18n-ph="prod_countdown_text_ph" placeholder="النص اللي يظهر جنب العداد (اختياري، افتراضي: العرض ينتهي خلال)" style="margin:0 0 8px;">
+                        <label style="font-size:11px; display:flex; align-items:center; gap:6px; margin:0;">
+                            <span data-i18n="prod_countdown_color_label">لون العداد:</span>
+                            <input type="color" id="prodCountdownColor" value="#dc2626" style="width:44px; height:30px; padding:2px; border-radius:8px; margin:0;">
+                        </label>
+                    </div>
+                    <small data-i18n="prod_countdown_note" style="color:var(--text-muted); font-size:10.5px;">لما ينتهي الوقت، العداد بيختفي تلقائيًا من كارت المنتج من غير ما تحتاج تعمل حاجة. ده منفصل تمامًا عن نسبة الخصم وعن كمية المخزون فوق — استخدم أي حاجة منهم لوحدها أو مع بعض حسب اللي يناسب العرض.</small>
+                </div>
+
+                <label style="font-size:12px; font-weight:bold;" id="prodGalleryLimitLabel" data-i18n="prod_gallery_label">صور إضافية للمنتج (اختياري، حتى 5 صور):</label>
+                <div class="upload-btn-wrapper">
+                    <label class="custom-file-upload">
+                        <i class="fa fa-images"></i> <span data-i18n="prod_gallery_btn">أضف صور للمعرض (يمكنك اختيار أكثر من صورة مرة واحدة)</span>
+                        <input type="file" id="prodGalleryFile" accept="image/*" multiple style="display:none;" onchange="addProductGalleryImages(this)">
+                    </label>
+                </div>
+                <div id="prodGalleryPreviewList" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;"></div>
+
+                <label style="font-size:12px; font-weight:bold;" data-i18n="prod_desc_label">وصف المنتج:</label>
+
+                <!-- ============================================================
+                     🖋️ محرر نص غني حقيقي لوصف المنتج: تنسيق عريض/مائل/تسطير،
+                     حجم ولون الخط، تظليل (Highlight)، محاذاة وقائمة نقطية - بيتطبق
+                     على أي جزء تحدده من النص (زي أي محرر نصوص حقيقي)، مش شكل واحد
+                     على كل الوصف. المحتوى بيُحفظ ويُعرض للعميل بنفس التنسيق بالظبط.
+                     ============================================================ -->
+                <div class="rich-toolbar-mount" data-target="prodDesc"></div>
+                <div id="prodDesc" class="rich-editor-content" contenteditable="true" data-i18n-ph="prod_desc_ph" data-placeholder="وصف التفاصيل والمكونات..."></div>
+
+                <p data-i18n-html="prod_fields_done_note" style="font-size:11px; color:var(--text-muted); text-align:center; margin:14px 0;"><i class="fa fa-arrow-up"></i> خلصت كل الحقول؟ زرار "نشر المنتج" / "حفظ التعديل" موجود فوق الفورم مباشرة.</p>
+
+                <h4 style="margin-top: 20px;" data-i18n="prod_current_h">المنتجات الحالية</h4>
+                <div id="merchantProductsList"></div>
+
+                <!-- الدعم الفني الموزع آلياً -->
+                <div class="support-box">
+                    <h4 style="margin: 0 0 5px; color: #0369a1;" data-i18n-html="support_h"><i class="fa fa-headset"></i> الدعم الفني المباشر</h4>
+                    <p data-i18n="support_desc" style="font-size: 11px; color: #0284c7; margin-bottom: 8px;">اضغط هنا للتواصل التلقائي مع أحد ممثلي الدعم الفني بالمنصة:</p>
+                    <button style="background:#0284c7; margin:0; font-size:13px;" data-i18n-html="support_btn" onclick="triggerRoundRobinSupport()"><i class="fab fa-whatsapp"></i> مراسلة الدعم الفني</button>
+                </div>
+            </div>
+            </div>
+
+            <!-- ============================================================
+                 📂 الأقسام: نفس فكرة المنتجات بالظبط — شاشة مستقلة بضغطة زرار
+                 واحدة، من غير أي رجوع للوحة أو ظهور إعدادات تانية معاها.
+                 ============================================================ -->
+            <button class="dash-quick-btn" onclick="openCategoriesModal()">
+                <span><i class="fa fa-folder-tree"></i> <span data-i18n="dash_categories_btn">الأقسام</span></span>
+                <span style="display:flex; align-items:center; gap:6px;">
+                    <span id="categoriesCountBadge" class="hidden" style="background:var(--primary-color); color:#fff; font-size:10px; font-weight:bold; padding:2px 7px; border-radius:20px;"></span>
+                    <i class="fa fa-chevron-left" style="font-size:12px; color:var(--text-muted);"></i>
+                </span>
+            </button>
+
+            <div id="categoriesModal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <h3 style="margin:0; color: var(--primary-color); font-size:16px;"><i class="fa fa-folder-tree"></i> <span data-i18n="dash_categories_btn">الأقسام</span></h3>
+                    <span class="modal-close-chip" onclick="closeCategoriesModal()"><i class="fa fa-times"></i> <span data-i18n="close_label">إغلاق</span></span>
+                </div>
+                <h4 id="catFormHeader" data-i18n="cat_add_new_h" style="color: var(--primary-color); margin-top: 0;">📂 إضافة قسم جديد</h4>
+                <p data-i18n="cat_intro" style="font-size:11px; color:var(--text-muted); margin-top:-6px;">الأقسام بتساعدك ترتّب منتجاتك وتسهّل على عملائك يلاقوا اللي عايزينه بسرعة (مثلاً: ملابس رجالي، عروض، الأكثر مبيعاً...).</p>
+                <input type="hidden" id="editCategoryIndex" value="-1">
+                <input type="text" id="newCatName" data-i18n-ph="cat_name_ph" placeholder="اسم القسم الجديد">
+                <div class="upload-btn-wrapper">
+                    <label class="custom-file-upload">
+                        <i class="fa fa-image"></i> <span data-i18n="cat_image_btn">صورة القسم</span>
+                        <input type="file" id="newCatImageFile" accept="image/*" style="display:none;" onchange="previewImage(this, 'catPreviewImg')">
+                    </label>
+                    <img id="catPreviewImg" class="img-preview-box">
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button onclick="addCategory()" id="saveCatBtn" data-i18n-html="cat_add_btn">إضافة القسم <i class="fa fa-folder-plus"></i></button>
+                    <button class="secondary hidden" id="cancelCatEditBtn" data-i18n="cancel_btn" onclick="cancelEditCategory()">إلغاء</button>
+                </div>
+
+                <h4 data-i18n="cat_current_h" style="margin-top: 20px;">الأقسام الحالية</h4>
+                <div id="merchantCategoriesList" style="margin-top: 10px;"></div>
+            </div>
+            </div>
+
+            <details class="dash-accordion">
+            <summary><span><i class="fa fa-store"></i> <span data-i18n="dash_settings_title">إدارة المتجر والإعدادات</span></span></summary>
+            <div class="box">
+                <h3 id="dashStoreTitle" data-i18n="set_title_main" style="color: var(--primary-color); margin-top:0;">إدارة المتجر</h3>
+                <hr style="border-color: var(--border-color); margin: 10px 0;">
+                
+                <h4 data-i18n="set_identity_h">⚙️ هوية المتجر وبيانات التواصل</h4>
+                
+                <label data-i18n="set_store_name_label" style="font-size: 12px; font-weight: bold;">اسم المتجر (اللي يشوفه العملاء):</label>
+                <input type="text" id="storeNameInput" data-i18n-ph="set_store_name_ph" placeholder="أدخل اسم متجرك">
+                <p data-i18n="set_store_name_note" style="font-size:10.5px; color:var(--text-muted); margin-top:-6px;">ده الاسم اللي هيظهر للعملاء في كل مكان. ممكن يتكرر مع أي متجر تاني براحتك.</p>
+
+                <details style="margin:8px 0 12px;">
+                    <summary data-i18n="set_login_id_summary" style="cursor:pointer; font-size:11.5px; color:var(--text-muted);">⚙️ اسم الدخول الخاص بيك</summary>
+                    <div style="padding-top:8px;">
+                        <p data-i18n="set_login_readonly_note" style="font-size:10.5px; color:#9a3412; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:8px 10px;">⚠️ ده اسم الدخول السري بتاعك (مش اسم المتجر الظاهر للعملاء) - بيستخدم في تسجيل الدخول ورابط متجرك. اتقفل من التعديل عشان يفضل ثابت وميتنساش. لو محتاج تغييره فعلاً، تواصل مع إدارة المنصة.</p>
+                        <div id="storeLoginNameReadonly" style="background:#f9fafb; border:1px solid var(--border-color); border-radius:8px; padding:10px; font-weight:bold; text-align:center; font-family:monospace; direction:ltr;"></div>
+                    </div>
+                </details>
+
+                <details style="margin:8px 0 12px;">
+                    <summary data-i18n="set_lockout_summary" style="cursor:pointer; font-size:11.5px; color:var(--text-muted);">🔒 مدة قفل الدخول لحسابك ولمساعديك</summary>
+                    <div style="padding-top:8px;">
+                        <p data-i18n="set_lockout_note" style="font-size:10.5px; color:var(--text-muted);">بعد 5 محاولات دخول فاشلة متتالية، الحساب بيتقفل مؤقتًا كإجراء أمان. حدد هنا مدة القفل اللي تناسبك (لحسابك ولحسابات مساعديك)، بدل المدة الافتراضية للمنصة.</p>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <input type="number" id="storeLockoutMinutesInput" data-i18n-ph="set_lockout_ph" placeholder="سيبها فاضية لاستخدام مدة المنصة الافتراضية" style="flex:1; margin:0;">
+                            <span style="font-size:12px;" data-i18n="unit_minute">دقيقة</span>
+                        </div>
+                    </div>
+                </details>
+
+                <label data-i18n="set_logo_label" style="font-size: 12px; font-weight: bold;">لوجو / شعار المتجر:</label>
+                <div class="upload-btn-wrapper">
+                    <label class="custom-file-upload">
+                        <i class="fa fa-image"></i> <span data-i18n="set_logo_upload_btn">اختر شعار جديد للمتجر</span>
+                        <input type="file" id="storeLogoFile" accept="image/*" style="display:none;" onchange="previewImage(this, 'storeLogoPreview')">
+                    </label>
+                    <img id="storeLogoPreview" class="img-preview-box">
+                </div>
+
+                <label data-i18n="set_whatsapp_label" style="font-size: 12px; font-weight: bold;">رقم الواتساب لاستلام الطلبات:</label>
+                <div style="display:flex; gap:6px;">
+                    <select id="storeWhatsappCountryCode" style="width: 110px; flex-shrink:0;" onchange="updateWhatsappPreview()"></select>
+                    <input type="text" id="storeWhatsappInput" data-i18n-ph="set_whatsapp_ph" placeholder="مثال: 1012345678 (بدون الصفر وبدون كود الدولة)" style="flex:1;" oninput="updateWhatsappPreview()">
+                </div>
+                <div id="whatsappPreviewBox" style="font-size:12px; font-weight:bold; color:var(--primary-color); margin-top:-4px;"></div>
+                <div data-i18n="set_whatsapp_note" style="font-size:11px; color:var(--text-muted); margin-top:-4px;">اختر كود الدولة ثم اكتب الرقم بدون صفر البداية لتفادي مشاكل التحويل للواتساب.</div>
+
+                <label data-i18n="set_messenger_label" style="font-size: 12px; font-weight: bold; margin-top:8px; display:block;">رابط الماسنجر (اختياري):</label>
+                <input type="text" id="storeMessengerInput" placeholder="https://m.me/yourpage">
+
+                <label data-i18n="set_telegram_label" style="font-size: 12px; font-weight: bold; margin-top:8px; display:block;">معرّف / رابط تيليجرام (اختياري):</label>
+                <input type="text" id="storeTelegramInput" data-i18n-ph="set_telegram_ph" placeholder="مثال: username@ أو https://t.me/username">
+
+                <label data-i18n="set_order_msg_label" style="font-size: 12px; font-weight: bold; margin-top:8px; display:block;">نص رسالة الطلب (اختياري - اكتبها بلغتك الخاصة):</label>
+                <textarea id="storeOrderTemplateInput" data-i18n-ph="set_order_msg_ph" style="height:110px; font-size:12px; direction:auto;" placeholder="سيبه فاضي عشان يستخدم النص الافتراضي بالعربي"></textarea>
+                <div style="font-size:10.5px; color:var(--text-muted); margin-top:-4px; line-height:1.6;">
+                    <span data-i18n="set_order_msg_vars">المتغيرات المتاحة: {store} اسم المتجر، {items} قائمة المنتجات، {subtotal} المجموع الفرعي، {delivery} رسوم التوصيل، {total} الإجمالي، {deliveryMode} طريقة الاستلام، {payment} طريقة الدفع، {addressLine} سطر العنوان، {phoneLine} سطر رقم الهاتف، {orderNo} رقم الطلب.</span>
+                    <br><span data-i18n="set_order_msg_note2">⚠️ ملحوظة: النص ده مجرد إشعار للعميل يبعتهولك، والأرقام الرسمية الموثوقة دايمًا موجودة في سجل "الطلبات" بلوحتك مش في الرسالة نفسها.</span>
+                </div>
+
+                <!-- ============================================================
+                     ✅ رسالة تأكيد "الإرسال المباشر" (بدون واتساب/ماسنجر/تيليجرام):
+                     العميل لما يبعت طلب بالطريقة دي مش بيتفتحله أي تطبيق يشوف فيه
+                     رسالة، فبيحس إنه مش متأكد وصل ولا لأ. الرسالة دي بتظهر
+                     في نافذة واضحة قدامه فورًا بعد الإرسال عشان يطمن ويعرف
+                     يستنى قد إيه بالظبط.
+                     ============================================================ -->
+                <div class="box" style="background:var(--bg-body); padding:12px; margin-top:10px;">
+                    <label data-i18n="set_direct_order_title" style="font-size: 12.5px; font-weight: bold; display:block;">✅ رسالة تأكيد "الإرسال المباشر" للعميل</label>
+                    <p data-i18n="set_direct_order_desc" style="font-size:10.5px; color:var(--text-muted); margin:2px 0 8px;">بتظهر للعميل في نافذة واضحة فور ما يبعت طلبه لك بطريقة "الإرسال المباشر" (بدون واتساب)، عشان يطمن إن طلبه وصلك ويعرف يستنى قد إيه.</p>
+                    <label data-i18n="set_direct_order_hours_label" style="font-size:11.5px;">هترد على العميل خلال كام ساعة عادةً؟</label>
+                    <input type="number" id="storeDirectOrderHoursInput" data-i18n-ph="set_direct_order_hours_ph" placeholder="مثلاً 4" min="0" style="margin:4px 0 8px;">
+                    <label data-i18n="set_direct_order_msg_label" style="font-size:11.5px;">نص الرسالة (اختياري):</label>
+                    <textarea id="storeDirectOrderMessageInput" data-i18n-ph="set_direct_order_msg_ph" style="height:70px; font-size:12px; direction:auto; margin:4px 0 4px;" placeholder="سيبها فاضية عشان تستخدم الرسالة الافتراضية"></textarea>
+                    <div data-i18n="set_direct_order_vars" style="font-size:10.5px; color:var(--text-muted); line-height:1.6;">المتغيرات المتاحة: {hours} هتتحول تلقائي لعبارة كاملة زي "خلال 4 ساعة تقريبًا"، {orderNo} رقم الطلب. مثال: "سيتواصل معك المتجر {hours} لتأكيد طلبك رقم {orderNo}."</div>
+                </div>
+
+                <label data-i18n="set_cash_wallet_label" style="font-size: 12px; font-weight: bold;">رقم محفظة الدفع الكاش (الرقم الذي يستقبل عليه التحويلات):</label>
+                <input type="text" id="storeVodafoneCashInput" data-i18n-ph="set_cash_wallet_ph" placeholder="رقم المحفظة لاستلام الكاش">
+
+                <label data-i18n="set_currency_label" style="font-size: 12px; font-weight: bold;">عملة المتجر:</label>
+                <select id="storeCurrencyInput" onchange="syncCurrencyDropdowns(this.value)"></select>
+                <input type="text" id="storeCurrencyManualInput" class="hidden" data-i18n-ph="currency_manual_ph" placeholder="مثال: ر.ي — ريال يمني" onchange="syncCurrencyDropdowns(this.value)" style="margin-top:6px;">
+                <p style="font-size:11px; margin-top:-4px;">
+                    <a href="#" onclick="toggleCurrencyInputMode('storeCurrencyInput', 'storeCurrencyManualInput', event)" data-i18n="currency_toggle_manual" style="color:var(--primary-color); text-decoration:underline; cursor:pointer;">✏️ لو عملتك مش في القائمة أو الاسم غلط، اكتبها يدويًا هنا</a>
+                </p>
+                <p data-i18n="set_currency_note" style="font-size:10.5px; color:var(--text-muted); margin-top:-6px;">تقدر كمان تغيّرها بسرعة من نفس مكان إضافة المنتج مباشرة.</p>
+
+                <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <h4 data-i18n="set_change_pass_h" style="margin-bottom:6px;">🔑 تغيير كلمة المرور</h4>
+                <input type="password" id="currentPassInput" data-i18n-ph="set_current_pass_ph" placeholder="كلمة المرور الحالية">
+                <input type="password" id="newPassInput" data-i18n-ph="set_new_pass_ph" placeholder="كلمة المرور الجديدة">
+                <input type="password" id="confirmNewPassInput" data-i18n-ph="set_confirm_pass_ph" placeholder="تأكيد كلمة المرور الجديدة">
+                <button class="secondary" data-i18n-html="set_change_pass_btn" onclick="changeMyPassword()"><i class="fa fa-key"></i> تغيير كلمة المرور</button>
+
+                <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <h4 data-i18n="set_delivery_h" style="margin-bottom:6px;">🚚 إعدادات التوصيل (اختياري)</h4>
+                <label data-i18n="set_delivery_fee_label" style="font-size: 12px;">سعر التوصيل (اتركه فارغاً إذا كنت لا توفر خدمة توصيل - العميل هيستلم من المتجر فقط):</label>
+                <input type="number" id="storeDeliveryFeeInput" data-i18n-ph="set_delivery_fee_ph" placeholder="مثال: 20">
+                <label data-i18n="set_free_delivery_label" style="font-size: 12px;">التوصيل مجاني للطلبات الأعلى من (اختياري):</label>
+                <input type="number" id="storeFreeDeliveryThresholdInput" data-i18n-ph="set_free_delivery_ph" placeholder="مثال: 200">
+                <label data-i18n="set_zones_label" style="font-size: 12px;">📍 أسعار التوصيل حسب المنطقة (اختياري - لو كتبتها، العميل يختار منطقته والسعر يتحسب تلقائياً بدل السعر الثابت):</label>
+                <textarea id="storeDeliveryZonesInput" rows="4" data-i18n-ph="set_zones_ph" placeholder="القاهرة = 30&#10;الجيزة = 40&#10;المحافظات = 70"></textarea>
+                <p data-i18n="set_zones_hint" style="font-size:11px; color:var(--text-muted); margin:2px 0 8px;">اكتب كل منطقة في سطر بالشكل: اسم المنطقة = السعر</p>
+                <p data-i18n="set_delivery_note" style="font-size:11px; color:var(--text-muted); margin-top:-6px;">هذه الأرقام تُحسب فعلياً داخل السلة تلقائياً عند اختيار العميل "توصيل"، وليست شكلية فقط.</p>
+
+                <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <h4 data-i18n="set_phone_field_h" style="margin-bottom:6px;">📞 طلب رقم هاتف العميل عند الشراء</h4>
+                <p data-i18n="set_phone_field_desc" style="font-size:11px; color:var(--text-muted); margin-top:-4px;">كتير من العملاء بيحبوا الطلب السريع وميحبوش يكتبوا رقمهم. اختار الوضع اللي يناسب متجرك.</p>
+                <select id="storePhoneFieldModeSelect">
+                    <option value="optional" data-i18n="set_phone_opt_optional">اختياري (موصى به) — الخانة ظاهرة برسالة واضحة إنها مش إجبارية</option>
+                    <option value="hidden" data-i18n="set_phone_opt_hidden">مخفي تمامًا — من غير ما نسأل العميل خالص (رقمه هيظهرلك في شات الواتساب نفسه لو طلب منه)</option>
+                    <option value="required" data-i18n="set_phone_opt_required">إجباري — العميل لازم يكتب رقمه قبل ما يكمل الطلب</option>
+                </select>
+                <p data-i18n="set_phone_field_note" style="font-size:10.5px; color:var(--text-muted); margin-top:-6px;">لو طلب العميل عبر واتساب، هتقدر تشوف رقمه في الشات نفسه أوتوماتيك حتى لو سابه فاضي هنا.</p>
+
+                <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <h4 data-i18n="set_buyers_h" style="margin-bottom:6px;">👤 المشترون والتعليقات</h4>
+                <label style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;"><span data-i18n="set_guest_checkout_label">🛒 السماح بالشراء بدون تسجيل حساب (الوضع الافتراضي الموصى به)</span>
+                    <input type="checkbox" id="storeGuestCheckoutToggle" style="width:auto; margin:0;" checked>
+                </label>
+                <p data-i18n="set_guest_checkout_note" style="font-size:10.5px; color:var(--text-muted); margin-top:-6px;">لو أوقفته، العميل هيضطر يسجّل دخول/ينشئ حساب في متجرك الأول قبل ما يقدر يكمل طلبه.</p>
+                <label style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;"><span data-i18n="set_reviews_enabled_label">💬 تفعيل التعليقات والتقييمات على المنتجات</span>
+                    <input type="checkbox" id="storeReviewsEnabledToggle" style="width:auto; margin:0;" checked>
+                </label>
+                <p data-i18n="set_reviews_enabled_note" style="font-size:10.5px; color:var(--text-muted); margin-top:-6px;">لو أوقفته، قسم التقييمات هيختفي بالكامل من صفحة كل منتج في متجرك.</p>
+                <label style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;"><span data-i18n="set_reviews_require_login_label">🔒 لازم تسجيل دخول بحساب مشترِي عشان تضيف تقييم</span>
+                    <input type="checkbox" id="storeReviewsRequireLoginToggle" style="width:auto; margin:0;">
+                </label>
+                <p data-i18n="set_reviews_require_login_note" style="font-size:10.5px; color:var(--text-muted); margin-top:-6px;">افتراضيًا (الوضع المقترح) أي زائر يقدر يضيف تقييم باسمه بدون حساب. فعّل ده لو عايز التقييمات تبقى من حسابات موثّقة بس.</p>
+                <label style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;"><span data-i18n="set_buyer_reg_disabled_label">🚫 تعطيل تسجيل حسابات مشترين جدد مؤقتًا</span>
+                    <input type="checkbox" id="storeBuyerRegDisabledToggle" style="width:auto; margin:0;">
+                </label>
+                <p data-i18n="set_buyer_reg_disabled_note" style="font-size:10.5px; color:var(--text-muted); margin-top:-6px;">الحسابات الموجودة فعلاً تقدر تسجّل دخول عادي - ده بيوقف إنشاء حسابات جديدة بس.</p>
+                <button type="button" class="secondary" style="width:auto; padding:6px 14px; font-size:12px;" onclick="openBuyerManagementModal()"><i class="fa fa-users"></i> <span data-i18n="set_buyer_mgmt_btn">إدارة المشترين المسجلين</span></button>
+                <button type="button" class="secondary" style="width:auto; padding:6px 14px; font-size:12px; position:relative;" onclick="openBuyerChatThreadsModal()"><i class="fa fa-comments"></i> <span data-i18n="buyer_chats_mgmt_btn">محادثات العملاء</span> <span id="buyerChatsTotalBadge" class="hidden" style="background:#dc2626; color:#fff; font-size:10px; min-width:16px; height:16px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; padding:0 4px; margin-right:4px;">0</span></button>
+
+                <label data-i18n="set_products_label_label" style="font-size: 12px; font-weight: bold;">اسم قسم المنتجات (يمكنك تغييره لمثلاً "الدورات"):</label>
+                <input type="text" id="storeProductsLabelInput" data-i18n-ph="set_products_label_ph" placeholder="منتج / دورة / خدمة ...">
+
+                <label data-i18n="set_categories_label_label" style="font-size: 12px; font-weight: bold;">اسم عنوان قسم الأقسام في متجرك:</label>
+                <input type="text" id="storeCategoriesLabelInput" data-i18n-ph="set_categories_label_ph" placeholder="التصنيفات / أقسامنا / عروضنا ...">
+                <label data-i18n="set_categories_icon_label" style="font-size: 12px; font-weight: bold;">أيقونة العنوان ده:</label>
+                <select id="storeCategoriesIconSelect">
+                    <option value="🗂️" data-i18n="icon_files">🗂️ ملفات</option>
+                    <option value="📂" data-i18n="icon_folder">📂 مجلد</option>
+                    <option value="🛍️" data-i18n="icon_shopping">🛍️ شوبينج</option>
+                    <option value="🏷️" data-i18n="icon_pricetag">🏷️ تاج سعر</option>
+                    <option value="📦" data-i18n="icon_box">📦 صندوق</option>
+                    <option value="🧺" data-i18n="icon_basket">🧺 سلة</option>
+                    <option value="⭐" data-i18n="icon_star">⭐ نجمة</option>
+                    <option value="🔥" data-i18n="icon_fire">🔥 نار</option>
+                    <option value="📁" data-i18n="icon_simplefolder">📁 مجلد بسيط</option>
+                    <option value="🗃️" data-i18n="icon_archive">🗃️ أرشيف</option>
+                </select>
+                <p data-i18n="set_categories_icon_note" style="font-size:10.5px; color:var(--text-muted); margin:-6px 0 6px;">أو لو حابب أيقونة خاصة بيك بدل الجاهزة دي، ارفعها من جهازك تحت (بتاخد الأولوية لو رفعتها):</p>
+                <div class="upload-btn-wrapper" style="margin-bottom:8px;">
+                    <label class="custom-file-upload">
+                        <i class="fa fa-upload"></i> <span data-i18n="set_upload_custom_icon_btn">ارفع أيقونة مخصصة من جهازك</span>
+                        <input type="file" id="storeCategoriesIconImageFile" accept="image/*" style="display:none;" onchange="previewImage(this, 'storeCategoriesIconImagePreview')">
+                    </label>
+                    <img id="storeCategoriesIconImagePreview" class="img-preview-box" style="max-width:60px; max-height:60px;">
+                    <button type="button" class="secondary" data-i18n-html="set_remove_custom_icon_btn" style="width:auto; padding:4px 12px; font-size:11px; margin-right:8px;" onclick="removeCustomCategoriesIcon()"><i class="fa fa-times"></i> إزالة والرجوع للإيموجي</button>
+                </div>
+
+                <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <h4 data-i18n="set_social_h" style="margin-bottom:6px;">🔗 روابط التواصل الاجتماعي (اختياري)</h4>
+                <label style="font-size: 12px;"><i class="fab fa-facebook" style="color:#1877f2;"></i> <span data-i18n="set_facebook_label">رابط صفحة الفيسبوك:</span></label>
+                <input type="text" id="storeFacebookInput" placeholder="https://facebook.com/yourpage">
+                <label style="font-size: 12px;"><i class="fab fa-instagram" style="color:#e1306c;"></i> <span data-i18n="set_instagram_label">رابط الانستقرام:</span></label>
+                <input type="text" id="storeInstagramInput" placeholder="https://instagram.com/yourpage">
+                <label style="font-size: 12px;"><i class="fab fa-youtube" style="color:#ff0000;"></i> <span data-i18n="set_youtube_label">رابط اليوتيوب:</span></label>
+                <input type="text" id="storeYoutubeInput" placeholder="https://youtube.com/@yourchannel">
+                <label style="font-size: 12px;"><i class="fab fa-tiktok"></i> <span data-i18n="set_tiktok_label">رابط التيك توك:</span></label>
+                <input type="text" id="storeTiktokInput" placeholder="https://tiktok.com/@yourpage">
+                <label style="font-size: 12px;"><i class="fab fa-twitter" style="color:#1da1f2;"></i> <span data-i18n="set_twitter_label">رابط تويتر/X:</span></label>
+                <input type="text" id="storeTwitterInput" placeholder="https://x.com/yourpage">
+                <label style="font-size: 12px;"><i class="fa fa-phone-alt" style="color:#10b981;"></i> <span data-i18n="set_call_phone_label">رقم الاتصال المباشر (اتصال فوري بالضغط):</span></label>
+                <input type="text" id="storeCallPhoneInput" data-i18n-ph="set_call_phone_ph" placeholder="مثال: 201012345678">
+
+                <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <h4 data-i18n="set_email_security_h" style="margin-bottom:6px;">🔒 تأمين الحساب بالبريد الإلكتروني (اختياري)</h4>
+                <p data-i18n="set_email_security_note" style="font-size:11px; color:var(--text-muted); margin-top:-4px;">لو ضفت بريدك وأكدته بالكود، هيبقى عندك طريقة إضافية لإثبات ملكية الحساب. الخطوة دي مش إجبارية.</p>
+                <div id="emailSecurityBox"></div>
+
+                <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <h4 data-i18n="set_design_h" style="margin-bottom:6px;">🎨 تصميم وألوان متجرك</h4>
+                <p data-i18n="set_design_desc" style="font-size:11px; color:var(--text-muted); margin-top:-4px;">اختار تشكيلة ألوان جاهزة لمتجرك، أو لوّنه بنفسك بالكامل — يتغيّر شكل المتجر فورًا للعميل.</p>
+                <div id="merchantColorsGateBox"></div>
+
+                <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <h4 data-i18n="set_copyright_h" style="margin-bottom:6px;">©️ سطر حقوق النشر أسفل متجرك</h4>
+                <p data-i18n="set_copyright_desc" style="font-size:11px; color:var(--text-muted); margin-top:-4px;">اختر هل يظهر اسم المنصة مع متجرك أسفل الصفحة، أو اسم متجرك بس (ميزة للباقات الاحترافية).</p>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <select id="merchantCopyrightModeSelect" onchange="onMerchantCopyrightModeChange(this)" style="width:auto; margin:0;">
+                        <option value="combined" data-i18n="copyright_combined_opt">مدمج (مع المنصة)</option>
+                        <option value="store_only" data-i18n="copyright_store_only_opt">اسم المتجر بس</option>
+                    </select>
+                    <span id="merchantCopyrightLockBadge" class="hidden" style="font-size:11px; background:#fef3c7; color:#92400e; border-radius:6px; padding:3px 8px; cursor:pointer;" onclick="showWhiteLabelUpgradeModal()">👑 <span data-i18n="pro_plans_only_badge">خاص بالباقات الاحترافية</span></span>
+                </div>
+
+                <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <h4 data-i18n="set_paylink_h" style="margin-bottom:6px;">💳 رابط الدفع الأونلاين (اختياري)</h4>
+                <p data-i18n="set_paylink_desc" style="font-size:11px; color:var(--text-muted); margin-top:-4px;">لو عندك رابط دفع جاهز (Instapay، فودافون كاش، فوري، أو أي رابط دفع تاني)، حطه هنا وهيظهر للعميل كزرار دفع مباشر وقت تأكيد الطلب، غير طريقة "الدفع عند الاستلام" العادية.</p>
+                <input type="text" id="storePaymentLinkInput" data-i18n-ph="set_paylink_ph" placeholder="https://ipn.eg/S/yourname/instapay/xxxxx">
+
+                <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <h4 data-i18n="set_push_h" style="margin-bottom:6px;">🔔 إشعارات الطلبات الجديدة</h4>
+                <p data-i18n="set_push_desc" style="font-size:11px; color:var(--text-muted); margin-top:-4px;">لما تكون مفعّلة، هتوصلك إشعارات فورية لما يجيلك طلب جديد، حتى لو مش فاتح المتجر دلوقتي.</p>
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="pushNotifToggle" checked onchange="togglePushNotifications(this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span data-i18n="set_push_toggle_label" style="font-size:12.5px;">تفعيل إشعارات هذا المتجر</span>
+                </div>
+                <span id="pushNotifStatus" style="font-size:11px; color:var(--text-muted);"></span>
+
+                <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <h4 data-i18n="set_about_h" style="margin-bottom:6px;">ℹ️ من نحن (يظهر للمشتري عند الضغط على أيقونة "من نحن" داخل متجرك فقط)</h4>
+                <p data-i18n="set_about_note" style="font-size:11px; color:var(--text-muted); margin-top:-6px;">هذا المحتوى خاص بمتجرك أنت فقط، ولا يظهر في أي متجر آخر.</p>
+
+                <!-- ============================================================
+                     🖋️ شريط أدوات "نبذة عن المتجر": نفس فكرة شريط تنسيق وصف
+                     المنتج (لون / حجم الخط / عريض / تسطير) + معاينة حية، عشان
+                     التاجر يقدر يلوّن ويكبّر ويثقّل كلامه في صفحة "من نحن".
+                     ============================================================ -->
+                <div style="display:flex; gap:6px; flex-wrap:wrap; background:var(--bg-body); border:1px solid var(--border-color); border-radius:10px 10px 0 0; padding:6px; margin-top:8px;">
+                    <button type="button" onclick="insertAboutBullet()" style="width:auto; margin:0; padding:6px 10px; font-size:12px; background:#fff; color:var(--text-main); border:1px solid var(--border-color);" title="إضافة نقطة تعداد" data-i18n-html="prod_desc_bullet_btn"><i class="fa fa-list-ul"></i> نقطة</button>
+                    <button type="button" onclick="insertAboutLineBreak()" style="width:auto; margin:0; padding:6px 10px; font-size:12px; background:#fff; color:var(--text-main); border:1px solid var(--border-color);" title="سطر جديد" data-i18n-html="prod_desc_newline_btn"><i class="fa fa-arrow-turn-down"></i> سطر جديد</button>
+                    <button type="button" onclick="insertAboutEmoji('✅')" style="width:auto; margin:0; padding:6px 10px; font-size:13px; background:#fff; border:1px solid var(--border-color);">✅</button>
+                    <button type="button" onclick="insertAboutEmoji('☕')" style="width:auto; margin:0; padding:6px 10px; font-size:13px; background:#fff; border:1px solid var(--border-color);">☕</button>
+                    <button type="button" onclick="insertAboutEmoji('⭐')" style="width:auto; margin:0; padding:6px 10px; font-size:13px; background:#fff; border:1px solid var(--border-color);">⭐</button>
+                    <button type="button" onclick="insertAboutEmoji('📍')" style="width:auto; margin:0; padding:6px 10px; font-size:13px; background:#fff; border:1px solid var(--border-color);">📍</button>
+                </div>
+                <textarea id="storeAboutUsInput" data-i18n-ph="set_about_ph" placeholder="اكتب نبذة عن متجرك: طبيعة العمل، المدينة (اختياري)، وأي معلومات تحب توضحها للعملاء" style="border-radius:0; margin-top:0;" rows="5" oninput="updateAboutPreview()"></textarea>
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:2px; flex-wrap:wrap; background:var(--bg-body); border:1px solid var(--border-color); border-top:none; border-radius:0 0 10px 10px; padding:8px;">
+                    <label style="font-size:11px; display:flex; align-items:center; gap:4px;" data-i18n="prod_desc_color_label">لون النص: <input type="color" id="storeAboutColor" value="#5a5248" style="width:32px; height:26px; padding:0; margin:0; border:none;" onchange="updateAboutPreview()"></label>
+                    <select id="storeAboutSize" style="width:auto; margin:0; padding:5px;" onchange="updateAboutPreview()">
+                        <option value="13px" data-i18n="font_small">خط صغير</option>
+                        <option value="15px" selected data-i18n="font_normal">خط عادي</option>
+                        <option value="18px" data-i18n="font_large">خط كبير</option>
+                    </select>
+                    <label style="font-size:11px; display:flex; align-items:center; gap:4px;"><input type="checkbox" id="storeAboutBold" style="width:auto; margin:0;" onchange="updateAboutPreview()"> <span data-i18n="font_bold">عريض (Bold)</span></label>
+                    <label style="font-size:11px; display:flex; align-items:center; gap:4px;"><input type="checkbox" id="storeAboutUnderline" style="width:auto; margin:0;" onchange="updateAboutPreview()"> <span data-i18n="font_underline">تسطير (Underline)</span></label>
+                </div>
+                <p data-i18n-html="prod_preview_label" style="font-size:10.5px; color:var(--text-muted); margin:4px 0 8px;"><i class="fa fa-eye"></i> معاينة الشكل اللي هيشوفه العميل بالظبط:</p>
+                <div id="storeAboutPreviewBox" style="background:#fff; border:1px dashed var(--border-color); border-radius:8px; padding:10px 12px; margin-bottom:10px; min-height:20px;"></div>
+
+                <div class="upload-btn-wrapper">
+                    <label class="custom-file-upload">
+                        <i class="fa fa-image"></i> <span data-i18n="set_about_image_btn">صورة لصفحة "من نحن" (اختياري)</span>
+                        <input type="file" id="storeAboutImageFile" accept="image/*" style="display:none;" onchange="previewImage(this, 'storeAboutImagePreview')">
+                    </label>
+                    <img id="storeAboutImagePreview" class="img-preview-box">
+                </div>
+
+                <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <h4 data-i18n="how_to_shop_h" style="margin-bottom:6px;">🛒 إزاي يشتري العميل من متجرك؟ (اختياري)</h4>
+                <p data-i18n="how_to_shop_note" style="font-size:11px; color:var(--text-muted); margin-top:-6px;">اشرح للعميل خطوات الشراء ومتابعة الطلب بأسلوبك الخاص. لو سيبته فاضي، هيظهر نص افتراضي جاهز يشرح الخطوات الأساسية بما فيها تتبع الطلب.</p>
+                <textarea id="storeHowToShopInput" rows="5" data-i18n-ph="how_to_shop_ph" placeholder="سيبها فاضية لاستخدام النص الافتراضي الجاهز"></textarea>
+
+                <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <h4 data-i18n="set_return_policy_h" style="margin-bottom:6px;">↩️ سياسة الإرجاع (اختياري)</h4>
+                <p data-i18n="set_return_policy_note" style="font-size:11px; color:var(--text-muted); margin-top:-6px;">اكتب هنا شروط الإرجاع الخاصة بمتجرك (مثلاً: حالة المنتج، مين بيدفع مصاريف الشحن، خلال كام يوم...). النص ده هيظهر للمشتري لما يضغط على "سياسة الإرجاع" في صفحة أي منتج.</p>
+                <textarea id="storeReturnPolicyInput" data-i18n-ph="set_return_policy_ph" placeholder="مثال: يمكن إرجاع المنتج خلال 3 أيام من الاستلام بشرط أن يكون بحالته الأصلية وبكرتونته، ويتحمل العميل مصاريف الشحن الخاصة بالإرجاع..."></textarea>
+
+                <button style="background: #10b981; margin-top: 8px;" data-i18n-html="set_save_btn" onclick="saveMerchantSettings()"><i class="fa fa-save"></i> حفظ التحديثات وتحديث الهيدر</button>
+
+                <hr style="margin:14px 0; border-color:var(--border-color);">
+                <p data-i18n="merchant_backup_desc" style="font-size:11px; color:var(--text-muted); margin:0 0 6px;">نسخة احتياطية خاصة ببيانات متجرك فقط (المنتجات، الطلبات، والإعدادات).</p>
+                <button onclick="merchantExportCloudBackup()" style="background:#0ea5e9; margin-bottom:8px;"><i class="fa fa-cloud-arrow-down"></i> <span data-i18n="merchant_export_cloud_btn">تصدير نسخة متجري من السحابة</span></button>
+                <div class="upload-btn-wrapper">
+                    <label class="custom-file-upload" style="background:#0284c7;">
+                        <i class="fa fa-cloud-arrow-up"></i> <span data-i18n="merchant_import_cloud_btn">استيراد نسخة لمتجري (يستبدل منتجاتي/طلباتي!)</span>
+                        <input type="file" id="merchantCloudRestoreFile" accept="application/json" style="display:none;" onchange="merchantImportCloudBackup(this)">
+                    </label>
+                </div>
+                <button id="merchantUndoImportBtn" class="hidden secondary" onclick="merchantUndoLastImport()" style="margin-top:8px; border-color:#f59e0b; color:#b45309;"><i class="fa fa-rotate-left"></i> <span data-i18n="merchant_undo_import_btn">تراجع عن آخر استيراد</span></button>
+
+                <div id="storageQuotaBox" style="margin-top:10px; font-size:12px;"></div></div>
+            </details>
+
+            <!-- ============================================================
+                 🏷️ الاشتراك والباقات: بقى بند مستقل قائم بذاته في اللوحة (مش
+                 مدفون جوه إعدادات المتجر العامة)، عشان صاحب المتجر يلاقي حالة
+                 اشتراكه، باقته الحالية، وباقي الباقات المتاحة للترقية بسهولة
+                 من غير ما يدوّر عليهم جوه فورم الإعدادات الطويل.
+                 ============================================================ -->
+            <details class="dash-accordion" id="storeSubscriptionAccordion">
+            <summary><span><i class="fa fa-tags"></i> <span data-i18n="dash_subscription_title">🏷️ الاشتراك والباقات</span></span></summary>
+            <div class="box">
+                <div id="subscriptionStatusBox" style="margin-top:0; font-size:13px; background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:10px;"></div>
+                <div id="adminMessagesInbox" style="margin-top:10px;"></div>
+                <div id="visitorChartBox" style="margin-top:10px; background:#fff; border:1px solid var(--border-color); border-radius:10px; padding:10px;"></div>
+            </div>
+            </details>
+
+            <!-- ============================================================
+                 👥 مساعدو المتجر: بقى بند مستقل قائم بذاته في اللوحة (مش تحت
+                 الإعدادات)، عشان يبقى واضح وسهل الوصول. صاحب المتجر بس (مش أي
+                 مساعد) يقدر يوصل هنا ويضيف/يعدّل/يحذف مساعدين، ويحدد لكل واحد
+                 منهم صلاحيات محددة. المساعد بيدخل من نفس صفحة تسجيل الدخول
+                 ببياناته الخاصة (منفصلة عن كلمة مرور صاحب المتجر)، وبيوصل لنفس
+                 لوحة المتجر ده بس بصلاحيات محدودة.
+                 ============================================================ -->
+            <details class="dash-accordion" id="storeStaffAccordion">
+            <summary><span><i class="fa fa-users"></i> <span data-i18n="dash_staff_title">👥 مساعدو المتجر</span></span> <span id="staffActivityUnreadBadge" class="hidden" style="background:#dc2626; color:#fff; border-radius:20px; padding:1px 7px; font-size:11px; margin-right:6px;">0</span></summary>
+            <div class="box">
+                <div id="staffManagementSection">
+                    <p data-i18n="staff_intro" style="font-size:11px; color:var(--text-muted); margin-top:-4px;">ضيف مساعدين ليك يدخلوا لوحتك ببيانات دخول خاصة بيهم (مش كلمة مرورك أنت)، وحدد لكل واحد بالظبط إيه اللي يقدر يعمله.</p>
+
+                    <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:10px; margin-bottom:10px;">
+                        <p data-i18n="staff_link_title" style="font-size:11.5px; color:#1e40af; margin:0 0 6px; font-weight:bold;">🔗 إزاي يدخل مساعدك؟</p>
+                        <p data-i18n="staff_link_desc" style="font-size:10.5px; color:#1e3a8a; margin:0 0 8px;">ابعتله رابط متجرك العادي اللي تحت ده (هو نفس الرابط اللي عملاءك بيدخلوا بيه، مش رابط سري منفصل)، وقوله يضغط أيقونة 👤 اللي فوق الصفحة عشان يسجل دخوله. المساعد لازم يكون داخل من الرابط ده بالظبط، مش من الصفحة الرئيسية العامة للمنصة. أما انت (أو أي شريك ليك) فتقدروا تدخلوا من الرابط ده أو من الصفحة الرئيسية للمنصة، مفيش فرق.</p>
+                        <div style="display:flex; gap:6px;">
+                            <input type="text" id="staffLoginLinkBox" readonly style="margin:0; font-size:11px; background:#fff;">
+                            <button type="button" class="secondary" data-i18n-html="copy_btn" style="width:auto; margin:0; padding:8px 12px; font-size:11px;" onclick="copyStaffLoginLink()"><i class="fa fa-copy"></i> نسخ</button>
+                            <button type="button" class="secondary" style="width:auto; margin:0; padding:8px 12px; font-size:11px;" onclick="showStoreQrCode()" title="QR كود لمتجرك"><i class="fa fa-qrcode"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- 📱 نافذة QR كود المتجر: التاجر يقدر يحمّلها ويطبعها (على منيو، فاتورة،
+                         فيتيرينة المحل...) عشان العميل يفتح المتجر بمجرد ما يمسحها بكاميرته. -->
+                    <div id="storeQrModal" class="modal-overlay hidden">
+                        <div class="modal-content" style="text-align:center; max-width:320px;">
+                            <h3 style="margin:0 0 10px;">📱 QR كود متجرك</h3>
+                            <p style="font-size:11.5px; color:var(--text-muted); margin:0 0 14px;">اطبعها على المنيو أو الفاتورة أو محلك، والعميل يفتح متجرك بمجرد ما يمسحها بكاميرة موبايله.</p>
+                            <div id="storeQrCanvasBox" style="display:flex; justify-content:center; padding:12px; background:#fff; border-radius:12px;"></div>
+                            <button style="margin-top:14px;" onclick="downloadStoreQrCode()"><i class="fa fa-download"></i> تنزيل الصورة</button>
+                            <div style="text-align:center; margin-top:10px;">
+                                <span class="modal-close-chip" onclick="closeStoreQrModal()"><i class="fa fa-times"></i> <span data-i18n="close_label">إغلاق</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="editStaffIndex" value="-1">
+                    <input type="text" id="newStaffUsername" data-i18n-ph="staff_username_ph" placeholder="اسم دخول المساعد (فريد وغير مكرر على المنصة كلها)">
+                    <input type="password" id="newStaffPassword" data-i18n-ph="staff_password_ph" placeholder="كلمة مرور المساعد">
+
+                    <div style="background:#fff; border:1px solid var(--border-color); border-radius:10px; padding:10px; margin-bottom:8px;">
+                        <p data-i18n="staff_perms_label" style="font-size:11px; color:var(--text-muted); margin:0 0 6px;">صلاحيات هذا المساعد داخل متجرك:</p>
+                        <div id="newStaffPermsChecklist"></div>
+                    </div>
+
+                    <div style="display:flex; gap:8px;">
+                        <button id="saveStaffBtn" data-i18n-html="staff_add_btn" onclick="saveStoreStaff()"><i class="fa fa-user-plus"></i> إضافة المساعد</button>
+                        <button class="secondary hidden" id="cancelStaffEditBtn" data-i18n="cancel_btn" onclick="cancelEditStaff()">إلغاء</button>
+                    </div>
+
+                    <h4 data-i18n="staff_current_h" style="margin-top:16px; font-size:13px;">المساعدون الحاليون</h4>
+                    <div id="storeStaffList" style="margin-top:8px;"></div>
+
+                    <hr style="border-color: var(--border-color); margin: 16px 0;">
+                    <!-- ============================================================
+                         📜 سجل نشاط المساعدين: بيوصل صاحب المتجر بأي تعامل أو تغيير
+                         عمله أي مساعد فورًا (علامة 🔴 جديد + بادچ عداد على عنوان
+                         القسم)، لحد ما يفتح القسم فيتعلّم مقروء. مدة الاحتفاظ بالسجل
+                         قابلة للتحكم بالكامل من دقايق لأيام.
+                         ============================================================ -->
+                    <h4 data-i18n="staff_log_h" style="margin-bottom:6px;">📜 سجل نشاط المساعدين</h4>
+                    <p data-i18n="staff_log_desc" style="font-size:11px; color:var(--text-muted); margin-top:-4px;">كل تعديل يعمله أي مساعد (منتجات، طلبات، إعدادات) بيتسجل هنا فورًا.</p>
+
+                    <div style="background:var(--bg-body); border:1px solid var(--border-color); border-radius:8px; padding:8px 10px; margin-bottom:10px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:12px;">
+                        <span data-i18n="staff_log_autodel_label">🧹 امسح السجل تلقائيًا بعد</span>
+                        <input type="number" id="staffLogRetentionValueInput" min="1" style="width:60px; margin:0; padding:5px;" onchange="saveStaffLogRetentionTime()">
+                        <select id="staffLogRetentionUnitInput" style="width:auto; margin:0; padding:5px;" onchange="saveStaffLogRetentionTime()">
+                            <option value="minutes" data-i18n="unit_minute">دقيقة</option>
+                            <option value="hours" data-i18n="unit_hour">ساعة</option>
+                            <option value="days" selected data-i18n="unit_day">يوم</option>
+                        </select>
+                        <button class="secondary" data-i18n-html="staff_log_clear_btn" style="width:auto; margin:0; padding:5px 10px; font-size:11px;" onclick="clearStaffActivityLogNow()"><i class="fa fa-trash"></i> مسح السجل الآن</button>
+                    </div>
+
+                    <div id="staffActivityLogList"></div>
+                </div>
+            </div>
+            </details>
+            <!-- ✅ اتصلح هنا: كان فيه وسم إغلاق زيادة وغلط بيقفل #dashboardSection قبل الأوان،
+                 فيخلي كل اللي بعده (أيقونات مختصرة/لافتات/الأكثر مبيعاً/المنتجات وزرار الخروج)
+                 يظهر برّه لوحة التاجر لأي زائر عادي حتى مع class="hidden" على dashboardSection،
+                 لأنه كان بقى فعليًا مش جواها في شجرة الصفحة (DOM). الإغلاق الصحيح لـ dashboardSection
+                 موجود تحت في نهاية اللوحة عند زرار "تسجيل الخروج السريع". -->
+
+            <!-- إدارة أيقونات الاختصارات العلوية (مثل أمازون) -->
+            <details class="dash-accordion">
+            <summary><span><i class="fa fa-star"></i> <span data-i18n="dash_shortcuts_title">أيقونات مختصرة أعلى المتجر</span></span></summary>
+            <div class="box">
+                <h4 style="color: var(--primary-color); margin-top: 0;" id="shortcutFormHeader" data-i18n-html="shortcuts_h">⭐ أيقونات مختصرة أعلى المتجر (اختياري)</h4>
+                <p data-i18n="shortcuts_desc" style="font-size:11px; color:var(--text-muted); margin-top:-6px;">تظهر فوق المتجر كاختصارات دائرية، لن تظهر إطلاقاً إذا لم تضف أي منها.</p>
+                <input type="hidden" id="editShortcutIndex" value="-1">
+                <input type="text" id="newShortcutName" data-i18n-ph="shortcuts_name_ph" placeholder="اسم الاختصار (مثال: عروض اليوم)">
+                <div class="upload-btn-wrapper">
+                    <label class="custom-file-upload">
+                        <i class="fa fa-image"></i> <span data-i18n="shortcuts_image_btn">صورة الاختصار</span>
+                        <input type="file" id="newShortcutImageFile" accept="image/*" style="display:none;" onchange="previewImage(this, 'shortcutPreviewImg')">
+                    </label>
+                    <img id="shortcutPreviewImg" class="img-preview-box">
+                </div>
+                <input type="text" id="newShortcutLink" data-i18n-ph="shortcuts_link_ph" placeholder="رابط عند الضغط (اختياري)">
+                <div style="display:flex; gap:8px;">
+                    <button onclick="saveShortcut()" id="saveShortcutBtn" data-i18n-html="shortcuts_add_btn">إضافة اختصار <i class="fa fa-plus"></i></button>
+                    <button class="secondary hidden" id="cancelShortcutEditBtn" data-i18n="cancel_btn" onclick="cancelEditShortcut()">إلغاء</button>
+                </div>
+                <div id="merchantShortcutsList" style="margin-top:10px;"></div>
+            </div>
+            </details>
+
+            <!-- إدارة لافتات/إعلانات متحركة -->
+            <details class="dash-accordion">
+            <summary><span><i class="fa fa-image"></i> <span data-i18n="dash_banners_title">لافتات إعلانية متحركة</span></span></summary>
+            <div class="box">
+                <h4 style="color: var(--primary-color); margin-top: 0;" id="bannerFormHeader" data-i18n-html="banners_h">🖼️ لافتات إعلانية متحركة (اختياري)</h4>
+                <p data-i18n="banners_desc" style="font-size:11px; color:var(--text-muted); margin-top:-6px;">صور تتحرك تلقائياً أعلى متجرك، مع رابط تحويل عند الضغط عليها إن أردت. لن تظهر أي مساحة فارغة إن لم تُضِف شيئاً.</p>
+                <input type="hidden" id="editBannerIndex" value="-1">
+                <div class="upload-btn-wrapper">
+                    <label class="custom-file-upload">
+                        <i class="fa fa-image"></i> <span data-i18n="banners_image_btn">صورة اللافتة</span>
+                        <input type="file" id="newBannerImageFile" accept="image/*" style="display:none;" onchange="previewImage(this, 'bannerPreviewImg')">
+                    </label>
+                    <img id="bannerPreviewImg" class="img-preview-box">
+                </div>
+                <input type="text" id="newBannerLink" data-i18n-ph="banners_link_ph" placeholder="رابط التحويل عند الضغط (اختياري)">
+                <div style="display:flex; gap:8px;">
+                    <button onclick="saveBanner()" id="saveBannerBtn" data-i18n-html="banners_add_btn">إضافة لافتة <i class="fa fa-plus"></i></button>
+                    <button class="secondary hidden" id="cancelBannerEditBtn" data-i18n="cancel_btn" onclick="cancelEditBanner()">إلغاء</button>
+                </div>
+                <div id="merchantBannersList" style="margin-top:10px;"></div>
+            </div>
+            </details>
+
+            <!-- الأكثر مبيعاً -->
+            <details class="dash-accordion">
+            <summary><span><i class="fa fa-trophy"></i> <span data-i18n="dash_bestsellers_title">الأكثر مبيعاً</span></span></summary>
+            <div class="box">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                    <h4 style="color: var(--primary-color); margin:0;" data-i18n-html="bestsellers_h">🏆 الأكثر مبيعاً</h4>
+                    <button class="danger secondary" style="width:auto; margin:0; padding:6px 10px; font-size:11px;" data-i18n-html="bestsellers_reset_btn" onclick="resetBestSellers()"><i class="fa fa-rotate-left"></i> تصفير الترتيب</button>
+                </div>
+                <p data-i18n="bestsellers_desc" style="font-size:11px; color:var(--text-muted); margin:6px 0 10px;">مرتبة حسب عدد مرات الشراء، عشان تعرف تزود مخزونك من المنتجات دي. لو حبيت تلفت نظر المشترين لمنتج معين، فعّل شارة "الأكثر مبيعاً" عليه في متجرك.</p>
+                <div id="bestSellersList"></div>
+            </div>
+            </details>
+
+            <!-- 📊 تقرير الأرباح والمبيعات -->
+            <details class="dash-accordion">
+            <summary><span><i class="fa fa-chart-line"></i> <span data-i18n="dash_revenue_title">تقرير الأرباح والمبيعات</span></span></summary>
+            <div class="box">
+                <h4 style="color: var(--primary-color); margin:0 0 6px;" data-i18n-html="revenue_h">📊 تقرير الأرباح والمبيعات</h4>
+                <p style="font-size:11px; color:var(--text-muted); margin:0 0 10px;">
+                    <span data-i18n="revenue_desc">الأرقام هنا بتتحسب تلقائيًا من كل طلب تحدده "✅ تم التسليم" في سجل الطلبات فقط
+                    (مش لحظة إرسال الطلب، عشان الطلب ممكن ميتمش). لو عميل رجّع طلب بعد التسليم،
+                    تقدر تعدّل المبلغ المحسوب من طلبه من سجل الطلبات تحت، والتقرير هيتحدث تلقائيًا.</span>
+                </p>
+                <div id="revenueReportBox"></div>
+            </div>
+            </details>
+
+            <!-- ============================================================
+                 💰 إدارة الربح: مركز واحد يجمع كل حسابات الربح "قبل البيع"
+                 (فرق عن تقرير الأرباح فوق اللي بيحسب الربح "الفعلي" من طلبات
+                 اتباعت وسُلّمت بالفعل). هنا بتشوف كل منتج: تكلفته، سعر بيعه،
+                 ربحه المتوقع للقطعة، هامش الربح %، ولو محدد له مخزون بيحسب
+                 كمان إجمالي الربح المتوقع لو اتباع كل المخزون الحالي.
+                 ============================================================ -->
+            <details class="dash-accordion" id="profitManagementAccordion">
+            <summary><span><i class="fa fa-sack-dollar"></i> <span data-i18n="dash_profit_title">إدارة الربح</span></span></summary>
+            <div class="box">
+                <h4 style="color: var(--primary-color); margin:0 0 6px;" data-i18n-html="profit_h">💰 إدارة الربح لكل منتج</h4>
+                <p style="font-size:11px; color:var(--text-muted); margin:0 0 10px;">
+                    <span data-i18n="profit_desc">ده حساب "الربح المتوقع" قبل ما تبيع، بناءً على سعر التكلفة وسعر البيع اللي حددتهم لكل منتج
+                    (مش الربح الفعلي من مبيعات حصلت بالفعل - ده تلاقيه في "تقرير الأرباح والمبيعات" فوق).
+                    حدد سعر التكلفة من فورم كل منتج في قسم "المنتجات" (استخدم حاسبة الدفعة/الكرتونة لو اشتريت بالجملة)
+                    عشان الأرقام هنا تظهر صحيحة.</span>
+                </p>
+                <div id="profitManagementSummary" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;"></div>
+                <div id="profitManagementTableWrap" style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                    <table id="profitManagementTable" style="width:100%; border-collapse:collapse; font-size:11.5px; min-width:520px;"></table>
+                </div>
+                <p id="profitManagementEmptyMsg" class="hidden" data-i18n="profit_empty" style="text-align:center; color:var(--text-muted); font-size:12px; margin-top:10px;">لسه مفيش منتجات مضافة.</p>
+            </div>
+            </details>
+
+            <!-- إدارة المنتجات -->
+            
+
+            <button class="danger" data-i18n-html="logout_btn" onclick="logoutApp()">تسجيل الخروج السريع <i class="fa fa-sign-out-alt"></i></button>
+        </div>
+
+<div id="adminSection" class="hidden">
+            <!-- 🔍 بحث شامل في كل لوحة الإدارة العامة: بيدوّر في كل الأقسام جوه #adminSection
+                 كلها ويفلتر ويخفي أي قسم مالوش نتيجة. -->
+            <div style="position:relative; margin-bottom:10px;">
+                <input type="text" id="adminSettingsSearchInput" oninput="searchInSettings(this.value, 'adminSection')" data-i18n-ph="settings_search_ph" placeholder="🔍 بحث في لوحة الإدارة" onfocus="this.scrollLeft=0" onblur="this.scrollLeft=0" style="padding-inline-end:70px;">
+                <span id="adminSettingsSearchCount" class="hidden" style="position:absolute; inset-inline-end:8px; top:50%; transform:translateY(-50%); font-size:11px; color:var(--text-muted); background:var(--bg-body); padding:2px 6px; border-radius:6px;"></span>
+            </div>
+            <div class="box" style="border: 2px solid var(--accent-color);">
+                <h2 style="color: var(--accent-color); text-align: center; margin-top:0;" data-i18n="admin_panel_title">👑 لوحة الإدارة العامة</h2>
+                <div id="adminWelcomeNote" style="text-align:center; font-size:12px; color:var(--text-muted); margin-bottom:8px;"></div>
+            </div>
+
+            <!-- 📊 إحصائيات عامة -->
+            <details class="dash-accordion" id="adminStatsAccordion" open>
+            <summary><span><i class="fa fa-chart-pie"></i> <span data-i18n="admin_stats_title">إحصائيات عامة</span></span></summary>
+            <div class="box">
+                <div id="adminStatsBox" style="background:#fff; border:1px solid var(--border-color); border-radius:10px; padding:10px; font-size:13px;"></div>
+            </div>
+            </details>
+
+            <!-- 🔔 طلبات تجديد الاشتراك (بلاغات التجار إنهم حوّلوا) -->
+            <details class="dash-accordion" id="renewalRequestsAccordion" open>
+            <summary><span><i class="fa fa-bell"></i> <span data-i18n="admin_renewals_title">طلبات تجديد الاشتراك</span> <span id="renewalRequestsCountBadge"></span></span></summary>
+            <div class="box">
+                <p style="font-size:11px; color:var(--text-muted); margin-top:-4px;">لما تاجر يبلّغ إنه حوّل قيمة الاشتراك، طلبه هيظهر هنا. راجع محفظتك وتأكد إن المبلغ فعلاً وصلك بنفس رقم/معرّف التحويل المكتوب قبل ما تضغط تأكيد.</p>
+                <div id="renewalRequestsList"></div>
+            </div>
+            </details>
+
+            <!-- ============================================================
+                 💬 الشات المباشر (نص فقط) بين التجار وفريق الدعم/الأدمن. فيه: زرار
+                 يفتح قائمة المتاجر مرتبة حسب الرسائل غير المقروءة، وتحت كمان إعدادات
+                 التحكم الكامل: تفعيل/تعطيل الشات بالكامل، أو عرض "رسالة غياب" بدل
+                 السكوت، بالإضافة لإمكانية كل موظف/مدير إنه "يقفل" توفّره الشخصي.
+                 ============================================================ -->
+            <details class="dash-accordion" id="platformChatAccordion" open>
+            <summary><span><i class="fa fa-comment-dots"></i> <span data-i18n="chat_admin_title">شات الدعم مع التجار</span> <span id="adminChatTotalBadge" class="hidden" style="background:#dc2626; color:#fff; font-size:10px; font-weight:bold; padding:2px 7px; border-radius:20px; margin-right:4px;"></span></span></summary>
+            <div class="box">
+                <div style="display:flex; gap:8px; margin:0 0 10px;">
+                    <button onclick="openAdminChatStoresPanel()" style="margin:0; flex:1;"><i class="fa fa-inbox"></i> <span data-i18n="chat_admin_open_inbox">فتح صندوق محادثات التجار</span></button>
+                    <button class="secondary" onclick="openAdminChatRatingsPanel()" style="margin:0; flex:1; width:auto;"><i class="fa fa-star"></i> <span data-i18n="chat_ratings_open_btn">تقييمات الدعم</span></button>
+                </div>
+                <hr style="border-color:var(--border-color); margin:10px 0;">
+                <h4 style="margin:0 0 6px;" data-i18n="chat_admin_settings_title">⚙️ إعدادات الشات العامة</h4>
+                <label style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;"><span data-i18n="chat_enabled_label">💬 تفعيل الشات بين التجار والدعم</span>
+                    <input type="checkbox" id="chatGloballyEnabledToggle" onchange="savePlatformChatSettings()" style="width:auto; margin:0;">
+                </label>
+                <label style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;"><span data-i18n="chat_away_active_label">🌙 إظهار رسالة غياب بدل الشات</span>
+                    <input type="checkbox" id="chatAwayActiveToggle" onchange="savePlatformChatSettings()" style="width:auto; margin:0;">
+                </label>
+                <textarea id="chatAwayMessageInput" data-i18n-ph="chat_away_message_ph" placeholder="نص رسالة الغياب (مثال: فريق الدعم غير متاح حاليًا، هنرد عليك في أقرب وقت)" style="min-height:60px;" onblur="savePlatformChatSettings()"></textarea>
+                <p style="font-size:10.5px; color:var(--text-muted); margin:4px 0 0;" data-i18n="chat_my_availability_note">تقدر كمان تتحكم في توفّرك الشخصي للشات من قسم "حسابات مديري المنصة والدعم" تحت.</p>
+                <hr style="border-color:var(--border-color); margin:10px 0;">
+                <h4 style="margin:0 0 6px;" data-i18n="chat_cleanup_title">🧹 تنظيف المحادثات القديمة تلقائيًا</h4>
+                <label style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; gap:8px;"><span data-i18n="chat_retention_label" style="flex:1;">احتفظ بالمحادثات لمدة (أيام):</span>
+                    <input type="number" id="chatRetentionDaysInput" min="1" value="14" onblur="savePlatformChatSettings()" style="width:70px; margin:0; flex-shrink:0;">
+                </label>
+                <p style="font-size:10.5px; color:var(--text-muted); margin:0 0 8px;" data-i18n="chat_cleanup_note">بيتنظف تلقائيًا كل ما تفتح صندوق محادثات التجار، أو اضغط تنظيف فوري دلوقتي:</p>
+                <button class="secondary" onclick="adminCleanupChatNow(true)" style="margin:0; width:auto;"><i class="fa fa-broom"></i> <span data-i18n="chat_cleanup_now_btn">تنظيف الآن</span></button>
+            </div>
+            </details>
+
+            <!-- 🛍️ إدارة المتاجر (الأكثر استخداماً - مفتوحة افتراضياً) -->
+            <details class="dash-accordion" id="storesControlAccordion" open>
+            <summary><span><i class="fa fa-store"></i> <span data-i18n="admin_stores_title">التحكم في المتاجر</span></span></summary>
+            <div class="box">
+                <p style="font-size:11px; color:var(--text-muted); margin-top:-4px;">تظهر لك المتاجر المسموح لك بإدارتها فقط إن كنت دعم فني.</p>
+
+                <!-- ⏸️ إيقاف تسجيل متاجر جديدة مؤقتاً -->
+                <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:10px; margin-bottom:10px;">
+                    <label style="font-size:12px; font-weight:bold;">⏸️ إيقاف تسجيل متاجر جديدة مؤقتًا:</label>
+                    <div style="display:flex; gap:8px; margin-top:6px;">
+                        <input type="number" id="regPauseDurationInput" placeholder="المدة (مثلاً 30)" style="flex:1; margin:0;">
+                        <select id="regPauseUnitSelect" style="flex:1; margin:0;">
+                            <option value="minutes">دقيقة</option>
+                            <option value="hours">ساعة</option>
+                            <option value="days">يوم</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; gap:6px; margin-top:6px;">
+                        <button onclick="pauseNewRegistrations()" style="flex:1; margin:0; font-size:12px;">⏸️ إيقاف التسجيل</button>
+                        <button class="secondary" onclick="resumeNewRegistrations()" style="flex:1; margin:0; font-size:12px;">▶️ إلغاء الإيقاف فورًا</button>
+                    </div>
+                    <p id="regPauseStatusText" style="font-size:11px; color:var(--text-muted); margin:6px 0 0;"></p>
+                </div>
+
+                <!-- 🔒 مدة قفل الدخول الافتراضية بعد محاولات فاشلة متكررة -->
+                <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:10px; margin-bottom:10px;">
+                    <label style="font-size:12px; font-weight:bold;">🔒 مدة قفل الدخول الافتراضية للمنصة كلها (بعد 5 محاولات فاشلة):</label>
+                    <div style="display:flex; gap:8px; margin-top:6px; align-items:center;">
+                        <input type="number" id="platformLockoutMinutesInput" placeholder="مثلاً 10" style="flex:1; margin:0;">
+                        <span style="font-size:12px;">دقيقة</span>
+                        <button onclick="savePlatformLockoutMinutes()" style="flex:0 0 auto; width:auto; padding:8px 14px; margin:0; font-size:12px;">💾 حفظ</button>
+                    </div>
+                    <p style="font-size:10.5px; color:var(--text-muted); margin:6px 0 0;">أي تاجر يقدر يحدد مدة مختلفة لحسابه هو ومساعديه بالذات من إعدادات متجره، وده بياخد أولوية على الرقم ده.</p>
+                </div>
+
+                <!-- 🗑️ حذف متاجر متعددة دفعة واحدة -->
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <label style="font-size:12px; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                        <input type="checkbox" id="selectAllStoresCheckbox" onchange="toggleSelectAllStores(this.checked)" style="width:auto; margin:0;"> تحديد كل المتاجر
+                    </label>
+                    <button class="danger" id="bulkDeleteStoresBtn" onclick="bulkDeleteSelectedStores()" style="width:auto; padding:6px 12px; font-size:11px; margin:0;" disabled>🗑️ حذف المحدد (<span id="selectedStoresCount">0</span>)</button>
+                </div>
+
+                <!-- ⏱️ فلترة المتاجر حسب آخر نشاط، لمساعدتك تكتشف المتاجر المهجورة -->
+                <div style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:10px; padding:10px; margin-bottom:10px;">
+                    <label style="font-size:12px; font-weight:bold;">⏱️ اعرض بس المتاجر اللي آخر نشاط ليها أقدم من:</label>
+                    <div style="display:flex; gap:8px; margin-top:6px;">
+                        <select id="inactivityFilterSelect" onchange="renderAdminStores()" style="flex:1; margin:0;">
+                            <option value="0">(بدون فلترة - اعرض كل المتاجر)</option>
+                            <option value="1">يوم</option>
+                            <option value="2">يومين</option>
+                            <option value="7">أسبوع</option>
+                            <option value="30">شهر</option>
+                            <option value="90">3 شهور</option>
+                        </select>
+                <input type="number" id="expiryAlertDaysInput" style="flex:1; margin:0;" placeholder="نبّهني قبل الانتهاء بكام يوم؟ (افتراضي 3)" onchange="localStorage.setItem('expiryAlertDays', this.value||3); renderAdminStores();">
+                    </div>
+                    <p style="font-size:10.5px; color:var(--text-muted); margin:6px 0 0;">بتحسب آخر مرة سجل فيها دخول صاحب المتجر أو أي مساعد له. لو المتجر لسه ما سجلش دخول تاني من يوم ما اتعمل، بناخد تاريخ التسجيل نفسه كمرجع.</p>
+                </div>
+
+                <input type="text" id="adminStoreSearchInput" placeholder="🔍 دوّر باسم المتجر..." oninput="renderAdminStores()" style="margin-bottom:8px;">
+                <input type="text" id="adminStoresSearchInput" placeholder="🔍 دوّر باسم المتجر..." oninput="renderAdminStores()" style="margin-bottom:8px;">
+                <div id="adminStoresList"></div>
+            </div>
+            </details>
+
+            <!-- 📨 رسائل للتجار -->
+            <details class="dash-accordion" id="broadcastAccordion">
+            <summary><span><i class="fa fa-paper-plane"></i> <span data-i18n="admin_broadcast_title">إرسال رسالة للتجار</span></span></summary>
+            <div class="box">
+                <p style="font-size:11px; color:var(--text-muted); margin:0 0 6px;">حدد متجر واحد أو أكتر (تقدر تختار أي عدد)، أو استخدم زرار "إرسال للجميع" تحت من غير ما تحدد حاجة هنا.</p>
+                <div style="display:flex; justify-content:flex-end; gap:10px; font-size:11px; margin-bottom:4px;">
+                    <span style="cursor:pointer; color:var(--primary-color);" onclick="toggleAllBroadcastTargets(true)">تحديد الكل</span>
+                    <span style="cursor:pointer; color:var(--text-muted);" onclick="toggleAllBroadcastTargets(false)">إلغاء التحديد</span>
+                </div>
+                <div id="broadcastTargetsChecklist" style="max-height:170px; overflow-y:auto; border:1px solid var(--border-color); border-radius:10px; padding:8px 10px; background:#fff; margin-bottom:10px;"></div>
+
+                <textarea id="broadcastMessageInput" placeholder="اكتب نص الرسالة هنا..."></textarea>
+                <label style="font-size:12px; font-weight:bold;">إرسال للمتاجر المحددة فوق:</label>
+                <div class="lang-choice-btns">
+                    <button onclick="sendMerchantBroadcast('ar')">إرسال بالعربية</button>
+                    <button class="secondary" onclick="sendMerchantBroadcast('en')">Send in English</button>
+                </div>
+                <label style="font-size:12px; font-weight:bold; display:block; margin-top:10px;">إرسال لكل التجار دفعة واحدة (بدون تحديد):</label>
+                <div class="lang-choice-btns">
+                    <button style="background:#7c3aed;" onclick="sendMerchantBroadcast('ar', true)"><i class="fa fa-bullhorn"></i> إرسال للجميع (عربي)</button>
+                    <button class="secondary" onclick="sendMerchantBroadcast('en', true)"><i class="fa fa-bullhorn"></i> Send to All (English)</button>
+                </div>
+            </div>
+            </details>
+
+            <!-- 🎧 فريق الدعم الفني وتقاريره -->
+            <details class="dash-accordion" id="supportTeamAccordion">
+            <summary><span><i class="fa fa-headset"></i> <span data-i18n="admin_support_team_title">فريق الدعم الفني</span></span></summary>
+            <div class="box">
+                <p style="font-size:11px; color:var(--text-muted); margin-top:-4px;" data-i18n="admin_support_team_note">ℹ️ القائمة دي لمجرد توزيع رسائل واتساب "تواصل مع الدعم" العامة من الزوار/التجار بالتبادل بينهم (مش حسابات تسجيل دخول). لو عاوز موظف يسجّل دخول فعلي ويدير متاجر معينة ويستخدم الشات الداخلي، استخدم قسم "فريق المنصة (مديرين ودعم فني)" تحت بدل القائمة دي.</p>
+                <h4 style="margin-top:0;">🎧 أعضاء فريق الدعم (Round-Robin)</h4>
+                <div id="adminSupportTeamList"></div>
+                <input type="hidden" id="editSupportIndex" value="-1">
+                <div style="display:flex; gap:5px; margin-top:8px;">
+                    <input type="text" id="newSupportName" placeholder="اسم الموظف" style="margin:0;">
+                    <input type="text" id="newSupportPhone" placeholder="رقم الواتساب (مثال: 2010...)" style="margin:0;">
+                    <button style="width: auto; padding:0 15px; margin:0;" id="saveSupportBtn" onclick="saveSupportMember()"><i class="fa fa-plus"></i></button>
+                    <button class="secondary hidden" id="cancelSupportEditBtn" style="width: auto; padding:0 12px; margin:0;" onclick="cancelEditSupportMember()"><i class="fa fa-times"></i></button>
+                </div>
+
+                <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <h4 style="margin-bottom:6px;">📊 تقرير طلبات الدعم (Click Counter Log)</h4>
+                <div id="adminSupportLogs" style="max-height: 150px; overflow-y: auto; background: #fff; padding: 10px; border-radius: 8px; font-size: 12px; border: 1px solid var(--border-color);"></div>
+            </div>
+            </details>
+
+            <!-- 🔑 حسابي -->
+            <details class="dash-accordion">
+            <summary><span><i class="fa fa-key"></i> <span data-i18n="admin_account_title">حسابي وكلمة المرور</span></span></summary>
+            <div class="box">
+                <label style="font-size:12px; font-weight:bold;">👤 اسم الدخول (اليوزرنيم):</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="adminNewUsernameInput" placeholder="اسم الدخول الجديد" style="flex:1; margin:0;">
+                    <button class="secondary" style="width:auto; padding:0 14px; margin:0;" onclick="changeMyAdminUsername()"><i class="fa fa-user-edit"></i> تغيير</button>
+                </div>
+                <p style="font-size:10.5px; color:var(--text-muted); margin-top:2px;">لازم يبقى فريد ومش مستخدم لحساب أدمن تاني.</p>
+                <hr style="border-color: var(--border-color); margin: 10px 0;">
+                <input type="password" id="adminCurrentPassInput" placeholder="كلمة المرور الحالية">
+                <input type="password" id="adminNewPassInput" placeholder="كلمة المرور الجديدة">
+                <input type="password" id="adminConfirmNewPassInput" placeholder="تأكيد كلمة المرور الجديدة">
+                <button class="secondary" onclick="changeMyAdminPassword()"><i class="fa fa-key"></i> تغيير كلمة المرور</button>
+                <hr style="border-color: var(--border-color); margin: 10px 0;">
+                <label style="font-size:12px; font-weight:bold;">🔒 تأمين حسابك بالبريد الإلكتروني (اختياري)</label>
+                <div id="adminEmailSecurityBox" style="margin-top:6px;"></div>
+            </div>
+            </details>
+
+            <div id="adminSuperOnlySections">
+
+                <!-- 📢 اللافتة الإعلانية -->
+                <details class="dash-accordion" id="homeBannerAccordion">
+                <summary><span><i class="fa fa-bullhorn"></i> <span data-i18n="admin_home_banner_title">اللافتة الإعلانية للرئيسية</span></span></summary>
+                <div class="box">
+                    <p style="font-size:11px; color:var(--text-muted); margin-top:-4px;">تظهر لكل الزوار قبل دخولهم أي متجر، مش داخل متاجر التجار (مثال: "سجّل متجرك الآن مجاناً").</p>
+                    <select id="adBannerType" onchange="toggleAdBannerType()" style="margin-bottom:6px;">
+                        <option value="text">نص إعلاني</option>
+                        <option value="image">صورة إعلانية</option>
+                    </select>
+                    <textarea id="adBannerTextInput" placeholder="مثال: سجل متجرك الإلكتروني الآن لمدة 15 يوم مجاناً وابدأ تجربتك الآن!"></textarea>
+                    <div class="upload-btn-wrapper hidden" id="adBannerImageWrap">
+                        <label class="custom-file-upload">
+                            <i class="fa fa-image"></i> اختر صورة اللافتة
+                            <input type="file" id="adBannerImageFile" accept="image/*" style="display:none;" onchange="previewImage(this, 'adBannerPreviewImg')">
+                        </label>
+                        <img id="adBannerPreviewImg" class="img-preview-box">
+                    </div>
+                    <input type="text" id="adBannerLinkInput" placeholder="رابط عند الضغط على اللافتة (اختياري)">
+                    <div style="display:flex; gap:8px;">
+                        <button onclick="saveHomeAdBanner()">حفظ اللافتة</button>
+                        <button class="danger" onclick="removeHomeAdBanner()">إزالة اللافتة</button>
+                    </div>
+                </div>
+                </details>
+
+                <!-- ✨ صفحة عن المنصة -->
+                <details class="dash-accordion" id="aboutPlatformAccordion">
+                <summary><span><i class="fa fa-info-circle"></i> <span data-i18n="admin_about_platform_title">صفحة "عن المنصة"</span></span></summary>
+                <div class="box">
+                    <p style="font-size:11px; color:var(--text-muted); margin-top:-4px;">اكتب هنا اسم المنصة، شعارها، مميزاتها، وكيفية التسجيل. هذا المحتوى يظهر في صفحة "عن المنصة" فقط، وليس داخل متاجر التجار.</p>
+                    <input type="text" id="platformNameInput" placeholder="اسم المنصة (مثال: سوقي)">
+                    <!-- 🌍 اسم مختلف للمنصة لكل لغة (اختياري) - لو سبته فاضي لأي لغة، هيستخدم
+                         الاسم العام اللي فوق بدل ما يفضل فاضي. مفيد لو عايز اسمك يتكتب بشكل
+                         مختلف لكل لغة بدل نفس الاسم حرفيًا في كل اللغات. -->
+                    <details style="margin:8px 0;">
+                        <summary data-i18n="platform_name_per_lang_summary" style="cursor:pointer; font-size:11.5px; color:var(--text-muted);">🌍 اسم مختلف للمنصة لكل لغة (اختياري)</summary>
+                        <div id="platformNameByLangInputs" style="padding-top:8px; display:flex; flex-direction:column; gap:6px;"></div>
+                        <button onclick="savePlatformNameByLang()" style="margin-top:6px;"><i class="fa fa-save"></i> <span data-i18n="save_btn_generic">حفظ</span></button>
+                    </details>
+                    <hr style="border-color: var(--border-color); margin: 12px 0;">
+                    <label style="font-size:12px; font-weight:bold;">© سطر حقوق النشر أسفل المنصة/المتاجر:</label>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:12px; margin-top:6px; cursor:pointer;">
+                        <input type="checkbox" id="footerCopyrightEnabledCheckbox" style="width:auto; margin:0;"> إظهار سطر الحقوق
+                    </label>
+                    <input type="text" id="footerCopyrightTextInput" placeholder="نص مخصص (اختياري) - استخدم {year} و{name}، مثال: © {year} {name} جميع الحقوق محفوظة">
+                    <label style="font-size:12px; font-weight:bold;">يظهر في:</label>
+                    <select id="footerCopyrightScopeSelect">
+                        <option value="all">كل المتاجر + المنصة</option>
+                    </select>
+                    <button onclick="saveFooterCopyrightSettings()" style="margin-top:8px;">💾 حفظ إعدادات سطر الحقوق</button>
+                    <hr style="border-color: var(--border-color); margin: 12px 0;">
+                    <label style="font-size:12px; font-weight:bold;">🔒 نص سياسة الخصوصية (ظاهر لأي زائر من رابط أسفل الصفحة):</label>
+                    <!-- 🌍 نص سياسة الخصوصية بقى منفصل لكل لغة - اختار اللغة اللي عايز تكتب
+                         نصها هنا، كل لغة ليها نصها الخاص، وبيظهر للزائر بنفس لغة الواجهة اللي
+                         هو شغال بيها تلقائيًا. لو لغة معينة سابتها فاضية، بيظهر النص الافتراضي. -->
+                    <select id="privacyPolicyLangSelect" onchange="switchPrivacyPolicyEditorLang(this.value)" style="margin-bottom:6px;"></select>
+                    <!-- 🖋️ محرر نص غني حقيقي: تنسيق (عريض/مائل/تسطير)، حجم ولون الخط،
+                         تظليل، محاذاة وقائمة نقطية - بيتطبق على أي جزء تحدده من النص. -->
+                    <div class="rich-toolbar-mount" data-target="privacyPolicyTextInput"></div>
+                    <div id="privacyPolicyTextInput" class="rich-editor-content" data-placeholder="سيبها فاضية لاستخدام النص الافتراضي الجاهز" contenteditable="true"></div>
+                    <button onclick="savePrivacyPolicyText()" style="margin-top:4px;">💾 حفظ سياسة الخصوصية</button>
+                    <label style="font-size:12px; font-weight:bold;">🌍 لغة المنصة الافتراضية لأي زائر جديد:</label>
+                    <select id="platformDefaultLangSelect"></select>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:12px; margin-top:8px; cursor:pointer;">
+                        <input type="checkbox" id="platformAutoDetectLangCheckbox" style="width:auto; margin:0;">
+                        الكشف التلقائي للغة حسب جهاز الزائر (لو متفعّل، بيتخطى اللغة الافتراضية فوق لو لغة جهاز الزائر مدعومة عندنا)
+                    </label>
+                    <p style="font-size:10.5px; color:var(--text-muted); margin-top:-4px;">لو عطّلت الكشف التلقائي، كل زائر جديد (أول مرة يفتح فيها المنصة على جهازه) هيشوف اللغة الافتراضية اللي حددتها فوق، مهما كانت لغة جهازه.</p>
+                    <button onclick="savePlatformLanguageSettings()" style="margin-top:8px;">💾 حفظ إعدادات اللغة</button>
+                    <div class="upload-btn-wrapper">
+                        <label class="custom-file-upload">
+                            <i class="fa fa-image"></i> شعار (لوجو) المنصة
+                            <input type="file" id="platformLogoFile" accept="image/*" style="display:none;" onchange="previewImage(this, 'platformLogoPreview')">
+                        </label>
+                        <img id="platformLogoPreview" class="img-preview-box">
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                        <label style="font-size:12px; margin:0;">لون اسم المنصة في صفحة "عن المنصة":</label>
+                        <input type="color" id="platformNameColorInput" value="#6d4c41" style="width:44px; height:34px; padding:2px; border-radius:8px; margin:0;">
+                    </div>
+                    <input type="text" id="platformTaglineInput" placeholder="شعار المنصة (مثال: ابدأ متجرك في دقائق)">
+                    <textarea id="platformAboutTextInput" placeholder="وصف المنصة ومميزاتها...&#10;مثال:&#10;✅ سهل الاستخدام&#10;✅ لا يحتاج خبرة تقنية&#10;✅ تجربة مجانية 15 يوم"></textarea>
+                    <input type="text" id="platformContactInput" placeholder="رقم التواصل أو البريد للتسجيل (اختياري)">
+
+                    <hr style="border-color: var(--border-color); margin: 15px 0;">
+                    <h4 style="margin-bottom:6px;">🔗 روابط تواصل المنصة (اختياري)</h4>
+                    <input type="text" id="platformFacebookInput" placeholder="رابط فيسبوك المنصة">
+                    <input type="text" id="platformInstagramInput" placeholder="رابط انستقرام المنصة">
+                    <input type="text" id="platformTwitterInput" placeholder="رابط تويتر / X للمنصة">
+                    <input type="text" id="platformWhatsappInput" placeholder="رقم واتساب المنصة (بالكود الدولي، بدون +)">
+                    <input type="text" id="platformTelegramInput" placeholder="يوزر تيليجرام المنصة (بدون @)">
+
+                    <p style="font-size:11px; color:var(--text-muted); margin:6px 0 0;">💡 الروابط دي بتظهر كأيقونات صغيرة أعلى وأسفل الصفحة الرئيسية للمنصة (قبل ما الزائر يدخل أي متجر). أي أيقونة ماتحطش رابطها هتفضل مخفية تلقائيًا.</p>
+
+                    <button onclick="savePlatformAbout()">💾 حفظ معلومات المنصة</button>
+                </div>
+                </details>
+
+                <!-- 📘 دليل استخدام المتجر: بنود قابلة للطي، كل بند عنوان + محتوى، تكتبهم بنفسك من هنا -->
+                <details class="dash-accordion" id="guideAccordion">
+                <summary><span><i class="fa fa-book"></i> <span data-i18n="admin_guide_title">دليل استخدام المتجر</span></span></summary>
+                <div class="box">
+                    <p style="font-size:11px; color:var(--text-muted); margin-top:-4px;">اكتب هنا بنود الدليل (زي "إزاي تضيف منتج؟"، "إزاي تفعّل الخصم؟"...). الدليل ده موجّه للتجار بالأساس، وبيظهر تلقائيًا في لوحة كل تاجر، وكمان في صفحة "عن المنصة" للزوار قبل ما يسجلوا.</p>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:12px; margin:6px 0; cursor:pointer; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:8px 10px;">
+                        <input type="checkbox" id="showGuideInAboutStoreCheckbox" onchange="saveShowGuideInAboutStore()" style="width:auto; margin:0;"> أظهر زرار الدليل كمان في صفحة "عن المتجر" اللي بيشوفها العملاء (اختياري، متقفول افتراضيًا)
+                    </label>
+                    <h4 style="margin:0 0 6px;">📋 بنود الدليل الحالية:</h4>
+                    <div id="platformGuideItemsList"></div>
+
+                    <hr style="border-color: var(--border-color); margin: 15px 0;">
+                    <h4 style="margin-bottom:6px;">➕ إضافة / تعديل بند</h4>
+                    <input type="hidden" id="guideItemEditId" value="">
+                    <input type="text" id="guideItemTitleInput" placeholder="عنوان البند (مثال: إزاي تضيف منتج جديد؟)">
+                    <textarea id="guideItemContentInput" placeholder="اكتب هنا شرح البند بالتفصيل خطوة بخطوة..."></textarea>
+                    <label style="font-size:12px; font-weight:bold;">صورة توضيحية (اختياري):</label>
+                    <div class="upload-btn-wrapper">
+                        <label class="custom-file-upload">
+                            <i class="fa fa-image"></i> اختر صورة للبند ده
+                            <input type="file" id="guideItemImageFile" accept="image/*" style="display:none;" onchange="previewImage(this, 'guideItemImagePreview')">
+                        </label>
+                        <img id="guideItemImagePreview" class="img-preview-box">
+                        <button type="button" class="secondary" style="width:auto; padding:4px 12px; font-size:11px; margin-right:8px;" onclick="removeGuideItemImage()"><i class="fa fa-times"></i> إزالة الصورة</button>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button onclick="saveGuideItem()" style="flex:1;"><i class="fa fa-save"></i> حفظ البند</button>
+                        <button class="secondary hidden" id="cancelGuideItemEditBtn" style="width:auto; padding:0 16px;" onclick="cancelGuideItemEdit()"><i class="fa fa-times"></i> إلغاء</button>
+                    </div>
+                </div>
+                </details>
+
+                <!-- 🏠 تخصيص أقسام الصفحة الرئيسية للمنصة: كل قسم اختياري بالكامل، والأدمن -->
+                <!-- حر يفعّله أو يلغيه في أي وقت، وكل عنصر جواه بياناته بيديها الأدمن بنفسه -->
+                <details class="dash-accordion" id="homeSectionsAccordion">
+                <summary><span><i class="fa fa-house-flag"></i> <span data-i18n="admin_home_sections_title">تخصيص أقسام الصفحة الرئيسية</span></span></summary>
+                <div class="box">
+                    <p style="font-size:11px; color:var(--text-muted); margin-top:-4px;">القسمين دول اختياريين بالكامل. لو مفعّلهم من غير أي عناصر جواهم، مش هيظهروا للزوار خالص.</p>
+
+                    <label style="font-size:13px; font-weight:bold; display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" id="platformShowFeaturesToggle" style="width:auto; margin:0;" onchange="localStorage.setItem('platformShowFeatures', this.checked); renderPlatformHome();">
+                        ✨ إظهار قسم "ليه تختارنا"
+                    </label>
+                    <div id="platformFeaturesAdminList" style="margin:8px 0;"></div>
+                    <input type="hidden" id="editFeatureIndex" value="-1">
+                    <select id="newFeatureIcon">
+                        <option value="✅">✅ صح</option>
+                        <option value="🚀">🚀 صاروخ</option>
+                        <option value="💰">💰 فلوس</option>
+                        <option value="🔒">🔒 قفل أمان</option>
+                        <option value="⚡">⚡ سرعة</option>
+                        <option value="🎯">🎯 هدف</option>
+                        <option value="📞">📞 دعم فني</option>
+                        <option value="🎁">🎁 هدية</option>
+                        <option value="⭐">⭐ نجمة</option>
+                        <option value="🛠️">🛠️ أدوات</option>
+                    </select>
+                    <input type="text" id="newFeatureTitle" placeholder="عنوان الميزة (مثال: بدون عمولة على مبيعاتك)">
+                    <input type="text" id="newFeatureText" placeholder="وصف قصير للميزة (اختياري)">
+                    <div style="display:flex; gap:8px;">
+                        <button onclick="addPlatformFeature()" id="saveFeatureBtn">إضافة ميزة <i class="fa fa-plus"></i></button>
+                        <button class="secondary hidden" id="cancelFeatureEditBtn" onclick="cancelEditPlatformFeature()">إلغاء</button>
+                    </div>
+
+                    <hr style="border-color: var(--border-color); margin: 18px 0;">
+
+                    <label style="font-size:13px; font-weight:bold; display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" id="platformShowStepsToggle" style="width:auto; margin:0;" onchange="localStorage.setItem('platformShowSteps', this.checked); renderPlatformHome();">
+                        <i class="fa fa-list-check"></i> إظهار قسم "خطوات البدء"
+                    </label>
+                    <div id="platformStepsAdminList" style="margin:8px 0;"></div>
+                    <input type="hidden" id="editStepIndex" value="-1">
+                    <input type="text" id="newStepTitle" placeholder="عنوان الخطوة (مثال: سجّل متجرك)">
+                    <input type="text" id="newStepText" placeholder="وصف قصير للخطوة (اختياري)">
+                    <div style="display:flex; gap:8px;">
+                        <button onclick="addPlatformStep()" id="saveStepBtn">إضافة خطوة <i class="fa fa-plus"></i></button>
+                        <button class="secondary hidden" id="cancelStepEditBtn" onclick="cancelEditPlatformStep()">إلغاء</button>
+                    </div>
+                </div>
+                </details>
+
+                <!-- 🏷️ باقات الاشتراك: تعريف كذا باقة بحدود مختلفة (منتجات/مساحة/مساعدين/مميزات) -->
+                <details class="dash-accordion" id="plansAccordion">
+                <summary><span><i class="fa fa-tags"></i> <span data-i18n="admin_plans_title">🏷️ باقات الاشتراك</span></span></summary>
+                <div class="box">
+                    <p style="font-size:11px; color:var(--text-muted); margin-top:-4px;">عرّف باقات مختلفة (زي مجانية/أساسي/متقدم/بريميوم)، كل واحدة بحدود مختلفة. بعد كده تقدر تحدد باقة كل متجر من قسم "إدارة المتاجر".</p>
+                    <div id="subscriptionPlansList"></div>
+                    <button class="secondary" onclick="addNewSubscriptionPlan()"><i class="fa fa-plus"></i> إضافة باقة جديدة</button>
+                </div>
+                </details>
+
+                <!-- 💳 إعدادات الاشتراك -->
+                <details class="dash-accordion" id="subSettingsAccordion">
+                <summary><span><i class="fa fa-credit-card"></i> <span data-i18n="admin_subscription_settings_title">إعدادات الاشتراك والدفع</span></span></summary>
+                <div class="box">
+                    <p style="font-size:11px; color:var(--text-muted); margin-top:-4px;">ملاحظة: التفعيل التلقائي الحقيقي عند التحويل (كاش / PayPal) غير ممكن في تطبيق يعمل من المتصفح فقط بدون سيرفر وبوابة دفع حقيقية؛ لذلك تم توفير نظام تذكير وتفعيل يدوي بدلاً من ذلك (زر "🔄 تجديد" جنب كل متجر في قسم "التحكم في المتاجر").</p>
+                    <input type="text" id="subscriptionPriceInput" placeholder="مثال: 150 ج.م / شهر">
+                    <label style="font-size:12px;">عدد أيام الفترة التجريبية المجانية:</label>
+                    <input type="number" id="trialDaysInput" placeholder="15">
+                    <label style="font-size:12px;">عدد أيام دورة التجديد الافتراضية (تقدر تخصص عدد مختلف لكل متجر لحاله وقت التجديد):</label>
+                    <input type="number" id="renewalCycleInput" placeholder="30">
+                    <label style="font-size:12px;">طرق الدفع المتاحة لتجديد الاشتراك (حدد ما يناسبك):</label>
+                    <div style="background:#fff; border:1px solid var(--border-color); border-radius:10px; padding:12px; margin-bottom:8px;">
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                            <label style="font-size:12px; font-weight:bold; color:#8B5CF6;">📲 انستاباي (InstaPay):</label>
+                            <input type="text" id="payInstapay" placeholder="رقم أو معرّف" style="margin:0; font-size:12px; padding:6px 10px;">
+                            <label style="font-size:12px; font-weight:bold; color:#e60000;">📱 فودافون كاش:</label>
+                            <input type="text" id="payVodafone" placeholder="رقم المحفظة" style="margin:0; font-size:12px; padding:6px 10px;">
+                            <label style="font-size:12px; font-weight:bold; color:#ff6600;">🟠 أورنج كاش:</label>
+                            <input type="text" id="payOrange" placeholder="رقم المحفظة" style="margin:0; font-size:12px; padding:6px 10px;">
+                            <label style="font-size:12px; font-weight:bold; color:#009900;">🟢 اتصالات كاش:</label>
+                            <input type="text" id="payEtisalat" placeholder="رقم المحفظة" style="margin:0; font-size:12px; padding:6px 10px;">
+                            <label style="font-size:12px; font-weight:bold; color:#0070ba;">💳 PayPal:</label>
+                            <input type="text" id="payPaypal" placeholder="البريد الإلكتروني" style="margin:0; font-size:12px; padding:6px 10px;">
+                            <label style="font-size:12px; font-weight:bold; color:#1e40af;">🏦 تحويل بنكي:</label>
+                            <input type="text" id="payBank" placeholder="رقم الحساب أو IBAN" style="margin:0; font-size:12px; padding:6px 10px;">
+                        </div>
+                    </div>
+                    <label style="font-size:12px;">نص رسالة التذكير التي تظهر للتاجر (استخدم {days} و {price} و {payNumber} وسيتم استبدالها تلقائياً):</label>
+                    <textarea id="subscriptionReminderTemplateInput" placeholder="مثال: باقي {days} يوم على تجديد اشتراكك بقيمة {price}، حوّل على {payNumber} لتفعيل التجديد."></textarea>
+                    <button onclick="saveSubscriptionPrice()">حفظ إعدادات الاشتراك</button>
+                </div>
+                </details>
+
+                <!-- 💾 نسخ احتياطي -->
+                <details class="dash-accordion" id="backupAccordion">
+                <summary><span><i class="fa fa-database"></i> <span data-i18n="admin_backup_title">النسخ الاحتياطي والاسترجاع</span></span></summary>
+                <div class="box">
+                    <p style="font-size:11px; color:var(--text-muted); margin-top:-4px;">يحفظ نسخة من كل بيانات المنصة (المتاجر، المنتجات، الإعدادات) في ملف واحد يمكن استرجاعه لاحقاً أو نقله لجهاز آخر.</p>
+                    <button onclick="exportBackup()"><i class="fa fa-download"></i> تصدير نسخة احتياطية (محلي - هذا الجهاز بس)</button>
+                    <div class="upload-btn-wrapper">
+                        <label class="custom-file-upload">
+                            <i class="fa fa-upload"></i> استيراد نسخة احتياطية (ملف JSON)
+                            <input type="file" id="restoreBackupFile" accept="application/json" style="display:none;" onchange="importBackup(this)">
+                        </label>
+                    </div>
+                    <hr style="margin:14px 0; border-color:var(--border-color);">
+                    <p style="font-size:11px; color:var(--text-muted); margin:0 0 6px;">☁️ نسخة شاملة من السحابة نفسها (Firestore) - كل المتاجر وطلباتها، تصلح لو عايز نسخة كاملة حقيقية من قاعدة البيانات مش بس من هذا الجهاز.</p>
+                    <button onclick="adminExportCloudBackup()" style="background:#0ea5e9;"><i class="fa fa-cloud-arrow-down"></i> تصدير نسخة شاملة من السحابة (كل المتاجر)</button>
+                    <div class="upload-btn-wrapper">
+                        <label class="custom-file-upload" style="background:#0284c7;">
+                            <i class="fa fa-cloud-arrow-up"></i> استيراد نسخة شاملة للسحابة (يستبدل بيانات المتاجر!)
+                            <input type="file" id="adminCloudRestoreFile" accept="application/json" style="display:none;" onchange="adminImportCloudBackup(this)">
+                        </label>
+                    </div>
+                </div>
+                </details>
+
+                <!-- 👥 حسابات المديرين -->
+                <details class="dash-accordion" id="adminAccountsAccordion">
+                <summary><span><i class="fa fa-users-cog"></i> <span data-i18n="admin_admins_title">فريق المنصة (مديرين ودعم فني)</span></span></summary>
+                <div class="box">
+                    <div id="adminAccountsList"></div>
+                    <div style="margin-top:8px;">
+                        <input type="text" id="newAdminUsername" placeholder="اسم المستخدم">
+                        <input type="text" id="newAdminPassword" placeholder="كلمة المرور">
+                        <select id="newAdminRole" onchange="toggleNewAdminStorePerms()">
+                            <option value="support">دعم فني (صلاحية محدودة على متاجر معينة)</option>
+                            <option value="super">مدير عام (كل الصلاحيات وكل المتاجر)</option>
+                        </select>
+                        <div id="newAdminStoresPermBox" style="background:#fff; border:1px solid var(--border-color); border-radius:10px; padding:10px; max-height:160px; overflow-y:auto; margin-bottom:8px;">
+                            <p style="font-size:11px; color:var(--text-muted); margin:0 0 6px;">اختر المتاجر التي يُسمح لهذا الحساب بإدارتها:</p>
+                            <div id="newAdminStoresChecklist"></div>
+                        </div>
+                        <div id="newAdminPermsBox" style="background:#fff; border:1px solid var(--border-color); border-radius:10px; padding:10px; max-height:220px; overflow-y:auto; margin-bottom:8px;">
+                            <p style="font-size:11px; color:var(--text-muted); margin:0 0 6px;">حدد بالظبط إيه اللي يقدر يعمله هذا الحساب داخل المتاجر المسموح له بها (تقدر تختار أي عدد وأي تركيبة):</p>
+                            <div id="newAdminPermsChecklist"></div>
+                        </div>
+                        <div id="newAdminPanelPermsBox" style="background:#fff; border:1px solid var(--border-color); border-radius:10px; padding:10px; max-height:180px; overflow-y:auto; margin-bottom:8px;">
+                            <p style="font-size:11px; color:var(--text-muted); margin:0 0 6px;">وحدد كمان أي أجزاء من لوحة الإدارة نفسها (مش المتاجر) يقدر يشوفها أو يستخدمها:</p>
+                            <div id="newAdminPanelPermsChecklist"></div>
+                        </div>
+                        <button style="width:100%; margin:0;" onclick="addAdminAccount()"><i class="fa fa-plus"></i> إضافة الحساب</button>
+                    </div>
+                </div>
+                </details>
+
+                <!-- 🧩 أكواد مخصصة (متقدمة) -->
+                <details class="dash-accordion" id="customCodeAccordion">
+                <summary><span><i class="fa fa-code"></i> <span data-i18n="admin_custom_code_title">أكواد مخصصة (HTML / CSS / JS)</span> <span id="platformSnippetsCountBadge" class="hidden" style="background:var(--primary-color); color:#fff; font-size:10px; font-weight:bold; padding:2px 7px; border-radius:20px; margin-right:4px;"></span></span></summary>
+                <div class="box">
+                    <p style="font-size:11.5px; color:#9a3412; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:8px 10px; margin-top:-4px;">
+                        ⚠️ منطقة متقدمة: أي كود مفعّل هنا هيتنفذ فعليًا في كل صفحات المنصة عند كل الزوار. مفيش داعي تستخدمها إلا لو معاك كود جاهز من مصدر موثوق (زي أكواد جوجل أناليتكس أو Facebook Pixel أو ودجت شات). تقدر تضيف أكتر من كود، كل واحد باسمه، وتفعّل/تعطّل/تعدّل/تحذف أي واحد براحتك.
+                    </p>
+
+                    <div id="platformSnippetsList"></div>
+
+                    <button onclick="openPlatformSnippetForm(-1)" style="background:var(--secondary-color, #2d2a26);"><i class="fa fa-plus"></i> إضافة كود جديد</button>
+
+                    <div id="platformSnippetFormBox" class="hidden" style="background:var(--bg-body); border:1px solid var(--border-color); border-radius:10px; padding:10px; margin-top:10px;">
+                        <input type="hidden" id="platformSnippetEditIndex" value="-1">
+                        <h4 id="platformSnippetFormHeader" style="margin:0 0 8px; color:var(--primary-color);">🧩 إضافة كود جديد</h4>
+                        <input type="text" id="platformSnippetNameInput" placeholder="اسم الكود (مثلاً: كود جوجل أناليتكس) - علشان تفتكره بعدين">
+                        <select id="platformSnippetTypeSelect">
+                            <option value="css">🎨 CSS (تنسيق فقط)</option>
+                            <option value="html">📄 HTML (عناصر مرئية)</option>
+                            <option value="js">⚙️ JavaScript (سكريبت فقط)</option>
+                            <option value="code">🧩 HTML + JavaScript معًا (ودجت / بكسل / شات)</option>
+                        </select>
+                        <label style="font-size:12px; font-weight:bold;">🎯 يشتغل فين؟</label>
+                        <select id="platformSnippetScopeSelect" onchange="onSnippetScopeChange()">
+                            <option value="all">🌐 المنصة + كل المتاجر</option>
+                            <option value="platform">🏛️ صفحات المنصة فقط</option>
+                            <option value="stores">🏪 متاجر محددة (أختارها)</option>
+                        </select>
+                        <div id="platformSnippetStoresBox" class="hidden" style="background:#fff; border:1px solid var(--border-color); border-radius:8px; padding:8px; margin-bottom:8px; max-height:160px; overflow:auto;"></div>
+                        <textarea id="platformSnippetContentInput" placeholder="الصق الكود هنا..." style="direction:ltr; text-align:left; font-family:monospace; font-size:12px; min-height:110px;"></textarea>
+                        <label style="font-size:12px; display:flex; align-items:center; gap:6px;">
+                            <input type="checkbox" id="platformSnippetEnabledInput" checked style="width:auto; margin:0;"> مفعّل (شغال على المنصة فورًا بعد الحفظ)
+                        </label>
+                        <div style="display:flex; gap:8px; margin-top:8px;">
+                            <button onclick="savePlatformSnippetForm()" style="margin:0;"><i class="fa fa-save"></i> حفظ الكود</button>
+                            <button class="secondary" onclick="closePlatformSnippetForm()" style="margin:0;">إلغاء</button>
+                        </div>
+                    </div>
+
+                    <p style="font-size:10.5px; color:var(--text-muted); margin-top:10px;">ملاحظة: طالما البيانات لسه متخزنة على جهازك (قبل ربط المنصة بسيرفر مشترك)، الأكواد دي هتشتغل بس على جهازك انت. لما تتربط المنصة بسيرفر (Supabase)، نفس الخاصية هتشتغل تلقائيًا لكل الزوار من أي جهاز.</p>
+                </div>
+                </details>
+
+            </div>
+
+            <button class="danger" onclick="logoutApp()" style="margin-top:8px;">تسجيل الخروج <i class="fa fa-power-off"></i></button>
+        </div>
+
+<div id="storeCustomCodeModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0; color:var(--text-main); font-size:15px;"><i class="fa fa-code"></i> أكواد مخصصة لمتجر: <span id="storeCustomCodeModalName"></span></h3>
+                <span class="modal-close-chip" onclick="closeStoreCustomCodeModal()"><i class="fa fa-times"></i> <span data-i18n="close_label">إغلاق</span></span>
+            </div>
+            <input type="hidden" id="storeCustomCodeModalTarget" value="">
+            <p style="font-size:11.5px; color:#9a3412; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:8px 10px;">⚠️ أي كود مفعّل هنا هيتنفذ بس جوه المتجر ده تحديدًا، ومش هيأثر على أي متجر تاني ولا على الصفحة الرئيسية للمنصة.</p>
+
+            <div id="storeSnippetsList"></div>
+
+            <button onclick="openStoreSnippetForm(-1)" style="background:var(--secondary-color, #2d2a26);"><i class="fa fa-plus"></i> إضافة كود جديد</button>
+
+            <div id="storeSnippetFormBox" class="hidden" style="background:var(--bg-body); border:1px solid var(--border-color); border-radius:10px; padding:10px; margin-top:10px;">
+                <input type="hidden" id="storeSnippetEditIndex" value="-1">
+                <h4 id="storeSnippetFormHeader" style="margin:0 0 8px; color:var(--primary-color);">🧩 إضافة كود جديد</h4>
+                <input type="text" id="storeSnippetNameInput" placeholder="اسم الكود (مثلاً: ودجت شات واتساب) - علشان تفتكره بعدين">
+                <select id="storeSnippetTypeSelect">
+                    <option value="css">🎨 CSS (تنسيق فقط)</option>
+                    <option value="html">📄 HTML (عناصر مرئية)</option>
+                            <option value="js">⚙️ JavaScript (سكريبت فقط)</option>
+                            <option value="code">🧩 HTML + JavaScript معًا</option>
+                </select>
+                <textarea id="storeSnippetContentInput" placeholder="الصق الكود هنا..." style="direction:ltr; text-align:left; font-family:monospace; font-size:12px; min-height:110px;"></textarea>
+                <label style="font-size:12px; display:flex; align-items:center; gap:6px;">
+                    <input type="checkbox" id="storeSnippetEnabledInput" checked style="width:auto; margin:0;"> مفعّل (شغال في المتجر فورًا بعد الحفظ)
+                </label>
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                    <button onclick="saveStoreSnippetForm()" style="margin:0;"><i class="fa fa-save"></i> حفظ الكود</button>
+                    <button class="secondary" onclick="closeStoreSnippetForm()" style="margin:0;">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<div id="storeCoOwnersModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0; color:var(--text-main); font-size:15px;"><i class="fa fa-user-friends"></i> تجار شركاء لمتجر: <span id="storeCoOwnersModalName"></span></h3>
+                <span class="modal-close-chip" onclick="closeStoreCoOwnersModal()"><i class="fa fa-times"></i> <span data-i18n="close_label">إغلاق</span></span>
+            </div>
+            <input type="hidden" id="storeCoOwnersModalTarget" value="">
+            <p style="font-size:11.5px; color:#1e40af; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:8px 10px;">
+                🤝 كل شريك بتضيفه هنا هيقدر يدخل ببياناته الخاصة (منفصلة تمامًا عن كلمة سر صاحب المتجر الأصلي) ويدير المتجر ده بالكامل، بنفس صلاحيات المالك (مش مساعد محدود). صاحب المتجر الأصلي هيفضل شايف كل تعاملات الشركاء برضه.
+            </p>
+
+            <div id="storeCoOwnersList" style="margin-bottom:10px;"></div>
+
+            <div style="background:var(--bg-body); border:1px solid var(--border-color); border-radius:10px; padding:10px;">
+                <h4 style="margin:0 0 8px; font-size:13px; color:var(--primary-color);">➕ إضافة شريك جديد</h4>
+                <input type="text" id="newCoOwnerUsername" placeholder="اسم دخول الشريك (فريد وغير مكرر على المنصة كلها)">
+                <input type="password" id="newCoOwnerPassword" placeholder="كلمة مرور الشريك">
+                <button id="addCoOwnerBtn" onclick="addStoreCoOwner()" style="margin:0;"><i class="fa fa-user-plus"></i> إضافة الشريك</button>
+            </div>
+        </div>
+    </div>
+
+<div id="storeColorsModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0; color:var(--text-main); font-size:15px;"><i class="fa fa-palette"></i> تخصيص ألوان متجر: <span id="storeColorsModalName"></span></h3>
+                <span class="modal-close-chip" onclick="closeStoreColorsModal()"><i class="fa fa-times"></i> <span data-i18n="close_label">إغلاق</span></span>
+            </div>
+            <input type="hidden" id="storeColorsModalTarget" value="">
+            <p style="font-size:11.5px; color:var(--text-muted); margin-top:-4px;">اختر ألوان هوية المتجر، هتتطبق فورًا على المتجر ده بس لما الزوار يفتحوه، من غير ما تأثر على باقي المتاجر أو الصفحة الرئيسية للمنصة.</p>
+
+            <h4 style="margin:10px 0 6px; font-size:12.5px;">🎨 تشكيلات جاهزة (اضغط لتجربتها فورًا):</h4>
+            <div id="storeColorPresetsRow" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;"></div>
+
+            <h4 style="margin:6px 0; font-size:12.5px;">✏️ أو حدد كل لون بنفسك:</h4>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px 14px;">
+                <label style="font-size:12px; display:flex; flex-direction:column; gap:4px;">اللون الأساسي (الأزرار والعناوين)
+                    <input type="color" id="storeColorPrimary" style="width:100%; height:36px; padding:2px; border-radius:8px; margin:0;">
+                </label>
+                <label style="font-size:12px; display:flex; flex-direction:column; gap:4px;">اللون الثانوي (تمييز وروابط)
+                    <input type="color" id="storeColorAccent" style="width:100%; height:36px; padding:2px; border-radius:8px; margin:0;">
+                </label>
+                <label style="font-size:12px; display:flex; flex-direction:column; gap:4px;">لون خلفية الصفحة
+                    <input type="color" id="storeColorBg" style="width:100%; height:36px; padding:2px; border-radius:8px; margin:0;">
+                </label>
+                <label style="font-size:12px; display:flex; flex-direction:column; gap:4px;">لون خلفية البطاقات
+                    <input type="color" id="storeColorCard" style="width:100%; height:36px; padding:2px; border-radius:8px; margin:0;">
+                </label>
+                <label style="font-size:12px; display:flex; flex-direction:column; gap:4px;">لون النصوص الأساسي
+                    <input type="color" id="storeColorText" style="width:100%; height:36px; padding:2px; border-radius:8px; margin:0;">
+                </label>
+                <label style="font-size:12px; display:flex; flex-direction:column; gap:4px;">لون النجوم / التقييم
+                    <input type="color" id="storeColorStar" style="width:100%; height:36px; padding:2px; border-radius:8px; margin:0;">
+                </label>
+            </div>
+
+            <div style="display:flex; gap:8px; margin-top:14px;">
+                <button onclick="saveStoreColors()" style="margin:0;"><i class="fa fa-save"></i> حفظ الألوان</button>
+                <button class="secondary" onclick="resetStoreColors()" style="margin:0;">استعادة الافتراضي</button>
+            </div>
+        </div>
+    </div>
+
+<div id="editAdminPermsModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0; color:var(--text-main); font-size:15px;"><i class="fa fa-user-shield"></i> صلاحيات الحساب: <span id="editAdminPermsModalName"></span></h3>
+                <span class="modal-close-chip" onclick="closeEditAdminPermsModal()"><i class="fa fa-times"></i> <span data-i18n="close_label">إغلاق</span></span>
+            </div>
+            <input type="hidden" id="editAdminPermsModalIndex" value="">
+
+            <h4 style="margin:6px 0; font-size:12.5px;">🏪 المتاجر المسموح له بإدارتها:</h4>
+            <div id="editAdminStoresChecklist" style="background:#fff; border:1px solid var(--border-color); border-radius:10px; padding:10px; max-height:150px; overflow-y:auto;"></div>
+
+            <h4 style="margin:12px 0 6px; font-size:12.5px;">🛡️ صلاحيات التحكم في المتاجر دي:</h4>
+            <div id="editAdminPermsChecklist" style="background:#fff; border:1px solid var(--border-color); border-radius:10px; padding:10px; max-height:240px; overflow-y:auto;"></div>
+
+            <h4 style="margin:12px 0 6px; font-size:12.5px;">🗂️ أجزاء لوحة الإدارة المسموح له باستخدامها:</h4>
+            <div id="editAdminPanelPermsChecklist" style="background:#fff; border:1px solid var(--border-color); border-radius:10px; padding:10px; max-height:180px; overflow-y:auto;"></div>
+
+            <!-- 💬 روابط تواصل خارجية اختيارية (واتساب/تليجرام) لو التاجر يفضّل يتواصل
+                 خارج الشات الداخلي، زائد زرار "إيقاف الشات عن نفسي" الخاص بهذا الحساب. -->
+            <h4 style="margin:12px 0 6px; font-size:12.5px;" data-i18n="chat_staff_contact_title">💬 إعدادات التواصل الخاصة بهذا الحساب</h4>
+            <div style="background:#fff; border:1px solid var(--border-color); border-radius:10px; padding:10px;">
+                <label style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;"><span data-i18n="chat_my_availability_toggle">✅ متاح للشات حاليًا (إلغاء التفعيل يوقف الشات عن هذا الحساب تحديدًا)</span>
+                    <input type="checkbox" id="editAdminChatAvailable" style="width:auto; margin:0; flex-shrink:0;">
+                </label>
+                <input type="text" id="editAdminWhatsapp" data-i18n-ph="chat_staff_whatsapp_ph" placeholder="رقم واتساب (اختياري، مثال: 2010...)" style="margin-bottom:6px;">
+                <input type="text" id="editAdminTelegram" data-i18n-ph="chat_staff_telegram_ph" placeholder="رابط تليجرام (اختياري، مثال: https://t.me/...)">
+            </div>
+
+            <button onclick="saveEditedAdminPerms()" style="margin-top:12px;"><i class="fa fa-save"></i> حفظ الصلاحيات</button>
+        </div>
+    </div>
+
+<div id="usageGuideModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0; color:var(--text-main); font-size:16px;"><i class="fa fa-book"></i> <span data-i18n="dash_guide_title">دليل الاستخدام</span></h3>
+                <span class="modal-close-chip" onclick="closeUsageGuideModal()"><i class="fa fa-times"></i> <span data-i18n="close_label">إغلاق</span></span>
+            </div>
+            <div id="usageGuideModalBody"></div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         💬 مودالات الشات المباشر الثلاثة (تاجر، صندوق محادثات الأدمن، نافذة شات
+         الأدمن) - لازم تبقى هنا جوه جذر الصفحة (مش جوه dashboardSection/adminSection)
+         عشان أيقونة الشات الموحّدة في الهيدر العلوي تقدر تفتحها من أي تبويب/صفحة،
+         مش بس وإحنا فاتحين لوحة التاجر أو الأدمن فعليًا. لو فضلت جوه قسم عليه
+         class="hidden"، المودال هيفضل مخفي معاه حتى لو شيلنا hidden من نفسه.
+         ============================================================ -->
+    <div id="merchantChatModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width:420px; display:flex; flex-direction:column; height:min(600px, 85vh); padding:0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid var(--border-color); flex-shrink:0;">
+            <h3 style="margin:0; color:var(--primary-color); font-size:15px;"><i class="fa fa-comment-dots"></i> <span data-i18n="chat_merchant_title">تواصل مع فريق الدعم</span></h3>
+            <button class="secondary" style="width:auto; margin:0; padding:4px 10px;" onclick="closeMerchantChatModal()"><i class="fa fa-times"></i></button>
+        </div>
+        <div id="merchantChatAwayBanner" class="hidden" style="background:#fff7ed; border-bottom:1px solid #fed7aa; color:#9a3412; font-size:12px; padding:8px 12px; flex-shrink:0;"></div>
+        <div id="merchantChatMessagesBox" style="flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:8px; background:var(--bg-body);"></div>
+        <div id="merchantChatInputRow" style="display:flex; gap:6px; padding:10px; border-top:1px solid var(--border-color); flex-shrink:0;">
+            <input type="text" id="merchantChatInput" data-i18n-ph="chat_input_ph" placeholder="اكتب رسالتك هنا..." style="flex:1; margin:0;" onkeydown="if(event.key==='Enter'){event.preventDefault(); sendMerchantChatMessage();}">
+            <button style="width:auto; margin:0; padding:0 16px; flex-shrink:0;" onclick="sendMerchantChatMessage()"><i class="fa fa-paper-plane"></i></button>
+        </div>
+    </div>
+    </div>
+
+    <div id="adminChatInboxModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width:460px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <h3 style="margin:0; color:var(--primary-color); font-size:15px;"><i class="fa fa-inbox"></i> <span data-i18n="chat_admin_open_inbox">صندوق محادثات التجار</span></h3>
+            <button class="secondary" style="width:auto; margin:0; padding:4px 10px;" onclick="closeAdminChatInboxModal()"><i class="fa fa-times"></i></button>
+        </div>
+        <div id="adminChatInboxLoading" style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;" data-i18n="chat_admin_loading">⏳ بنجمّع المحادثات...</div>
+        <div id="adminChatInboxList" style="max-height:60vh; overflow-y:auto;"></div>
+    </div>
+    </div>
+
+    <div id="adminChatThreadModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width:420px; display:flex; flex-direction:column; height:min(600px, 85vh); padding:0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid var(--border-color); flex-shrink:0;">
+            <h3 id="adminChatThreadTitle" style="margin:0; color:var(--primary-color); font-size:15px;"><i class="fa fa-comment-dots"></i> ...</h3>
+            <div style="display:flex; gap:6px;">
+                <button class="secondary" title="إنهاء المحادثة وطلب تقييم من التاجر" data-i18n-title="chat_close_rate_title" style="width:auto; margin:0; padding:4px 10px; font-size:11px;" onclick="closeAdminChatConversationAndRate()"><i class="fa fa-star"></i> <span data-i18n="chat_close_rate_btn">إنهاء وطلب تقييم</span></button>
+                <button class="secondary" style="width:auto; margin:0; padding:4px 10px;" onclick="closeAdminChatThreadModal()"><i class="fa fa-times"></i></button>
+            </div>
+        </div>
+        <div id="adminChatThreadMessagesBox" style="flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:8px; background:var(--bg-body);"></div>
+        <div style="display:flex; gap:6px; padding:10px; border-top:1px solid var(--border-color); flex-shrink:0;">
+            <input type="text" id="adminChatThreadInput" data-i18n-ph="chat_input_ph" placeholder="اكتب رسالتك هنا..." style="flex:1; margin:0;" onkeydown="if(event.key==='Enter'){event.preventDefault(); sendAdminChatMessage();}">
+            <button style="width:auto; margin:0; padding:0 16px; flex-shrink:0;" onclick="sendAdminChatMessage()"><i class="fa fa-paper-plane"></i></button>
+        </div>
+    </div>
+    </div>
+
+    <!-- ⭐ مودال تقييم الدعم (جانب التاجر) - بيظهر تلقائيًا لحظة ما الدعم يطلب تقييم -->
+    <div id="merchantChatRatingModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width:360px; text-align:center;">
+        <h3 style="margin:0 0 6px; color:var(--primary-color);" data-i18n="chat_rating_modal_title">⭐ قيّم تجربتك مع فريق الدعم</h3>
+        <p style="font-size:12px; color:var(--text-muted); margin:0 0 12px;" data-i18n="chat_rating_modal_subtitle">رأيك بيساعدنا نحسّن خدمة الدعم باستمرار</p>
+        <div id="merchantChatRatingStars" style="margin:10px 0;"></div>
+        <textarea id="merchantChatRatingNote" data-i18n-ph="chat_rating_note_ph" placeholder="ملاحظة إضافية (اختياري)..." style="min-height:60px;"></textarea>
+        <div style="display:flex; gap:8px; margin-top:10px;">
+            <button class="secondary" onclick="dismissMerchantRatingModal()" style="margin:0; flex:1;" data-i18n="chat_rating_skip_btn">لاحقًا</button>
+            <button onclick="submitMerchantChatRating()" style="margin:0; flex:1;" data-i18n="chat_rating_submit_btn">إرسال التقييم</button>
+        </div>
+    </div>
+    </div>
+
+    <!-- 📊 لوحة تقييمات الدعم (جانب الأدمن) - متوسط لكل موظف + قائمة كل التقييمات -->
+    <div id="adminChatRatingsModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width:480px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <h3 style="margin:0; color:var(--primary-color); font-size:15px;"><i class="fa fa-star"></i> <span data-i18n="chat_ratings_open_btn">تقييمات الدعم</span></h3>
+            <button class="secondary" style="width:auto; margin:0; padding:4px 10px;" onclick="closeAdminChatRatingsPanel()"><i class="fa fa-times"></i></button>
+        </div>
+        <div id="adminChatRatingsLoading" style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;" data-i18n="chat_admin_loading">⏳ بنجمّع المحادثات...</div>
+        <div id="adminChatRatingsSummary" style="margin-bottom:10px;"></div>
+        <div id="adminChatRatingsList" style="max-height:48vh; overflow-y:auto;"></div>
+    </div>
+    </div>
+
+    <!-- 👥 إدارة المشترين المسجلين في المتجر (من لوحة التاجر) -->
+    <div id="buyerManagementModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width:480px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <h3 style="margin:0; color:var(--primary-color); font-size:15px;"><i class="fa fa-users"></i> <span data-i18n="set_buyer_mgmt_btn">إدارة المشترين المسجلين</span></h3>
+            <button class="secondary" style="width:auto; margin:0; padding:4px 10px;" onclick="closeBuyerManagementModal()"><i class="fa fa-times"></i></button>
+        </div>
+        <div id="buyerManagementList" style="max-height:60vh; overflow-y:auto;"></div>
+    </div>
+    </div>
+
+    <!-- 💬 قائمة محادثات كل العملاء مع المتجر (من لوحة التاجر) -->
+    <div id="buyerChatThreadsModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width:480px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <h3 style="margin:0; color:var(--primary-color); font-size:15px;"><i class="fa fa-comments"></i> <span data-i18n="buyer_chats_mgmt_btn">محادثات العملاء</span></h3>
+            <button class="secondary" style="width:auto; margin:0; padding:4px 10px;" onclick="closeBuyerChatThreadsModal()"><i class="fa fa-times"></i></button>
+        </div>
+        <div id="buyerChatThreadsList" style="max-height:65vh; overflow-y:auto;"></div>
+    </div>
+    </div>
+
+    <!-- 💬 محادثة التاجر مع عميل واحد بالتحديد -->
+    <div id="buyerChatThreadModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width:480px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <h3 id="buyerChatThreadTitle" style="margin:0; color:var(--primary-color); font-size:15px;"><i class="fa fa-comment-dots"></i> <span></span></h3>
+            <button class="secondary" style="width:auto; margin:0; padding:4px 10px;" onclick="closeBuyerChatThreadModal()"><i class="fa fa-times"></i></button>
+        </div>
+        <div id="merchantBuyerChatMessagesBox" style="max-height:50vh; overflow-y:auto; background:var(--bg-body); border-radius:10px; padding:8px; margin-bottom:8px; display:flex; flex-direction:column; gap:6px;"></div>
+        <div style="display:flex; gap:6px;">
+            <input type="text" id="merchantBuyerChatInput" data-i18n-ph="buyer_chat_ph" placeholder="اكتب رسالتك هنا..." style="margin:0; flex:1;" onkeydown="if(event.key==='Enter'){sendMerchantBuyerChatMsg();}">
+            <button style="width:auto; margin:0; padding:10px 16px;" onclick="sendMerchantBuyerChatMsg()"><i class="fa fa-paper-plane"></i></button>
+        </div>
+    </div>
+    </div>
