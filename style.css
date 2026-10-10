@@ -1,0 +1,323 @@
+        :root {
+            /* درجات ألوان مريحة ومستوحاة من الهوية الدفيئة */
+            --bg-body: #f6f0ea; 
+            --bg-card: #fbf8f5; 
+            --bg-box: #ffffff; 
+            --text-main: #2b2623; 
+            --text-muted: #786f66; 
+            --primary-color: #d97706; 
+            --accent-color: #2563eb; 
+            --border-color: #e5dec9; 
+            --star-color: #f59e0b; 
+            --whatsapp-green: #25d366; 
+            --messenger-blue: #0084ff;
+            --vodafone-red: #e11d48;
+        }
+
+        /* 🛟 شبكة أمان عامة للموبايل: لو أي صورة (لوجو متجر، بانر، منتج...) جاتلها أبعاد
+           أكبر بكثير من المتوقع، أو حصل أي تعارض في تحميل كلاس معيّن، القاعدتين دول بيمنعوا
+           أي عنصر إنه "يفلت" ويكسر عرض الصفحة أو يطلع خارج حدود الشاشة على الموبايل. */
+        * { box-sizing: border-box; }
+        html { overflow-x: hidden; }
+        img, video { max-width: 100%; }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding-bottom: 85px;
+            direction: rtl;
+            overflow-x: hidden;
+        }
+        
+        /* شريط اللغات والهيدر المحسن والمتناسق */
+        .top-language-bar {
+            background: #2b2623;
+            color: #fff;
+            padding: 5px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+        .lang-select {
+            background: #3f3835;
+            color: #fff;
+            border: 1px solid #574e4a;
+            border-radius: 5px;
+            padding: 2px 8px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        header { 
+            background: var(--bg-box); 
+            padding: 12px 20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 1px solid var(--border-color); 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); 
+            position: sticky;
+            top: 0;
+            z-index: 900;
+        }
+        .header-brand { display: flex; align-items: center; gap: 10px; }
+        .header-brand img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--primary-color); display: none; }
+        .header-brand span { font-weight: bold; font-size: 18px; color: var(--text-main); }
+
+        .container { padding: 15px; max-width: 600px; margin: auto; }
+        .box { background: var(--bg-card); padding: 18px; border-radius: 18px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); border: 1px solid var(--border-color); }
+        /* أقسام لوحة التاجر القابلة للطي: تفتح بالضغط بس، عشان اللوحة تبقى خفيفة وسريعة وميحتاجش التاجر يسكرول كتير */
+        .dash-accordion { margin-bottom: 12px; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.02); border: 1px solid var(--border-color); }
+        .dash-accordion > summary { list-style: none; cursor: pointer; padding: 14px 18px; background: var(--bg-card); font-weight: bold; color: var(--text-main); display: flex; align-items: center; justify-content: space-between; font-size: 14px; }
+        .dash-accordion > summary::-webkit-details-marker { display: none; }
+        .dash-accordion > summary::after { content: '\f107'; font-family: 'Font Awesome 5 Free'; font-weight: 900; color: var(--text-muted); transition: transform 0.2s; }
+        .dash-accordion[open] > summary::after { transform: rotate(180deg); }
+        .dash-accordion[open] > summary { border-bottom: 1px solid var(--border-color); }
+        .dash-accordion > .box { margin: 0; border: none; border-radius: 0; box-shadow: none; }
+        /* زرار يفتح شاشة مستقلة (مودال) بدل الأكورديون العادي - نفس شكل عنوان الأكورديون بالظبط عشان يفضل شكل اللوحة متناسق */
+        .dash-quick-btn { width: 100%; margin-bottom: 12px; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); border: 1px solid var(--border-color); padding: 14px 18px; background: var(--bg-card); font-weight: bold; color: var(--text-main); display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer; font-family: inherit; }
+        .dash-quick-btn:hover { background: var(--bg-body); }
+        
+        input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid var(--border-color); font-size: 14px; box-sizing: border-box; background: #fff; color: var(--text-main); transition: 0.2s; }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.12); }
+        
+        button { background: var(--primary-color); color: white; font-weight: bold; cursor: pointer; border: none; padding: 12px; border-radius: 10px; font-size: 15px; transition: 0.2s; width: 100%; margin: 8px 0; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        button:hover { opacity: 0.92; transform: translateY(-1px); }
+        button.secondary { background: #6b7280; }
+        button.danger { background: #ef4444; }
+        button.edit { background: var(--accent-color); padding: 6px 12px; width: auto; font-size: 13px; margin: 0; }
+        
+        /* رفع المعاينة للصورة */
+        .upload-btn-wrapper { margin: 8px 0; text-align: center; }
+        .custom-file-upload { display: inline-block; padding: 10px 15px; cursor: pointer; background: #fff; border: 1px dashed var(--primary-color); border-radius: 10px; color: var(--primary-color); font-weight: bold; width: 100%; box-sizing: border-box; transition: 0.2s; }
+        .img-preview-box { width: 100%; max-height: 140px; object-fit: contain; border-radius: 8px; margin-top: 8px; border: 1px dashed var(--border-color); display: none; background: #fff; padding: 4px; }
+
+        /* شريط العروض العلوي السريع */
+        .amazon-top-bar { display: flex; overflow-x: auto; gap: 12px; padding: 10px 0; margin-bottom: 12px; scrollbar-width: none; }
+        .amazon-top-bar::-webkit-scrollbar { display: none; }
+        .amazon-shortcut-item { min-width: 70px; text-align: center; cursor: pointer; text-decoration: none; color: inherit; display: flex; flex-direction: column; align-items: center; }
+        .amazon-shortcut-item img { width: 55px; height: 55px; object-fit: cover; border-radius: 50%; border: 2px solid var(--primary-color); padding: 2px; background: #fff; }
+        .amazon-shortcut-item span { font-size: 11px; margin-top: 5px; font-weight: 600; white-space: nowrap; }
+
+        /* الأقسام والمنتجات */
+        .categories-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
+        .cat-card { background: var(--bg-card); border-radius: 15px; overflow: hidden; text-align: center; cursor: pointer; border: 1px solid var(--border-color); box-shadow: 0 3px 10px rgba(43,38,35,0.05); transition: transform 0.2s, box-shadow 0.2s; }
+        @keyframes countdownPulse { 0%, 100% { box-shadow: 0 3px 10px rgba(220,38,38,0.35); } 50% { box-shadow: 0 3px 16px rgba(220,38,38,0.7); } }
+        @keyframes pulseGlow { 0%, 100% { box-shadow:0 4px 14px rgba(234,88,12,0.35); } 50% { box-shadow:0 4px 22px rgba(234,88,12,0.6); } }
+        /* ✖️ زرار الإغلاق الموحّد لكل النوافذ في المتجر واللوحات - شكل واحد أنيق ومتسق بدل
+           الشكل القديم (× كبيرة معلقة جنب كلمة صغيرة مش متناسقة معاها). */
+        .modal-close-chip { display:inline-flex; align-items:center; gap:5px; background:#f3f4f6; color:var(--text-muted); padding:6px 13px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; border:1px solid var(--border-color); line-height:1.4; user-select:none; }
+        .modal-close-chip:active { background:#e5e7eb; }
+        .modal-close-chip i { font-size:11px; }
+        .cat-card:hover { border-color: var(--primary-color); transform: translateY(-3px); box-shadow: 0 8px 18px rgba(43,38,35,0.1); }
+
+        /* ============================================================
+           🖼️ صور الأقسام/المنتجات: بتملا الخانة بالكامل بالصورة الحقيقية
+           نفسها (مش نسخة مموّهة) عشان تبقى واضحة وحادة زي المتاجر
+           الاحترافية. لو الصورة مش بنفس نسبة الخانة، بيتقص بس الفايض
+           البسيط من الحواف (زي أي متجر إلكتروني عادي)، والصورة نفسها
+           تفضل واضحة 100% من غير أي بلور.
+           ============================================================ */
+        .cat-card img { width: 100%; height: 110px; object-fit: cover; display: block; transition: transform 0.35s ease; }
+        .cat-card:hover img { transform: scale(1.06); }
+        .cat-card h4 { margin: 10px 0; font-size: 15px; color: var(--text-main); }
+
+        .products-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .product-card { background: var(--bg-card); border-radius: 15px; padding: 10px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--border-color); box-shadow: 0 3px 10px rgba(43,38,35,0.05); transition: transform 0.2s, box-shadow 0.2s; }
+        .product-card:hover { border-color: var(--primary-color); transform: translateY(-3px); box-shadow: 0 8px 18px rgba(43,38,35,0.1); }
+        .product-card img { width: 100%; height: 130px; object-fit: cover; border-radius: 10px; display: block; }
+        
+        .product-title { font-size: 14px; font-weight: 600; color: var(--text-main); margin: 6px 0 3px; height: 34px; overflow: hidden; }
+        .price-tag { color: var(--primary-color); font-weight: bold; font-size: 16px; margin: 3px 0; }
+        .outer-rating { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+        .outer-rating i { color: var(--star-color); }
+
+        /* النوافذ المنبثقة */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; display: flex; justify-content: center; align-items: flex-end; backdrop-filter: blur(3px); }
+        /* نافذة "تأكيد الإرسال" لازم تظهر فوق نافذة "بيانات التسليم" لما الاتنين مفتوحين مع بعض
+           (بيحصل ده لحظة اختيار واتساب/ماسنجر/تيليجرام) - من غير z-index أعلى هنا، كانت نافذة
+           بيانات التسليم بتغطي عليها تمامًا لأنها بتيجي بعدها في الـ HTML، فيحس المستخدم إن
+           الزرار "مش شغال" مع إنه فعليًا بيفتح نافذة تأكيد المستخدم مش شايفها. */
+        #orderConfirmModal { z-index: 2100; }
+        .modal-content { background: #fff; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; padding: 22px; border-radius: 20px 20px 0 0; box-sizing: border-box; }
+        /* ============================================================
+           🖥️ نافذة تفاصيل المنتج على الشاشات الكبيرة: كانت بتظهر كأنها
+           "شيت" مربوط بأسفل الشاشة (تصميم موبايل)، وده على شاشة كمبيوتر
+           كبيرة بيبان صغير وغريب المكان. من 700px لفوق بنخليها نافذة
+           متمركزة في النص باستدارة كاملة، ومن 1000px لفوق بنقسمها لعمودين
+           (الصورة يمين، التفاصيل شمال) زي صفحة منتج أمازون بالظبط.
+           ============================================================ */
+        .product-modal-top { display: flex; flex-direction: column; }
+        
+        .star-rating { direction: ltr; display: inline-flex; font-size: 26px; cursor: pointer; }
+        .star { color: #d1d5db; }
+        .star.selected { color: var(--star-color); }
+
+        /* شريط التنقل السفلي */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid var(--border-color); z-index: 1000; }
+        .nav-item { color: var(--text-muted); text-align: center; font-size: 11px; cursor: pointer; background: none; border: none; width: auto; padding: 0; margin: 0; font-weight: 500; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+        .nav-item i { font-size: 18px; }
+        .nav-item.active { color: var(--primary-color); font-weight: bold; }
+        
+        .hidden { display: none !important; }
+        .badge { background: #ef4444; color: white; padding: 2px 6px; border-radius: 50%; font-size: 10px; position: absolute; top: -4px; right: 12px; font-weight: bold; }
+        
+        .manage-row { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 12px; margin-bottom: 8px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .payment-option-box { border: 1px solid var(--border-color); padding: 12px; border-radius: 10px; margin-bottom: 10px; cursor: pointer; background: #fff; }
+        .payment-option-box.active { border-color: var(--primary-color); background: #fffbf5; }
+
+        .support-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 12px; text-align: center; margin-top: 15px; }
+        .gallery-thumb-chip { position: relative; width: 54px; height: 54px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); }
+        .gallery-thumb-chip img { width: 100%; height: 100%; object-fit: cover; }
+        .gallery-thumb-chip .del-x { position: absolute; top:0; left:0; background:rgba(0,0,0,0.6); color:#fff; width:16px; height:16px; font-size:11px; display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius: 0 0 6px 0; }
+
+        /* إشعار سريع غير معطّل بديل alert() عند الإضافة للسلة */
+        .app-toast { position: fixed; top: 14px; left: 50%; transform: translateX(-50%) translateY(-30px); background: #2b2623; color: #fff; padding: 10px 20px; border-radius: 30px; font-size: 13px; z-index: 3000; opacity: 0; transition: 0.35s ease; pointer-events: none; box-shadow: 0 6px 18px rgba(0,0,0,0.2); }
+        .app-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        /* 🎨 نافذة تنبيه/رسالة موحدة بهوية المنصة، بديل شكل alert()/confirm() الافتراضي في المتصفح
+           اللي بيبقى غريب عن تصميم المتجر. بتتفتح فوق كل حاجة وسط الشاشة بخلفية معتّمة. */
+        .app-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 4000; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; transition: opacity 0.2s ease; }
+        .app-modal-overlay.show { opacity: 1; }
+        .app-modal-card { background: #fff; border-radius: 16px; max-width: 380px; width: 100%; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); transform: translateY(10px); transition: transform 0.2s ease; max-height: 80vh; overflow-y: auto; }
+        .app-modal-overlay.show .app-modal-card { transform: translateY(0); }
+        .app-modal-icon { font-size: 34px; text-align: center; margin-bottom: 8px; }
+        .app-modal-title { font-size: 15px; font-weight: bold; text-align: center; color: var(--primary-color, #b45309); margin: 0 0 10px; }
+        .app-modal-body { font-size: 13px; color: #4b4137; line-height: 1.7; text-align: center; }
+        .app-modal-suggestion-btn { display: block; width: 100%; background: #fff7ed; border: 1px solid #fed7aa; color: var(--primary-color, #b45309); border-radius: 10px; padding: 9px 12px; margin-top: 8px; font-size: 13px; font-weight: bold; cursor: pointer; text-align: center; }
+        .app-modal-ok-btn { display: block; width: 100%; background: var(--primary-color, #b45309); color: #fff; border: none; border-radius: 10px; padding: 10px; margin-top: 14px; font-size: 13px; font-weight: bold; cursor: pointer; }
+
+        /* أيقونة اللغة الصغيرة الجديدة (بدلاً من الشريط الكامل) */
+        .lang-corner-wrap { position: relative; }
+        .corner-icon-btn { background: #2b2623; color: #fff; border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+        .lang-corner-btn { background: #2b2623; color: #fff; border: none; border-radius: 20px; padding: 5px 10px; font-size: 11px; display: flex; align-items: center; gap: 5px; cursor: pointer; }
+        .lang-corner-dropdown { display: none; position: absolute; top: 30px; left: 0; background: #fff; border: 1px solid var(--border-color); border-radius: 10px; box-shadow: 0 6px 18px rgba(0,0,0,0.15); max-height: 260px; overflow-y: auto; width: 200px; padding: 6px; }
+        .lang-corner-dropdown.show { display: block; }
+        .lang-corner-dropdown div { padding: 7px 8px; font-size: 12px; border-radius: 6px; cursor: pointer; color: var(--text-main); }
+        .lang-corner-dropdown div:hover { background: var(--bg-body); }
+
+        /* شعار المتجر مكبّر بدون اسم بجانبه */
+        .header-brand img.big-logo { width: 56px; height: 56px; display: block; }
+
+        /* شريط اللافتات/الإعلانات المتحركة للتاجر */
+        .banner-slideshow { position: relative; width: 100%; height: 170px; border-radius: 14px; overflow: hidden; margin-bottom: 10px; background: #eee; box-shadow: 0 6px 16px rgba(43,38,35,0.08); }
+        /* ============================================================
+           🖼️ عرض اللافتة كاملة من غير ما تتقص: بدل ما كنا نعمل "cover" (يملا
+           الصندوق ويقص أي حتة زايدة من الصورة)، بقينا نحط نسخة مموهة (blur)
+           من نفس الصورة كخلفية بتملا الصندوق، وفوقها الصورة الأصلية كاملة
+           وواضحة من غير أي قص (contain). النتيجة: اللافتة تبان احترافية
+           وملهاش حواف بيضا فاضية، وفي نفس الوقت محدش يفوته جزء من التصميم.
+           ============================================================ */
+        .banner-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 0.7s ease-in-out; background-size: cover; background-position: center; }
+        .banner-slide::before { content: ''; position: absolute; inset: 0; background: inherit; filter: blur(22px) brightness(0.85); transform: scale(1.15); z-index: 0; }
+        .banner-slide.active { opacity: 1; }
+        .banner-slide img { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: contain; display: block; }
+        .banner-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 10px; }
+        .banner-dot { width: 6px; height: 6px; border-radius: 50%; background: #d6cdbf; transition: 0.3s; }
+        .banner-dot.active { background: var(--primary-color); width: 16px; border-radius: 4px; }
+
+        /* أيقونات التواصل الاجتماعي أسفل الصفحة */
+        .social-footer-box { display: flex; justify-content: center; gap: 18px; margin: 10px 0; flex-wrap: wrap; }
+        .social-footer-box a { color: var(--text-muted); font-size: 22px; text-decoration: none; transition: 0.2s; }
+        .social-footer-box a:hover { color: var(--primary-color); transform: translateY(-2px); }
+        .elegant-divider { display: flex; align-items: center; text-align: center; margin: 16px 0; }
+        .elegant-divider::before, .elegant-divider::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, transparent, var(--border-color), transparent); }
+        .elegant-divider span { padding: 0 10px; color: var(--text-muted); font-size: 11px; }
+
+        /* شريط الاختصارات العلوي - إدارة التاجر */
+        .shortcut-manage-row { display: flex; align-items: center; gap: 8px; background: #fff; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 6px; }
+        .shortcut-manage-row img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+        .shortcut-manage-row .info { flex: 1; font-size: 12px; }
+
+        /* شريط استخدام المساحة للمتجر */
+        .quota-bar-bg { background: #e5e7eb; border-radius: 10px; height: 8px; overflow: hidden; margin: 4px 0; }
+        .quota-bar-fill { background: var(--primary-color); height: 100%; }
+
+        /* نافذة إرسال رسالة إدارية */
+        .lang-choice-btns { display: flex; gap: 8px; margin: 8px 0; }
+        .lang-choice-btns button { width: auto; flex: 1; padding: 8px; font-size: 12px; }
+
+        /* لافتة إعلانية للصفحة الرئيسية (يديرها الأدمن فقط) */
+        .home-ad-banner { border-radius: 14px; overflow: hidden; margin-bottom: 12px; text-align: center; }
+        .home-ad-banner img { width: 100%; display: block; border-radius: 14px; }
+        .home-ad-banner .text-ad { background: linear-gradient(135deg, var(--primary-color), #b45309); color: #fff; padding: 14px; border-radius: 14px; font-weight: bold; font-size: 14px; }
+
+        /* ============================================================
+           📱💻 تجاوب مع الشاشات الأكبر (تابلت/كمبيوتر): التصميم الأساسي
+           مصمم mobile-first (container محدد بـ 600px)، وده هو الشكل اللي
+           بيظهر صح على كل أنواع الموبايلات مهما كانت الشاشة. الإضافة هنا
+           بس بتوسّع الحاوية شوية على الشاشات الكبيرة عشان الموقع ميفضلش
+           عمود ضيق وسط شاشة كمبيوتر كبيرة، من غير ما تأثر على شكل الموبايل خالص.
+           ============================================================ */
+        @media (min-width: 700px) {
+            .container { max-width: 760px; }
+            .banner-slideshow { height: 240px; }
+            .cat-card img { height: 135px; }
+            .cat-card h4 { font-size: 16px; }
+            .product-card img { height: 155px; }
+            .product-title { font-size: 15px; height: auto; }
+            .categories-grid, .products-grid { gap: 16px; }
+            .modal-overlay { align-items: center; padding: 20px; }
+            .modal-content { border-radius: 20px; max-height: 88vh; }
+        }
+        @media (min-width: 1000px) {
+            .container { max-width: 940px; }
+            .products-grid { grid-template-columns: repeat(3, 1fr); }
+            .categories-grid { grid-template-columns: repeat(3, 1fr); }
+            .banner-slideshow { height: 320px; border-radius: 18px; }
+            .cat-card img { height: 170px; }
+            .cat-card h4 { font-size: 17px; margin: 14px 0; }
+            .product-card { padding: 14px; }
+            .product-card img { height: 190px; border-radius: 12px; }
+            .product-title { font-size: 15.5px; margin: 10px 0 4px; }
+            .price-tag { font-size: 18px; }
+            .categories-grid, .products-grid { gap: 20px; }
+            .box { padding: 24px; }
+            #platformHeroName { font-size: 30px !important; }
+            #platformHeroTagline { font-size: 15px !important; }
+            #platformHeroEmoji { font-size: 58px !important; }
+            #platformHeroLogo { width: 84px !important; height: 84px !important; }
+            .modal-content { max-width: 880px; }
+            .product-modal-top { flex-direction: row; gap: 22px; align-items: flex-start; }
+            .product-modal-media { flex: 0 0 360px; }
+            .product-modal-media img#mainProductImg { max-height: 360px; }
+            .product-modal-info { flex: 1; min-width: 0; }
+        }
+        @media (min-width: 1300px) {
+            .container { max-width: 1280px; }
+            /* auto-fill: بيوزّع الكروت بعدد أعمدة مرن حسب عرض الشاشة الفعلي (مش رقم ثابت)،
+               كل كارت بعرض لا يقل عن 280px - كده الشبكة بتملا الفراغ بدل ما تفضل 4 أعمدة فاضية
+               على الشاشات الأعرض من كده. */
+            .products-grid, .categories-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+            .banner-slideshow { height: 380px; }
+        }
+        @media (min-width: 1700px) {
+            .container { max-width: 1440px; }
+        }
+        /* شاشات صغيرة جدًا (موبايلات قديمة/ضيقة أقل من 340px): تقليل بادينج بسيط لمنع أي ضغط */
+        @media (max-width: 340px) {
+            .container { padding: 10px; }
+            .box { padding: 14px; }
+        }
+
+/* 🔘 مفتاح تبديل (Toggle Switch) بسيط - مستخدم لتفعيل/إيقاف الإشعارات وخيارات مشابهة */
+.toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; vertical-align: middle; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-switch .toggle-slider { position: absolute; cursor: pointer; inset: 0; background-color: #cbd5e1; transition: 0.2s; border-radius: 24px; }
+.toggle-switch .toggle-slider::before { position: absolute; content: ""; height: 18px; width: 18px; right: 3px; bottom: 3px; background-color: #fff; transition: 0.2s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.toggle-switch input:checked + .toggle-slider { background-color: #10b981; }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(-20px); }
+.settings-search-match { background: #fef08a !important; outline: 2px solid #f59e0b; border-radius: 6px; box-shadow: 0 0 0 2px rgba(245,158,11,0.25); transition: background .2s; }
+.notif-autodel-dirty { background: #f59e0b !important; border-color: #f59e0b !important; color: #fff !important; animation: pulseDirty 1.4s ease-in-out infinite; }
+@keyframes pulseDirty { 0%,100% { opacity:1; } 50% { opacity:.6; } }
+.rich-toolbar { display:flex; flex-wrap:wrap; gap:4px; align-items:center; background:var(--bg-body); border:1px solid var(--border-color); border-radius:10px 10px 0 0; padding:6px; }
+.rich-toolbar button { width:auto; margin:0; padding:5px 10px; font-size:12px; background:#fff; border:1px solid var(--border-color); border-radius:6px; cursor:pointer; color:var(--text-main); }
+.rich-toolbar button:hover { background:#e5e7eb; }
+.rich-toolbar select { width:auto; margin:0; padding:5px; font-size:12px; border-radius:6px; border:1px solid var(--border-color); background:#fff; }
+.rich-editor-content { min-height:90px; max-height:280px; overflow-y:auto; border:1px solid var(--border-color); border-top:none; border-radius:0 0 10px 10px; padding:10px 12px; background:#fff; font-size:14px; line-height:1.7; margin-bottom:8px; }
+.rich-editor-content:focus { outline:2px solid var(--primary-color); outline-offset:-1px; }
+.rich-editor-content:empty:before { content: attr(data-placeholder); color:#9ca3af; }
+.rich-editor-content ul { margin:4px 0; padding-inline-start:20px; }
+.rich-content-display ul { margin:4px 0; padding-inline-start:20px; }
