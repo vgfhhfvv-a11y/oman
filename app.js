@@ -1207,12 +1207,16 @@
                     // شاشة تسجيل الدخول العامة برضه محايدة دايمًا، مش بلون آخر متجر تمت معاينته كزائر
                     applyStoreTheme(null);
                     document.getElementById('authSection').classList.remove('hidden');
-                    // 🏪 "تقديم طلب انضمام كتاجر" يظهر بس في الصفحة الرئيسية للمنصة (مفيش متجر متصفح حاليًا)،
-                    // مش وانت جوه متجر تاجر تاني وداخل بس تسجل دخولك أو تتابع طلبك.
-                    try { document.getElementById('merchantRegisterCtaBox').classList.toggle('hidden', !!activeStore); } catch(e) {}
+                    // 🏪 "تقديم طلب انضمام كتاجر" يظهر بس في الصفحة الرئيسية للمنصة (مفيش متجر محدد
+                    // متصفح دلوقتي)، مش وانت جوه متجر تاجر تاني وداخل بس تسجل دخولك أو تتابع طلبك.
+                    // ⚠️ المعيار الصح هنا هو viewMode ('store' ولا 'platform') مش activeStore -
+                    // activeStore فضلت دايمًا فيها قيمة (آخر متجر اتزار) حتى وانت في الصفحة الرئيسية
+                    // للمنصة، فاستخدامها هنا كان بيخلي الزرار يظهر/يختفي غلط.
+                    let __onStorePage = localStorage.getItem('viewMode') === 'store';
+                    try { document.getElementById('merchantRegisterCtaBox').classList.toggle('hidden', __onStorePage); } catch(e) {}
                     // 🔗 رابط "عميل؟ ادخل من هنا" يظهر بس وانت جوه متجر معيّن (عشان بوابة الدخول
                     // الموحّدة وفرت المكان المظبوط للعميل، وده الرابط الاحتياطي لو وصل هنا غلط).
-                    try { document.getElementById('authSwitchToBuyerLinkBox').classList.toggle('hidden', !activeStore); } catch(e) {}
+                    try { document.getElementById('authSwitchToBuyerLinkBox').classList.toggle('hidden', !__onStorePage); } catch(e) {}
                     setTimeout(checkStorageAndWarn, 100);
                 }
             }
@@ -7321,7 +7325,7 @@
                     reviewsListHtml += `
                         <div style="background:var(--bg-card); padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid var(--border-color);">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <strong style="font-size:12px; color:var(--text-main);">${rev.author || 'عميل'}</strong>
+                                <strong style="font-size:12px; color:var(--text-main);">${rev.author || 'عميل'}${rev.viaGoogle ? ' <i class="fa-brands fa-google" title="' + t('review_via_google_label', 'تقييم موثّق عن طريق جوجل') + '" style="color:#4285F4; font-size:10px;"></i>' : ''}</strong>
                                 <span style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:8px;">
                                     ${rev.date || ''}
                                     ${isViewingOwnStore ? `
@@ -7436,16 +7440,32 @@
 
                 <div class="box" style="background:var(--bg-body); padding: 12px;">
                     <h5 style="margin:0 0 8px; color:var(--text-main); font-size:13px;">أضف تقييمك ومراجعتك:</h5>
-                    ${(store.reviewsRequireLogin === true && !getBuyerSession(activeStore)) ? `
-                        <p style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">${t('review_login_required_msg', 'لازم تسجّل دخولك بحساب مشترِي في هذا المتجر الأول عشان تضيف تقييم.')}</p>
-                        <button class="secondary" style="padding:8px; font-size:12px;" onclick="closeProductModal(); openBuyerAuthModal('login');">${t('buyer_login_tab', 'تسجيل الدخول')}</button>
-                    ` : `
-                    ${(store.reviewsRequireLogin === true) ? '' : (GOOGLE_SIGNIN_ENABLED ? `
-                        <div id="googleSignInBox" style="margin-bottom:8px;"><div id="googleSignInBtn"></div></div>
-                        <div id="googleSignedInBox" class="hidden" style="font-size:12px; margin-bottom:8px; background:#fff; padding:6px 10px; border-radius:8px;"></div>
-                    ` : `
-                        <input type="text" id="reviewerName" placeholder="اسمك (اختياري)" style="padding:8px; font-size:12px;">
-                    `)}
+                    ${(() => {
+                        let __buyerSess = getBuyerSession(activeStore);
+                        // 1) المتجر طالب تسجيل دخول إجباري، ومفيش جلسة شغالة؟ وقف هنا.
+                        if(store.reviewsRequireLogin === true && !__buyerSess) {
+                            return `<p style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">${t('review_login_required_msg', 'لازم تسجّل دخولك بحساب مشترِي في هذا المتجر الأول عشان تضيف تقييم.')}</p>
+                                <button class="secondary" style="padding:8px; font-size:12px;" onclick="closeProductModal(); openBuyerAuthModal('login');">${t('buyer_login_tab', 'تسجيل الدخول')}</button>`;
+                        }
+                        // 2) فيه جلسة مشترِي شغالة فعلاً (مسجّل عادي أو عن طريق جوجل) - استخدم
+                        //    هويته مباشرة، من غير ما نعرض صندوق "تسجيل دخول جوجل" تاني من الصفر
+                        //    ولا خانة اسم فاضية كأنه زائر مجهول.
+                        if(__buyerSess) {
+                            let viaGoogle = __buyerSess.buyerId && __buyerSess.buyerId.includes('@') && __buyerSess.authProvider === 'google';
+                            return `<p style="font-size:12px; margin-bottom:8px; background:#fff; padding:6px 10px; border-radius:8px;">
+                                ✅ ${t('review_posting_as_label', 'هتضيف التقييم باسم')}: <strong>${escapeHtml(__buyerSess.name || 'عميل')}</strong>
+                                ${viaGoogle ? ' <i class="fa-brands fa-google" style="color:#4285F4;"></i>' : ''}
+                            </p>`;
+                        }
+                        // 3) زائر عادي، والمتجر مش طالب تسجيل دخول للتقييم - الوضع الاختياري القديم.
+                        return GOOGLE_SIGNIN_ENABLED ? `
+                            <div id="googleSignInBox" style="margin-bottom:8px;"><div id="googleSignInBtn"></div></div>
+                            <div id="googleSignedInBox" class="hidden" style="font-size:12px; margin-bottom:8px; background:#fff; padding:6px 10px; border-radius:8px;"></div>
+                        ` : `
+                            <input type="text" id="reviewerName" placeholder="اسمك (اختياري)" style="padding:8px; font-size:12px;">
+                        `;
+                    })()}
+                    ${(store.reviewsRequireLogin === true && !getBuyerSession(activeStore)) ? '' : `
                     <div style="text-align:center; margin-bottom:8px;">
                         <div class="star-rating" id="starContainer">
                             <span class="star selected" onclick="setRating(1)">★</span>
@@ -7499,19 +7519,30 @@
             });
         }
 
-        function submitReview(prodName) {
-            let author, email = '';
+        async function submitReview(prodName) {
+            let author, email = '', viaGoogle = false;
             let __storesForReview = JSON.parse(localStorage.getItem('allStores')) || {};
             let __storeForReview = __storesForReview[activeStore];
-            if(__storeForReview && __storeForReview.reviewsRequireLogin === true) {
-                let sess = getBuyerSession(activeStore);
-                if(!sess) { alert(t('review_login_required_msg', 'لازم تسجّل دخولك بحساب مشترِي في هذا المتجر الأول عشان تضيف تقييم.')); return; }
-                author = sess.name || 'عميل';
-                email = sess.buyerId && sess.buyerId.includes('@') ? sess.buyerId : '';
+            // 🥇 الأولوية دايمًا لجلسة مشترِي شغالة (عادية أو جوجل) لو موجودة - مهما كانت قيمة
+            // reviewsRequireLogin، عشان عميل داخل بحسابه فعلًا ميتعاملش معاه كزائر مجهول.
+            let __buyerSessForReview = getBuyerSession(activeStore);
+            if(__buyerSessForReview) {
+                // 🚫 التاجر ممكن يكون منع الحساب ده بالذات من التقييم (مع احتفاظه بباقي مميزاته)
+                if(window.fetchBuyerReviewsBlocked) {
+                    let blocked = await window.fetchBuyerReviewsBlocked(activeStore, __buyerSessForReview.buyerId);
+                    if(blocked) { alert(t('review_blocked_msg', 'صاحب المتجر أوقف إمكانية إضافة تقييمات من حسابك في هذا المتجر.')); return; }
+                }
+                author = __buyerSessForReview.name || 'عميل';
+                email = __buyerSessForReview.buyerId && __buyerSessForReview.buyerId.includes('@') ? __buyerSessForReview.buyerId : '';
+                viaGoogle = !!(email && __buyerSessForReview.authProvider === 'google');
+            } else if(__storeForReview && __storeForReview.reviewsRequireLogin === true) {
+                alert(t('review_login_required_msg', 'لازم تسجّل دخولك بحساب مشترِي في هذا المتجر الأول عشان تضيف تقييم.'));
+                return;
             } else if(GOOGLE_SIGNIN_ENABLED) {
                 if(!currentReviewerGoogleUser) { alert('برجاء تسجيل الدخول بحساب جوجل أولاً لإضافة تقييم.'); return; }
                 author = currentReviewerGoogleUser.name;
                 email = currentReviewerGoogleUser.email || '';
+                viaGoogle = true;
             } else {
                 author = document.getElementById('reviewerName').value.trim() || 'عميل';
             }
@@ -7530,7 +7561,7 @@
             let product = store.products.find(p => p.name === prodName);
 
             if(!product.reviews) product.reviews = [];
-            let newReview = { rating: tempSelectedRating, author, email, comment, date, reply: '' };
+            let newReview = { rating: tempSelectedRating, author, email, comment, date, reply: '', viaGoogle: viaGoogle };
             product.reviews.push(newReview);
 
             if(!saveAllStores(stores)) return;
@@ -7928,7 +7959,8 @@
             // 🚪 الأيقونة دلوقتي ظاهرة دايمًا (مش بس جوه متجر) عشان هي نفسها بوابة الدخول
             // الموحّدة لأي حد: عميل جوه متجر، أو صاحب متجر/تاجر من الصفحة الرئيسية للمنصة.
             btn.classList.remove('hidden');
-            if(!activeStore) {
+            let __onStorePageIcon = localStorage.getItem('viewMode') === 'store';
+            if(!__onStorePageIcon) {
                 let loggedMerchant = localStorage.getItem('currentActiveMerchant');
                 let loggedAdmin = localStorage.getItem('isAdminLoggedIn') === 'true';
                 icon.className = (loggedMerchant || loggedAdmin) ? 'fa fa-store' : 'fa fa-right-to-bracket';
@@ -7946,7 +7978,7 @@
         // حسب وضعه بالظبط - عميل مسجّل دخوله، عميل زائر جوه متجر، أو صاحب متجر/أدمن من
         // الصفحة الرئيسية للمنصة - من غير ما يحتاج يختار بنفسه بين أيقونتين مختلفتين.
         function unifiedEntryClick() {
-            if(activeStore) {
+            if(localStorage.getItem('viewMode') === 'store') {
                 let sess = getBuyerSession(activeStore);
                 if(sess) { openBuyerProfileModal(); return; }
                 openBuyerAuthModal('login');
@@ -8002,7 +8034,7 @@
             try {
                 let res = await window.loginOrRegisterBuyerWithGoogle(activeStore, payload.email, payload.name || '');
                 if(!res.ok) { alert(t('buyer_generic_error', 'حصل خطأ، حاول مرة أخرى.')); return; }
-                setBuyerSession(activeStore, { buyerId: res.buyerId, name: res.name, phone: res.phone || '', address: res.address || '' });
+                setBuyerSession(activeStore, { buyerId: res.buyerId, name: res.name, phone: res.phone || '', address: res.address || '', authProvider: 'google' });
                 await mergeCartOnBuyerLogin(activeStore, res.buyerId, res.savedCart || []);
                 closeBuyerAuthModal();
             } catch(e) {
@@ -8196,15 +8228,19 @@
             }).join('');
             box.scrollTop = box.scrollHeight;
         }
-        function sendBuyerChatMsg() {
+        async function sendBuyerChatMsg() {
             if(!activeStore) return;
             let sess = getBuyerSession(activeStore);
             if(!sess) return;
             let input = document.getElementById('buyerChatInput');
             let text = input.value.trim();
-            if(!text || !window.sendBuyerChatMessage) return;
+            if(!text) return;
+            if(!window.sendBuyerChatMessage) { alert(t('alert_no_internet', 'لا يوجد اتصال بالإنترنت حاليًا، حاول مرة أخرى.')); return; }
             input.value = '';
-            window.sendBuyerChatMessage(activeStore, sess.buyerId, 'buyer', text, sess.name || '');
+            // ⚠️ بنستنى نتيجة الإرسال فعليًا بدل ما نفترض نجاحه - لو قواعد أمان Firestore مش
+            // سامحة بالكتابة على buyerChats هيظهر خطأ واضح هنا بدل ما الرسالة "تختفي" بصمت.
+            let ok = await window.sendBuyerChatMessage(activeStore, sess.buyerId, 'buyer', text, sess.name || '');
+            if(!ok) { alert(t('buyer_chat_send_failed', 'تعذر إرسال الرسالة - تأكد إن قواعد أمان Firestore مفعّلة لمسار buyerChats، وحاول تاني.')); input.value = text; }
         }
         function deleteBuyerChatMsgUI(msgId) {
             if(!activeStore) return;
@@ -8308,15 +8344,41 @@
                 box.innerHTML = '<p style="text-align:center; color:var(--text-muted); font-size:12px;">' + t('buyer_mgmt_none', 'لا يوجد مشترون مسجّلون في هذا المتجر بعد.') + '</p>';
                 return;
             }
-            box.innerHTML = buyers.map(b => `
-                <div class="box" style="padding:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; font-size:12.5px;">
-                    <div>
-                        <strong>${escapeHtml(b.name || '-')}</strong><br>
-                        <span style="color:var(--text-muted); direction:ltr; display:inline-block;">${escapeHtml(b.buyerId || '')}</span>
+            box.innerHTML = buyers.map(b => {
+                let bid = escapeHtml(b.buyerId).replace(/'/g, "\\'");
+                return `
+                <div class="box" style="padding:10px; margin-bottom:8px; font-size:12.5px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <div>
+                            <strong>${escapeHtml(b.name || '-')}</strong>${b.authProvider === 'google' ? ' <i class="fa-brands fa-google" style="color:#4285F4; font-size:10px;"></i>' : ''}<br>
+                            <span style="color:var(--text-muted); direction:ltr; display:inline-block;">${escapeHtml(b.buyerId || '')}</span>
+                        </div>
+                        <button class="secondary" style="width:auto; margin:0; padding:5px 10px; font-size:11px; background:#dc2626; color:#fff; border-color:#dc2626;" onclick="deleteBuyerFromManagement('${bid}')"><i class="fa fa-trash"></i> ${t('buyer_mgmt_delete_btn', 'حذف')}</button>
                     </div>
-                    <button class="secondary" style="width:auto; margin:0; padding:5px 10px; font-size:11px; background:#dc2626; color:#fff; border-color:#dc2626;" onclick="deleteBuyerFromManagement('${escapeHtml(b.buyerId).replace(/'/g, "\\'")}')"><i class="fa fa-trash"></i> ${t('buyer_mgmt_delete_btn', 'حذف')}</button>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; border-top:1px solid var(--border-color); padding-top:6px;">
+                        <button class="secondary" style="width:auto; margin:0; padding:4px 8px; font-size:10.5px;" onclick="resetBuyerPasswordFromManagement('${bid}')"><i class="fa fa-key"></i> ${t('buyer_mgmt_reset_pw_btn', 'تغيير كلمة السر')}</button>
+                        <button class="secondary" style="width:auto; margin:0; padding:4px 8px; font-size:10.5px;${b.reviewsBlocked ? ' background:#f59e0b; color:#fff; border-color:#f59e0b;' : ''}" onclick="toggleBuyerReviewsBlocked('${bid}', ${!b.reviewsBlocked})"><i class="fa fa-comment-slash"></i> ${b.reviewsBlocked ? t('buyer_mgmt_unblock_reviews_btn', 'إلغاء منع التعليقات') : t('buyer_mgmt_block_reviews_btn', 'منع التعليقات')}</button>
+                    </div>
                 </div>
-            `).join('');
+            `; }).join('');
+        }
+        async function resetBuyerPasswordFromManagement(buyerId) {
+            let merchant = localStorage.getItem('currentActiveMerchant');
+            if(!merchant || !buyerId) return;
+            let newPw = prompt(t('buyer_mgmt_reset_pw_prompt', 'اكتب كلمة السر الجديدة لهذا الحساب (4 حروف/أرقام على الأقل):'));
+            if(newPw === null) return;
+            if(!newPw || newPw.length < 4) { alert(t('buyer_weak_password', 'كلمة السر قصيرة جدًا، لازم 4 حروف/أرقام على الأقل.')); return; }
+            if(!window.adminResetBuyerPassword) return;
+            let res = await window.adminResetBuyerPassword(merchant, buyerId, newPw);
+            if(!res.ok) { alert(t('buyer_generic_error', 'حصل خطأ، حاول مرة أخرى.')); return; }
+            alert(t('buyer_mgmt_reset_pw_done', 'تم تغيير كلمة السر بنجاح. قولها للعميل.'));
+        }
+        async function toggleBuyerReviewsBlocked(buyerId, blocked) {
+            let merchant = localStorage.getItem('currentActiveMerchant');
+            if(!merchant || !buyerId || !window.setBuyerReviewsBlocked) return;
+            let ok = await window.setBuyerReviewsBlocked(merchant, buyerId, blocked);
+            if(!ok) { alert(t('buyer_generic_error', 'حصل خطأ، حاول مرة أخرى.')); return; }
+            openBuyerManagementModal();
         }
         async function deleteBuyerFromManagement(buyerId) {
             let merchant = localStorage.getItem('currentActiveMerchant');
@@ -8429,14 +8491,16 @@
             }).join('');
             box.scrollTop = box.scrollHeight;
         }
-        function sendMerchantBuyerChatMsg() {
+        async function sendMerchantBuyerChatMsg() {
             let merchant = localStorage.getItem('currentActiveMerchant');
             if(!merchant || !__activeBuyerChatThreadBuyerId) return;
             let input = document.getElementById('merchantBuyerChatInput');
             let text = input.value.trim();
-            if(!text || !window.sendBuyerChatMessage) return;
+            if(!text) return;
+            if(!window.sendBuyerChatMessage) { alert(t('alert_no_internet', 'لا يوجد اتصال بالإنترنت حاليًا، حاول مرة أخرى.')); return; }
             input.value = '';
-            window.sendBuyerChatMessage(merchant, __activeBuyerChatThreadBuyerId, 'merchant', text, '');
+            let ok = await window.sendBuyerChatMessage(merchant, __activeBuyerChatThreadBuyerId, 'merchant', text, '');
+            if(!ok) { alert(t('buyer_chat_send_failed', 'تعذر إرسال الرسالة - تأكد إن قواعد أمان Firestore مفعّلة لمسار buyerChats، وحاول تاني.')); input.value = text; }
         }
         function deleteMerchantBuyerChatMsgUI(msgId) {
             let merchant = localStorage.getItem('currentActiveMerchant');

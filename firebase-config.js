@@ -1137,3 +1137,41 @@ function cleanupOldBuyerChatMessages(storeKey, retentionDays) {
     }).catch(function(err) { console.warn('⚠️ تعذر تنظيف محادثات العملاء القديمة:', err.message); return 0; });
 }
 window.cleanupOldBuyerChatMessages = cleanupOldBuyerChatMessages;
+
+// 🔑 صاحب المتجر يقدر يغيّر كلمة سر أي مشترِي عنده من لوحته مباشرة (من غير ما يحتاج
+// كلمة السر القديمة) - مفيد لما العميل ينسى كلمة سره ويطلب من التاجر يساعده.
+async function adminResetBuyerPassword(storeKey, buyerId, newPassword) {
+    if (!__cloudEnabled || !__cloudDb || !storeKey || !buyerId) return { ok: false, error: 'offline' };
+    if (!newPassword || String(newPassword).length < 4) return { ok: false, error: 'weak_password' };
+    try {
+        let passwordHash = await hashBuyerPassword(newPassword);
+        if (!passwordHash) return { ok: false, error: 'hash_failed' };
+        await __cloudDb.collection('stores').doc(storeKey).collection('buyers').doc(buyerId).update({ passwordHash: passwordHash });
+        return { ok: true };
+    } catch (err) {
+        console.warn('⚠️ تعذر تغيير كلمة سر المشترِي من لوحة التاجر:', err.message);
+        return { ok: false, error: 'network' };
+    }
+}
+window.adminResetBuyerPassword = adminResetBuyerPassword;
+
+// 🚫 صاحب المتجر يقدر يمنع مشترِي معيّن من إضافة تقييمات (مع احتفاظه بباقي مميزات
+// حسابه عادي - شراء، شات، إلخ) - مفيد لعميل بيسيء استخدام التقييمات تحديدًا.
+function setBuyerReviewsBlocked(storeKey, buyerId, blocked) {
+    if (!__cloudEnabled || !__cloudDb || !storeKey || !buyerId) return Promise.resolve(false);
+    return __cloudDb.collection('stores').doc(storeKey).collection('buyers').doc(buyerId)
+        .update({ reviewsBlocked: !!blocked })
+        .then(() => true)
+        .catch(err => { console.warn('⚠️ تعذر تحديث حالة التقييمات لهذا المشترِي:', err.message); return false; });
+}
+window.setBuyerReviewsBlocked = setBuyerReviewsBlocked;
+
+// 🔍 فحص سريع (قراءة واحدة) هل صاحب المتجر منع هذا المشترِي بالذات من إضافة تقييمات -
+// بيتنده وقت إرسال التقييم نفسه عشان يفضل الموضوع مضبوط حتى لو اتغيّر بعد تسجيل الدخول.
+function fetchBuyerReviewsBlocked(storeKey, buyerId) {
+    if (!__cloudEnabled || !__cloudDb || !storeKey || !buyerId) return Promise.resolve(false);
+    return __cloudDb.collection('stores').doc(storeKey).collection('buyers').doc(buyerId).get()
+        .then(function(doc) { return doc.exists && doc.data().reviewsBlocked === true; })
+        .catch(() => false);
+}
+window.fetchBuyerReviewsBlocked = fetchBuyerReviewsBlocked;
