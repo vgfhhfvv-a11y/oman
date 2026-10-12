@@ -439,6 +439,7 @@
             </div>
 
             <div id="buyerAuthRegisterBox" class="hidden">
+                <p data-i18n="buyer_register_incentive_msg" style="font-size:12.5px; background:var(--bg-body); padding:8px 10px; border-radius:8px; margin:0 0 10px; text-align:center;">🎁 سجّل حساب في المتجر عشان تحصل على أفضل العروض والمميزات الخاصة بالأعضاء!</p>
                 <label style="font-size:12px; font-weight:bold;" data-i18n="buyer_name_label">الاسم:</label>
                 <input type="text" id="buyerRegNameInput" data-i18n-ph="buyer_name_ph" placeholder="اسمك بالكامل">
                 <label style="font-size:12px; font-weight:bold;" data-i18n="buyer_identifier_label">رقم الهاتف أو البريد الإلكتروني:</label>
@@ -449,10 +450,6 @@
                 <input type="password" id="buyerRegPasswordInput" data-i18n-ph="buyer_password_ph" placeholder="كلمة السر">
                 <button id="buyerRegSubmitBtn" onclick="submitBuyerRegister()" data-i18n="buyer_register_btn">إنشاء الحساب</button>
             </div>
-
-            <p style="text-align:center; margin-top:14px; padding-top:10px; border-top:1px solid var(--border-color); font-size:12px;">
-                <a href="#" onclick="closeBuyerAuthModal(); switchTab('auth'); return false;" data-i18n="buyer_switch_to_merchant_link" style="color:var(--text-muted); text-decoration:underline;">صاحب المتجر؟ سجّل دخولك من هنا</a>
-            </p>
         </div>
     </div>
 
@@ -531,6 +528,13 @@
         <button class="nav-item" id="cartNavBtn" style="position: relative;" onclick="switchTab('cart', this)"><i class="fa fa-shopping-basket"></i><span id="cartNavLabel" data-i18n="nav_cart">السلة</span> <span id="cartCount" class="badge">0</span></button>
         <button class="nav-item hidden" id="storeAboutNavBtn" onclick="openStoreAboutModal()"><i class="fa fa-shop"></i><span data-i18n="nav_about_store">عن المتجر</span></button>
         <button class="nav-item hidden" id="platformAboutNavBtn" onclick="openPlatformAboutModal()"><i class="fa fa-building"></i><span data-i18n="nav_about_platform">عن المنصة</span></button>
+        <!-- 👤 حساب المشتري - ظاهر بس وانت جوه صفحة متجر معيّن (مش في الصفحة الرئيسية
+             للمنصة)، وبيتغيّر شكله حسب لو فيه جلسة دخول شغالة ولا لأ. -->
+        <button class="nav-item hidden" id="buyerAccountNavBtn" onclick="unifiedEntryClick()" style="position:relative;">
+            <i class="fa fa-user-circle" id="buyerAccountNavIcon"></i>
+            <span id="buyerAccountNavLabel" data-i18n="my_account_label">حسابي</span>
+            <span id="buyerAccountNavDot" class="hidden" style="position:absolute; top:4px; left:calc(50% - 14px); width:9px; height:9px; border-radius:50%; background:#dc2626; border:1.5px solid #fff;"></span>
+        </button>
         <button class="nav-item" id="authNavBtn" onclick="switchTab('auth', this)"><i class="fa fa-store" id="authNavIcon"></i><span data-i18n="nav_auth" id="authNavLabel">دخول التجار</span></button>
     </nav>
 
@@ -1261,6 +1265,11 @@
     "buyer_mgmt_unblock_reviews_btn": "إلغاء منع التعليقات",
     "buyer_mgmt_reset_pw_prompt": "اكتب كلمة السر الجديدة لهذا الحساب (4 حروف/أرقام على الأقل):",
     "buyer_mgmt_reset_pw_done": "تم تغيير كلمة السر بنجاح. قولها للعميل.",
+    "buyer_chat_send_failed_rules": "تعذر الإرسال: قواعد أمان Firestore مش سامحة بالكتابة على buyerChats. افتح Firebase Console ← Firestore ← Rules وانشر القاعدة الخاصة بمسار buyerChats، وبعدين حاول تاني.",
+    "buyer_chat_send_failed_timeout": "تعذر الإرسال: الاتصال بطيء جدًا أو مقطوع (انتهت مهلة الانتظار). تأكد من اتصال الإنترنت وحاول تاني.",
+    "buyer_mgmt_fetch_failed_rules": "تعذر تحميل المشترين: قواعد أمان Firestore مش سامحة بقراءة قائمة المشترين. راجع القواعد في Firebase Console وانشرها.",
+    "buyer_mgmt_fetch_failed_timeout": "تعذر تحميل المشترين: الاتصال بطيء جدًا أو مقطوع. تأكد من الإنترنت وحاول تاني.",
+    "buyer_mgmt_fetch_failed_generic": "تعذر تحميل قائمة المشترين، حاول تاني.",
     "set_reviews_require_login_label": "🔒 لازم تسجيل دخول بحساب مشترِي عشان تضيف تقييم",
     "set_reviews_require_login_note": "افتراضيًا (الوضع المقترح) أي زائر يقدر يضيف تقييم باسمه بدون حساب. فعّل ده لو عايز التقييمات تبقى من حسابات موثّقة بس.",
     "review_login_required_msg": "لازم تسجّل دخولك بحساب مشترِي في هذا المتجر الأول عشان تضيف تقييم.",
@@ -1303,8 +1312,9 @@
     "buyer_change_password_btn": "تغيير كلمة السر",
     "buyer_orders_h": "📦 طلباتي",
     "buyer_logout_btn": "🚪 تسجيل الخروج",
-    "buyer_login_title": "تسجيل دخول المشتري",
-    "buyer_register_title": "تسجيل حساب مشترٍ جديد",
+    "buyer_login_title": "تسجيل الدخول",
+    "buyer_register_title": "حساب جديد",
+    "buyer_register_incentive_msg": "🎁 سجّل حساب في المتجر عشان تحصل على أفضل العروض والمميزات الخاصة بالأعضاء!",
     "buyer_registration_disabled_msg": "تسجيل حسابات مشترين جدد متوقف مؤقتًا في هذا المتجر. جرب تسجيل الدخول لو عندك حساب بالفعل.",
     "set_buyer_reg_disabled_label": "🚫 تعطيل تسجيل حسابات مشترين جدد مؤقتًا",
     "set_buyer_reg_disabled_note": "الحسابات الموجودة فعلاً تقدر تسجّل دخول عادي - ده بيوقف إنشاء حسابات جديدة بس.",
@@ -2091,6 +2101,11 @@
     "buyer_mgmt_unblock_reviews_btn": "Unblock reviews",
     "buyer_mgmt_reset_pw_prompt": "Enter the new password for this account (at least 4 characters):",
     "buyer_mgmt_reset_pw_done": "Password changed successfully. Share it with the customer.",
+    "buyer_chat_send_failed_rules": "Couldn't send: Firestore security rules don't allow writing to buyerChats. Open Firebase Console → Firestore → Rules and publish the buyerChats rule, then try again.",
+    "buyer_chat_send_failed_timeout": "Couldn't send: the connection is too slow or offline (timed out). Check your internet connection and try again.",
+    "buyer_mgmt_fetch_failed_rules": "Couldn't load buyers: Firestore security rules don't allow reading the buyers list. Review the rules in Firebase Console and publish them.",
+    "buyer_mgmt_fetch_failed_timeout": "Couldn't load buyers: the connection is too slow or offline. Check your internet and try again.",
+    "buyer_mgmt_fetch_failed_generic": "Couldn't load the buyers list, try again.",
     "set_reviews_require_login_label": "🔒 Require buyer login to add a review",
     "set_reviews_require_login_note": "By default (recommended), any visitor can add a review under their name without an account. Enable this if you want reviews limited to verified accounts only.",
     "review_login_required_msg": "You need to log in with a buyer account in this store first to add a review.",
@@ -2135,6 +2150,7 @@
     "buyer_logout_btn": "🚪 Logout",
     "buyer_login_title": "Buyer Login",
     "buyer_register_title": "Create Buyer Account",
+    "buyer_register_incentive_msg": "🎁 Create an account to unlock the best offers and member-only perks!",
     "buyer_registration_disabled_msg": "New buyer registration is temporarily disabled in this store. Try logging in if you already have an account.",
     "set_buyer_reg_disabled_label": "🚫 Temporarily disable new buyer registration",
     "set_buyer_reg_disabled_note": "Existing accounts can still log in normally - this only blocks creating new accounts.",
@@ -2921,6 +2937,11 @@
     "buyer_mgmt_unblock_reviews_btn": "取消禁止评价",
     "buyer_mgmt_reset_pw_prompt": "请输入此账户的新密码（至少4个字符）：",
     "buyer_mgmt_reset_pw_done": "密码已成功更改。请告知客户。",
+    "buyer_chat_send_failed_rules": "无法发送：Firestore 安全规则不允许写入 buyerChats。请打开 Firebase 控制台 → Firestore → 规则，发布 buyerChats 的规则后重试。",
+    "buyer_chat_send_failed_timeout": "无法发送：网络太慢或已断开（已超时）。请检查网络连接后重试。",
+    "buyer_mgmt_fetch_failed_rules": "无法加载买家：Firestore 安全规则不允许读取买家列表。请在 Firebase 控制台检查并发布规则。",
+    "buyer_mgmt_fetch_failed_timeout": "无法加载买家：网络太慢或已断开。请检查网络后重试。",
+    "buyer_mgmt_fetch_failed_generic": "无法加载买家列表，请重试。",
     "set_reviews_require_login_label": "🔒 需要买家登录才能添加评价",
     "set_reviews_require_login_note": "默认情况下（推荐），任何访客都可以用自己的名字添加评价而无需账户。如果您希望评价仅限于已验证的账户，请启用此选项。",
     "review_login_required_msg": "您需要先使用该店铺的买家账户登录才能添加评价。",
@@ -2965,6 +2986,7 @@
     "buyer_logout_btn": "🚪 退出登录",
     "buyer_login_title": "买家登录",
     "buyer_register_title": "创建买家账户",
+    "buyer_register_incentive_msg": "🎁 创建账户，解锁最佳优惠和会员专属福利！",
     "buyer_registration_disabled_msg": "该店铺暂时停止新买家注册。如果您已有账户，请尝试登录。",
     "set_buyer_reg_disabled_label": "🚫 暂时禁止新买家注册",
     "set_buyer_reg_disabled_note": "现有账户仍可正常登录——这仅阻止创建新账户。",
@@ -3751,6 +3773,11 @@
     "buyer_mgmt_unblock_reviews_btn": "Разрешить отзывы",
     "buyer_mgmt_reset_pw_prompt": "Введите новый пароль для этого аккаунта (минимум 4 символа):",
     "buyer_mgmt_reset_pw_done": "Пароль успешно изменён. Сообщите его покупателю.",
+    "buyer_chat_send_failed_rules": "Не удалось отправить: правила безопасности Firestore не разрешают запись в buyerChats. Откройте Firebase Console → Firestore → Rules, опубликуйте правило для buyerChats и попробуйте снова.",
+    "buyer_chat_send_failed_timeout": "Не удалось отправить: соединение слишком медленное или отсутствует (истекло время ожидания). Проверьте интернет-соединение и попробуйте снова.",
+    "buyer_mgmt_fetch_failed_rules": "Не удалось загрузить покупателей: правила безопасности Firestore не разрешают чтение списка покупателей. Проверьте и опубликуйте правила в Firebase Console.",
+    "buyer_mgmt_fetch_failed_timeout": "Не удалось загрузить покупателей: соединение слишком медленное или отсутствует. Проверьте интернет и попробуйте снова.",
+    "buyer_mgmt_fetch_failed_generic": "Не удалось загрузить список покупателей, попробуйте снова.",
     "set_reviews_require_login_label": "🔒 Требовать вход покупателя для добавления отзыва",
     "set_reviews_require_login_note": "По умолчанию (рекомендуется) любой посетитель может оставить отзыв от своего имени без аккаунта. Включите это, если хотите, чтобы отзывы оставляли только подтверждённые аккаунты.",
     "review_login_required_msg": "Чтобы оставить отзыв, сначала войдите в аккаунт покупателя в этом магазине.",
@@ -3795,6 +3822,7 @@
     "buyer_logout_btn": "🚪 Выйти",
     "buyer_login_title": "Вход покупателя",
     "buyer_register_title": "Создать аккаунт покупателя",
+    "buyer_register_incentive_msg": "🎁 Создайте аккаунт, чтобы получить лучшие предложения и привилегии для участников!",
     "buyer_registration_disabled_msg": "Регистрация новых покупателей в этом магазине временно отключена. Попробуйте войти, если у вас уже есть аккаунт.",
     "set_buyer_reg_disabled_label": "🚫 Временно отключить регистрацию новых покупателей",
     "set_buyer_reg_disabled_note": "Существующие аккаунты по-прежнему могут входить в систему - это только блокирует создание новых аккаунтов.",
@@ -4581,6 +4609,11 @@
     "buyer_mgmt_unblock_reviews_btn": "Débloquer les avis",
     "buyer_mgmt_reset_pw_prompt": "Entrez le nouveau mot de passe pour ce compte (4 caractères minimum) :",
     "buyer_mgmt_reset_pw_done": "Mot de passe changé avec succès. Communiquez-le au client.",
+    "buyer_chat_send_failed_rules": "Échec de l'envoi : les règles de sécurité Firestore n'autorisent pas l'écriture sur buyerChats. Ouvrez Firebase Console → Firestore → Rules, publiez la règle buyerChats, puis réessayez.",
+    "buyer_chat_send_failed_timeout": "Échec de l'envoi : connexion trop lente ou hors ligne (délai dépassé). Vérifiez votre connexion internet et réessayez.",
+    "buyer_mgmt_fetch_failed_rules": "Impossible de charger les acheteurs : les règles de sécurité Firestore n'autorisent pas la lecture de la liste des acheteurs. Vérifiez et publiez les règles dans Firebase Console.",
+    "buyer_mgmt_fetch_failed_timeout": "Impossible de charger les acheteurs : connexion trop lente ou hors ligne. Vérifiez votre connexion et réessayez.",
+    "buyer_mgmt_fetch_failed_generic": "Impossible de charger la liste des acheteurs, réessayez.",
     "set_reviews_require_login_label": "🔒 Exiger une connexion acheteur pour ajouter un avis",
     "set_reviews_require_login_note": "Par défaut (recommandé), tout visiteur peut ajouter un avis sous son nom sans compte. Activez cette option si vous souhaitez limiter les avis aux comptes vérifiés.",
     "review_login_required_msg": "Vous devez d'abord vous connecter avec un compte acheteur dans cette boutique pour ajouter un avis.",
@@ -4625,6 +4658,7 @@
     "buyer_logout_btn": "🚪 Déconnexion",
     "buyer_login_title": "Connexion acheteur",
     "buyer_register_title": "Créer un compte acheteur",
+    "buyer_register_incentive_msg": "🎁 Créez un compte pour profiter des meilleures offres et avantages réservés aux membres !",
     "buyer_registration_disabled_msg": "L'inscription de nouveaux acheteurs est temporairement désactivée dans cette boutique. Essayez de vous connecter si vous avez déjà un compte.",
     "set_buyer_reg_disabled_label": "🚫 Désactiver temporairement l'inscription de nouveaux acheteurs",
     "set_buyer_reg_disabled_note": "Les comptes existants peuvent toujours se connecter normalement - cela bloque uniquement la création de nouveaux comptes.",
@@ -5411,6 +5445,11 @@
     "buyer_mgmt_unblock_reviews_btn": "Desbloquear reseñas",
     "buyer_mgmt_reset_pw_prompt": "Introduce la nueva contraseña para esta cuenta (mínimo 4 caracteres):",
     "buyer_mgmt_reset_pw_done": "Contraseña cambiada con éxito. Compártela con el cliente.",
+    "buyer_chat_send_failed_rules": "No se pudo enviar: las reglas de seguridad de Firestore no permiten escribir en buyerChats. Abre Firebase Console → Firestore → Rules, publica la regla de buyerChats y vuelve a intentarlo.",
+    "buyer_chat_send_failed_timeout": "No se pudo enviar: la conexión es demasiado lenta o está desconectada (tiempo de espera agotado). Verifica tu conexión a internet e inténtalo de nuevo.",
+    "buyer_mgmt_fetch_failed_rules": "No se pudieron cargar los compradores: las reglas de seguridad de Firestore no permiten leer la lista de compradores. Revisa y publica las reglas en Firebase Console.",
+    "buyer_mgmt_fetch_failed_timeout": "No se pudieron cargar los compradores: la conexión es demasiado lenta o está desconectada. Verifica tu internet e inténtalo de nuevo.",
+    "buyer_mgmt_fetch_failed_generic": "No se pudo cargar la lista de compradores, inténtalo de nuevo.",
     "set_reviews_require_login_label": "🔒 Requerir inicio de sesión del comprador para dejar una reseña",
     "set_reviews_require_login_note": "De forma predeterminada (recomendado), cualquier visitante puede dejar una reseña con su nombre sin una cuenta. Activa esto si quieres que las reseñas sean solo de cuentas verificadas.",
     "review_login_required_msg": "Debes iniciar sesión con una cuenta de comprador en esta tienda primero para dejar una reseña.",
@@ -5455,6 +5494,7 @@
     "buyer_logout_btn": "🚪 Cerrar sesión",
     "buyer_login_title": "Inicio de sesión del comprador",
     "buyer_register_title": "Crear cuenta de comprador",
+    "buyer_register_incentive_msg": "🎁 ¡Crea una cuenta para desbloquear las mejores ofertas y beneficios exclusivos para miembros!",
     "buyer_registration_disabled_msg": "El registro de nuevos compradores está temporalmente desactivado en esta tienda. Intenta iniciar sesión si ya tienes una cuenta.",
     "set_buyer_reg_disabled_label": "🚫 Desactivar temporalmente el registro de nuevos compradores",
     "set_buyer_reg_disabled_note": "Las cuentas existentes aún pueden iniciar sesión normalmente - esto solo bloquea la creación de cuentas nuevas.",
@@ -6241,6 +6281,11 @@
     "buyer_mgmt_unblock_reviews_btn": "Bewertungssperre aufheben",
     "buyer_mgmt_reset_pw_prompt": "Gib das neue Passwort für dieses Konto ein (mindestens 4 Zeichen):",
     "buyer_mgmt_reset_pw_done": "Passwort erfolgreich geändert. Teile es dem Kunden mit.",
+    "buyer_chat_send_failed_rules": "Senden fehlgeschlagen: Die Firestore-Sicherheitsregeln erlauben kein Schreiben auf buyerChats. Öffne die Firebase Console → Firestore → Rules, veröffentliche die buyerChats-Regel und versuche es erneut.",
+    "buyer_chat_send_failed_timeout": "Senden fehlgeschlagen: Die Verbindung ist zu langsam oder offline (Zeitüberschreitung). Prüfe deine Internetverbindung und versuche es erneut.",
+    "buyer_mgmt_fetch_failed_rules": "Käufer konnten nicht geladen werden: Die Firestore-Sicherheitsregeln erlauben kein Lesen der Käuferliste. Überprüfe und veröffentliche die Regeln in der Firebase Console.",
+    "buyer_mgmt_fetch_failed_timeout": "Käufer konnten nicht geladen werden: Die Verbindung ist zu langsam oder offline. Prüfe dein Internet und versuche es erneut.",
+    "buyer_mgmt_fetch_failed_generic": "Käuferliste konnte nicht geladen werden, versuche es erneut.",
     "set_reviews_require_login_label": "🔒 Käuferanmeldung für Bewertungen erforderlich",
     "set_reviews_require_login_note": "Standardmäßig (empfohlen) kann jeder Besucher ohne Konto eine Bewertung unter seinem Namen abgeben. Aktiviere dies, wenn Bewertungen nur von verifizierten Konten stammen sollen.",
     "review_login_required_msg": "Du musst dich zuerst mit einem Käuferkonto in diesem Shop anmelden, um eine Bewertung abzugeben.",
@@ -6285,6 +6330,7 @@
     "buyer_logout_btn": "🚪 Abmelden",
     "buyer_login_title": "Käufer-Anmeldung",
     "buyer_register_title": "Käuferkonto erstellen",
+    "buyer_register_incentive_msg": "🎁 Erstelle ein Konto, um die besten Angebote und exklusive Mitgliedervorteile freizuschalten!",
     "buyer_registration_disabled_msg": "Die Registrierung neuer Käufer ist in diesem Shop vorübergehend deaktiviert. Versuche dich anzumelden, falls du bereits ein Konto hast.",
     "set_buyer_reg_disabled_label": "🚫 Neue Käuferregistrierung vorübergehend deaktivieren",
     "set_buyer_reg_disabled_note": "Bestehende Konten können sich weiterhin normal anmelden - dies blockiert nur die Erstellung neuer Konten.",
@@ -7071,6 +7117,11 @@
     "buyer_mgmt_unblock_reviews_btn": "Sblocca recensioni",
     "buyer_mgmt_reset_pw_prompt": "Inserisci la nuova password per questo account (almeno 4 caratteri):",
     "buyer_mgmt_reset_pw_done": "Password cambiata con successo. Comunicala al cliente.",
+    "buyer_chat_send_failed_rules": "Invio non riuscito: le regole di sicurezza di Firestore non consentono la scrittura su buyerChats. Apri Firebase Console → Firestore → Rules, pubblica la regola per buyerChats e riprova.",
+    "buyer_chat_send_failed_timeout": "Invio non riuscito: la connessione è troppo lenta o assente (timeout). Controlla la connessione internet e riprova.",
+    "buyer_mgmt_fetch_failed_rules": "Impossibile caricare gli acquirenti: le regole di sicurezza di Firestore non consentono la lettura dell'elenco acquirenti. Controlla e pubblica le regole in Firebase Console.",
+    "buyer_mgmt_fetch_failed_timeout": "Impossibile caricare gli acquirenti: la connessione è troppo lenta o assente. Controlla la connessione e riprova.",
+    "buyer_mgmt_fetch_failed_generic": "Impossibile caricare l'elenco degli acquirenti, riprova.",
     "set_reviews_require_login_label": "🔒 Richiedi accesso acquirente per aggiungere una recensione",
     "set_reviews_require_login_note": "Per impostazione predefinita (consigliato), qualsiasi visitatore può aggiungere una recensione con il proprio nome senza account. Attiva questa opzione se vuoi che le recensioni provengano solo da account verificati.",
     "review_login_required_msg": "Devi prima accedere con un account acquirente in questo negozio per aggiungere una recensione.",
@@ -7115,6 +7166,7 @@
     "buyer_logout_btn": "🚪 Esci",
     "buyer_login_title": "Accesso acquirente",
     "buyer_register_title": "Crea account acquirente",
+    "buyer_register_incentive_msg": "🎁 Crea un account per sbloccare le migliori offerte e i vantaggi riservati ai membri!",
     "buyer_registration_disabled_msg": "La registrazione di nuovi acquirenti è temporaneamente disattivata in questo negozio. Prova ad accedere se hai già un account.",
     "set_buyer_reg_disabled_label": "🚫 Disattiva temporaneamente la registrazione di nuovi acquirenti",
     "set_buyer_reg_disabled_note": "Gli account esistenti possono ancora accedere normalmente: questo blocca solo la creazione di nuovi account.",
@@ -7901,6 +7953,11 @@
     "buyer_mgmt_unblock_reviews_btn": "Desbloquear avaliações",
     "buyer_mgmt_reset_pw_prompt": "Digite a nova senha para esta conta (pelo menos 4 caracteres):",
     "buyer_mgmt_reset_pw_done": "Senha alterada com sucesso. Informe o cliente.",
+    "buyer_chat_send_failed_rules": "Falha ao enviar: as regras de segurança do Firestore não permitem gravar em buyerChats. Abra o Firebase Console → Firestore → Rules, publique a regra de buyerChats e tente novamente.",
+    "buyer_chat_send_failed_timeout": "Falha ao enviar: a conexão está muito lenta ou offline (tempo esgotado). Verifique sua conexão com a internet e tente novamente.",
+    "buyer_mgmt_fetch_failed_rules": "Não foi possível carregar os compradores: as regras de segurança do Firestore não permitem ler a lista de compradores. Revise e publique as regras no Firebase Console.",
+    "buyer_mgmt_fetch_failed_timeout": "Não foi possível carregar os compradores: a conexão está muito lenta ou offline. Verifique sua internet e tente novamente.",
+    "buyer_mgmt_fetch_failed_generic": "Não foi possível carregar a lista de compradores, tente novamente.",
     "set_reviews_require_login_label": "🔒 Exigir login do comprador para adicionar avaliação",
     "set_reviews_require_login_note": "Por padrão (recomendado), qualquer visitante pode adicionar uma avaliação com seu nome sem uma conta. Ative isso se quiser que as avaliações sejam apenas de contas verificadas.",
     "review_login_required_msg": "Você precisa fazer login com uma conta de comprador nesta loja primeiro para adicionar uma avaliação.",
@@ -7945,6 +8002,7 @@
     "buyer_logout_btn": "🚪 Sair",
     "buyer_login_title": "Login do comprador",
     "buyer_register_title": "Criar conta de comprador",
+    "buyer_register_incentive_msg": "🎁 Crie uma conta para desbloquear as melhores ofertas e benefícios exclusivos para membros!",
     "buyer_registration_disabled_msg": "O cadastro de novos compradores está temporariamente desativado nesta loja. Tente entrar se já tiver uma conta.",
     "set_buyer_reg_disabled_label": "🚫 Desativar temporariamente o cadastro de novos compradores",
     "set_buyer_reg_disabled_note": "Contas existentes ainda podem entrar normalmente - isso apenas bloqueia a criação de novas contas.",
@@ -8731,6 +8789,11 @@
     "buyer_mgmt_unblock_reviews_btn": "Değerlendirme engelini kaldır",
     "buyer_mgmt_reset_pw_prompt": "Bu hesap için yeni şifreyi girin (en az 4 karakter):",
     "buyer_mgmt_reset_pw_done": "Şifre başarıyla değiştirildi. Müşteriye iletin.",
+    "buyer_chat_send_failed_rules": "Gönderilemedi: Firestore güvenlik kuralları buyerChats'e yazmaya izin vermiyor. Firebase Console → Firestore → Rules kısmını açıp buyerChats kuralını yayınlayın, sonra tekrar deneyin.",
+    "buyer_chat_send_failed_timeout": "Gönderilemedi: bağlantı çok yavaş veya çevrimdışı (zaman aşımı). İnternet bağlantınızı kontrol edip tekrar deneyin.",
+    "buyer_mgmt_fetch_failed_rules": "Alıcılar yüklenemedi: Firestore güvenlik kuralları alıcı listesini okumaya izin vermiyor. Firebase Console'daki kuralları gözden geçirip yayınlayın.",
+    "buyer_mgmt_fetch_failed_timeout": "Alıcılar yüklenemedi: bağlantı çok yavaş veya çevrimdışı. İnternetinizi kontrol edip tekrar deneyin.",
+    "buyer_mgmt_fetch_failed_generic": "Alıcı listesi yüklenemedi, tekrar deneyin.",
     "set_reviews_require_login_label": "🔒 Değerlendirme eklemek için alıcı girişi gereksin",
     "set_reviews_require_login_note": "Varsayılan olarak (önerilen) herhangi bir ziyaretçi hesap olmadan adıyla değerlendirme ekleyebilir. Değerlendirmelerin yalnızca doğrulanmış hesaplardan gelmesini istiyorsanız bunu etkinleştirin.",
     "review_login_required_msg": "Değerlendirme eklemek için önce bu mağazada bir alıcı hesabıyla giriş yapmalısınız.",
@@ -8775,6 +8838,7 @@
     "buyer_logout_btn": "🚪 Çıkış Yap",
     "buyer_login_title": "Alıcı Girişi",
     "buyer_register_title": "Alıcı Hesabı Oluştur",
+    "buyer_register_incentive_msg": "🎁 En iyi fırsatları ve üyelere özel ayrıcalıkları açmak için hesap oluşturun!",
     "buyer_registration_disabled_msg": "Bu mağazada yeni alıcı kaydı geçici olarak devre dışı bırakıldı. Zaten bir hesabınız varsa giriş yapmayı deneyin.",
     "set_buyer_reg_disabled_label": "🚫 Yeni alıcı kaydını geçici olarak devre dışı bırak",
     "set_buyer_reg_disabled_note": "Mevcut hesaplar normal şekilde giriş yapmaya devam edebilir - bu yalnızca yeni hesap oluşturmayı engeller.",

@@ -23,6 +23,18 @@ const firebaseConfig = {
   appId: "1:246895081561:web:01560b80e2296b3f289948"
 };
 
+// ⏱️ أي عملية Firestore ممكن "تعلّق" بدون ما تنجح ولا تفشل لو الشبكة بطيئة جدًا
+// أو مقطوعة فعليًا (مش رفض صلاحيات). عشان أي واجهة (قائمة تحميل..إلخ) متفضلش
+// معلّقة للأبد، أي عملية حساسة بتتلف بمهلة زمنية، وبعد انتهائها بترجع خطأ واضح
+// اسمه 'timeout' بدل ما تفضل منتظرة بلا نهاية.
+function __withFirestoreTimeout(promise, ms) {
+  ms = ms || 12000;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(Object.assign(new Error('firestore-timeout'), { code: 'timeout' })), ms))
+  ]);
+}
+
 let __cloudDb = null;
 let __cloudEnabled = false;
 try {
@@ -1008,13 +1020,18 @@ window.loginOrRegisterBuyerWithGoogle = loginOrRegisterBuyerWithGoogle;
 
 // 👥 جلب كل المشترين المسجلين في متجر معيّن - لصاحب المتجر فقط (list مقفولة في قواعد
 // الأمان على غير المصرّح لهم - راجع authorizedUids). تُستخدم في لوحة "إدارة المشترين".
+window.__lastFetchBuyersError = null;
 async function fetchAllStoreBuyers(storeKey) {
-    if (!__cloudEnabled || !__cloudDb || !storeKey) return [];
+    if (!__cloudEnabled || !__cloudDb || !storeKey) { window.__lastFetchBuyersError = 'offline'; return []; }
     try {
-        let snap = await __cloudDb.collection('stores').doc(storeKey).collection('buyers').get();
+        let snap = await __withFirestoreTimeout(
+            __cloudDb.collection('stores').doc(storeKey).collection('buyers').get()
+        );
+        window.__lastFetchBuyersError = null;
         return snap.docs.map(d => Object.assign({ buyerId: d.id }, d.data()));
     } catch (err) {
-        console.warn('⚠️ تعذر جلب قائمة المشترين (تأكد إن قواعد الأمان بتسمح بـ list لصاحب المتجر):', err.message);
+        window.__lastFetchBuyersError = (err && err.code) || 'unknown';
+        console.warn('⚠️ تعذر جلب قائمة المشترين (تأكد إن قواعد الأمان بتسمح بـ list لصاحب المتجر):', err && err.code, err && err.message);
         return [];
     }
 }
@@ -1038,8 +1055,9 @@ window.deleteBuyerAccount = deleteBuyerAccount;
 // على مسار stores/{storeId}/buyerChats/** (نفس أسلوب chatMessages الموجود بالفعل).
 // ============================================================
 
+window.__lastBuyerChatSendError = null;
 function sendBuyerChatMessage(storeKey, buyerId, senderType, text, buyerName) {
-    if (!__cloudEnabled || !__cloudDb || !storeKey || !buyerId || !text) return Promise.resolve(false);
+    if (!__cloudEnabled || !__cloudDb || !storeKey || !buyerId || !text) { window.__lastBuyerChatSendError = 'offline'; return Promise.resolve(false); }
     let threadRef = __cloudDb.collection('stores').doc(storeKey).collection('buyerChats').doc(buyerId);
     let msgData = {
         text: text,
@@ -1048,7 +1066,7 @@ function sendBuyerChatMessage(storeKey, buyerId, senderType, text, buyerName) {
         readByMerchant: senderType === 'merchant',
         readByBuyer: senderType === 'buyer'
     };
-    return threadRef.collection('messages').add(msgData).then(function() {
+    let chain = threadRef.collection('messages').add(msgData).then(function() {
         return threadRef.set({
             buyerName: buyerName || '',
             lastMessage: text,
@@ -1057,8 +1075,14 @@ function sendBuyerChatMessage(storeKey, buyerId, senderType, text, buyerName) {
             unreadByMerchant: firebase.firestore.FieldValue.increment(senderType === 'buyer' ? 1 : 0),
             unreadByBuyer: firebase.firestore.FieldValue.increment(senderType === 'merchant' ? 1 : 0)
         }, { merge: true });
-    }).then(() => true)
-    .catch(err => { console.warn('⚠️ تعذر إرسال رسالة شات المشترِي:', err.message); return false; });
+    });
+    return __withFirestoreTimeout(chain, 12000)
+    .then(() => { window.__lastBuyerChatSendError = null; return true; })
+    .catch(err => {
+        window.__lastBuyerChatSendError = (err && err.code) || 'unknown';
+        console.warn('⚠️ تعذر إرسال رسالة شات المشترِي:', err && err.code, err && err.message);
+        return false;
+    });
 }
 window.sendBuyerChatMessage = sendBuyerChatMessage;
 

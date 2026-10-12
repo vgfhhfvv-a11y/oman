@@ -7955,23 +7955,31 @@
         function syncBuyerAccountIcon() {
             let btn = document.getElementById('buyerAccountBtn');
             let icon = document.getElementById('buyerAccountIcon');
-            if(!btn || !icon) return;
-            // 🚪 الأيقونة دلوقتي ظاهرة دايمًا (مش بس جوه متجر) عشان هي نفسها بوابة الدخول
-            // الموحّدة لأي حد: عميل جوه متجر، أو صاحب متجر/تاجر من الصفحة الرئيسية للمنصة.
-            btn.classList.remove('hidden');
+            let navBtn = document.getElementById('buyerAccountNavBtn');
+            let navIcon = document.getElementById('buyerAccountNavIcon');
+            let navLabel = document.getElementById('buyerAccountNavLabel');
             let __onStorePageIcon = localStorage.getItem('viewMode') === 'store';
-            if(!__onStorePageIcon) {
-                let loggedMerchant = localStorage.getItem('currentActiveMerchant');
-                let loggedAdmin = localStorage.getItem('isAdminLoggedIn') === 'true';
-                icon.className = (loggedMerchant || loggedAdmin) ? 'fa fa-store' : 'fa fa-right-to-bracket';
-                btn.title = (loggedMerchant || loggedAdmin) ? t('my_store_dashboard_label', 'لوحة إدارة متجري') : t('header_merchant_login_title', 'تسجيل الدخول للمتجر');
-                try { stopBuyerChatWatch(); } catch(e) {}
-                return;
+            // 🔝 الأيقونة العلوية دلوقتي للصفحة الرئيسية للمنصة بس (دخول التجار/الأدمن) -
+            // حساب المشترِي بقى ليه مكانه الخاص في الشريط السفلي، مش مزاحم حاجة تانية.
+            if(btn && icon) {
+                btn.classList.toggle('hidden', __onStorePageIcon);
+                if(!__onStorePageIcon) {
+                    let loggedMerchant = localStorage.getItem('currentActiveMerchant');
+                    let loggedAdmin = localStorage.getItem('isAdminLoggedIn') === 'true';
+                    icon.className = (loggedMerchant || loggedAdmin) ? 'fa fa-store' : 'fa fa-right-to-bracket';
+                    btn.title = (loggedMerchant || loggedAdmin) ? t('my_store_dashboard_label', 'لوحة إدارة متجري') : t('header_merchant_login_title', 'تسجيل الدخول للمتجر');
+                }
             }
-            let sess = getBuyerSession(activeStore);
-            icon.className = sess ? 'fa fa-circle-user' : 'fa fa-user-circle';
-            btn.title = sess ? (sess.name || t('my_account_label', 'حسابي')) : t('login_register_label', 'تسجيل الدخول / حساب جديد');
-            try { if(sess) ensureBuyerChatBadgeWatch(); else stopBuyerChatWatch(); } catch(e) {}
+            if(!__onStorePageIcon) { try { stopBuyerChatWatch(); } catch(e) {} }
+            if(navBtn) {
+                navBtn.classList.toggle('hidden', !__onStorePageIcon);
+                if(__onStorePageIcon && navIcon && navLabel) {
+                    let sess = getBuyerSession(activeStore);
+                    navIcon.className = sess ? 'fa fa-circle-user' : 'fa fa-user-circle';
+                    navLabel.textContent = sess ? (sess.name || t('my_account_label', 'حسابي')) : t('login_register_label', 'تسجيل الدخول');
+                    try { if(sess) ensureBuyerChatBadgeWatch(); else stopBuyerChatWatch(); } catch(e) {}
+                }
+            }
         }
 
         // 🚪 نقطة الدخول الموحّدة الوحيدة في الهيدر: بتوجّه أي زائر تلقائيًا للمكان الصح
@@ -8196,7 +8204,7 @@
             __buyerChatUnsub = window.watchBuyerChatMessages(activeStore, sess.buyerId, function(msgs) {
                 __buyerChatMsgsCache = msgs;
                 let unread = msgs.filter(m => m.senderType === 'merchant' && !m.readByBuyer).length;
-                let dot = document.getElementById('buyerAccountChatDot');
+                let dot = document.getElementById('buyerAccountNavDot');
                 if(dot) dot.classList.toggle('hidden', unread === 0);
                 let modalBadge = document.getElementById('buyerChatUnreadBadge');
                 if(modalBadge) { modalBadge.textContent = unread; modalBadge.classList.toggle('hidden', unread === 0); }
@@ -8228,6 +8236,14 @@
             }).join('');
             box.scrollTop = box.scrollHeight;
         }
+        // 🔎 بيحوّل كود الخطأ الراجع من Firestore لرسالة واضحة ومحدّدة بدل رسالة عامة واحدة
+        // لكل الحالات - عشان لما تظهر تعرف بالظبط المشكلة فين (صلاحيات/نت/مهلة).
+        function buyerChatErrorMessage(errCode) {
+            if(errCode === 'permission-denied') return t('buyer_chat_send_failed_rules', 'تعذر الإرسال: قواعد أمان Firestore مش سامحة بالكتابة على buyerChats. افتح Firebase Console ← Firestore ← Rules وانشر القاعدة الخاصة بمسار buyerChats، وبعدين حاول تاني.');
+            if(errCode === 'timeout') return t('buyer_chat_send_failed_timeout', 'تعذر الإرسال: الاتصال بطيء جدًا أو مقطوع (انتهت مهلة الانتظار). تأكد من اتصال الإنترنت وحاول تاني.');
+            if(errCode === 'offline') return t('alert_no_internet', 'لا يوجد اتصال بالإنترنت حاليًا، حاول مرة أخرى.');
+            return t('buyer_chat_send_failed', 'تعذر إرسال الرسالة - تأكد إن قواعد أمان Firestore مفعّلة لمسار buyerChats، وحاول تاني.');
+        }
         async function sendBuyerChatMsg() {
             if(!activeStore) return;
             let sess = getBuyerSession(activeStore);
@@ -8240,7 +8256,7 @@
             // ⚠️ بنستنى نتيجة الإرسال فعليًا بدل ما نفترض نجاحه - لو قواعد أمان Firestore مش
             // سامحة بالكتابة على buyerChats هيظهر خطأ واضح هنا بدل ما الرسالة "تختفي" بصمت.
             let ok = await window.sendBuyerChatMessage(activeStore, sess.buyerId, 'buyer', text, sess.name || '');
-            if(!ok) { alert(t('buyer_chat_send_failed', 'تعذر إرسال الرسالة - تأكد إن قواعد أمان Firestore مفعّلة لمسار buyerChats، وحاول تاني.')); input.value = text; }
+            if(!ok) { alert(buyerChatErrorMessage(window.__lastBuyerChatSendError)); input.value = text; }
         }
         function deleteBuyerChatMsgUI(msgId) {
             if(!activeStore) return;
@@ -8333,6 +8349,16 @@
                 return;
             }
             let buyers = await window.fetchAllStoreBuyers(merchant);
+            let errCode = window.__lastFetchBuyersError;
+            if(errCode && (!buyers || buyers.length === 0)) {
+                let msg = errCode === 'permission-denied'
+                    ? t('buyer_mgmt_fetch_failed_rules', 'تعذر تحميل المشترين: قواعد أمان Firestore مش سامحة بقراءة قائمة المشترين. راجع القواعد في Firebase Console وانشرها.')
+                    : errCode === 'timeout'
+                    ? t('buyer_mgmt_fetch_failed_timeout', 'تعذر تحميل المشترين: الاتصال بطيء جدًا أو مقطوع. تأكد من الإنترنت وحاول تاني.')
+                    : t('buyer_mgmt_fetch_failed_generic', 'تعذر تحميل قائمة المشترين، حاول تاني.');
+                document.getElementById('buyerManagementList').innerHTML = '<p style="text-align:center; color:red; font-size:12px;">' + msg + '</p>';
+                return;
+            }
             renderBuyerManagementList(buyers);
         }
         function closeBuyerManagementModal() {
@@ -8500,7 +8526,7 @@
             if(!window.sendBuyerChatMessage) { alert(t('alert_no_internet', 'لا يوجد اتصال بالإنترنت حاليًا، حاول مرة أخرى.')); return; }
             input.value = '';
             let ok = await window.sendBuyerChatMessage(merchant, __activeBuyerChatThreadBuyerId, 'merchant', text, '');
-            if(!ok) { alert(t('buyer_chat_send_failed', 'تعذر إرسال الرسالة - تأكد إن قواعد أمان Firestore مفعّلة لمسار buyerChats، وحاول تاني.')); input.value = text; }
+            if(!ok) { alert(buyerChatErrorMessage(window.__lastBuyerChatSendError)); input.value = text; }
         }
         function deleteMerchantBuyerChatMsgUI(msgId) {
             let merchant = localStorage.getItem('currentActiveMerchant');
