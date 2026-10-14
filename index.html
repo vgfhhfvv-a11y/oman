@@ -65,13 +65,13 @@
         <!-- أيقونات صغيرة متناسقة الحجم: تتبع الطلب + تسجيل الدخول + اللغة -->
         <div style="position:absolute; top:8px; left:10px; z-index:1500; display:flex; align-items:center; gap:8px;">
             <button class="corner-icon-btn hidden" id="installAppBtn" onclick="triggerInstallPrompt()" title="ثبّت المتجر على شاشتك"><i class="fa fa-download"></i></button>
-            <button class="corner-icon-btn hidden" id="trackOrderNavBtn" onclick="openTrackOrderModal()" title="تتبع طلبك"><i class="fa fa-truck-fast"></i></button>
-            <!-- 🚪 أيقونة دخول موحّدة واحدة فقط: بتاخد أي حد (عميل أو صاحب متجر) لمكان الدخول
-                 المناسب ليه تلقائيًا - عميل مسجّل دخوله يروح ملفه، عميل زائر يروح تسجيل دخول
-                 العملاء، وفي الصفحة الرئيسية للمنصة (من غير متجر محدد) تروح تسجيل دخول التجار. -->
-            <button class="corner-icon-btn" id="buyerAccountBtn" onclick="unifiedEntryClick()" data-i18n-title="unified_entry_title" title="تسجيل الدخول / حسابي" style="position:relative;">
-                <i class="fa fa-user-circle" id="buyerAccountIcon"></i>
-                <span id="buyerAccountChatDot" class="hidden" style="position:absolute; top:-2px; left:-2px; width:10px; height:10px; border-radius:50%; background:#dc2626; border:1.5px solid #fff;"></span>
+            <!-- 🚪 أيقونة دخول/حساب واحدة موحّدة فقط - زي أمازون: ضغطة واحدة، وهي نفسها
+                 بتقرر تاخدك فين (ملفك الشخصي لو داخل بالفعل، لوحة التاجر لو تاجر/أدمن داخل،
+                 أو نافذة اختيار بسيطة لو زائر: "دخول العملاء" أو "دخول التجار"). مفيش أي
+                 أيقونة دخول تانية في أي مكان تاني بالصفحة - مكان واحد بس، واضح وثابت. -->
+            <button class="corner-icon-btn" id="unifiedEntryBtn" onclick="unifiedEntryClick()" data-i18n-title="unified_entry_title" title="تسجيل الدخول / حسابي" style="position:relative;">
+                <i class="fa fa-user-circle" id="unifiedEntryIcon"></i>
+                <span id="unifiedEntryDot" class="hidden" style="position:absolute; top:-2px; left:-2px; width:10px; height:10px; border-radius:50%; background:#dc2626; border:1.5px solid #fff;"></span>
             </button>
             <!-- 💬 أيقونة شات موحّدة في الشريط العلوي، نفس الشكل عند الجميع (تاجر/أدمن/مشرف
                  دعم) - بتقرر هي نفسها مين الداخل وتفتح اللوحة المناسبة له لحظة الضغط. -->
@@ -417,6 +417,17 @@
         </div>
     </div>
 
+    <!-- 🚪 نافذة الاختيار الذكية - بتظهر بس لما تضغط على أيقونة الدخول الموحّدة وانت زائر
+         جوه متجر معيّن (مش داخل بحساب أصلاً): خيارين واضحين جدًا زي أمازون، من غير أي تعقيد. -->
+    <div id="unifiedEntryChoiceModal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width:360px; text-align:center;">
+            <span class="modal-close-chip" onclick="closeUnifiedEntryChoiceModal()"><i class="fa fa-times"></i> <span data-i18n="close_label">إغلاق</span></span>
+            <h3 style="margin:0 0 16px;" data-i18n="unified_entry_title">تسجيل الدخول / حسابي</h3>
+            <button onclick="closeUnifiedEntryChoiceModal(); openBuyerAuthModal('login');" style="margin-bottom:10px;" data-i18n="unified_entry_customer_btn">👤 دخول العملاء لهذا المتجر</button>
+            <button class="secondary" onclick="closeUnifiedEntryChoiceModal(); switchTab('auth');" data-i18n="unified_entry_merchant_btn">🏪 دخول التجار / لوحة المنصة</button>
+        </div>
+    </div>
+
     <!-- 👤 نافذة تسجيل الدخول / إنشاء حساب مشترٍ داخل المتجر -->
     <div id="buyerAuthModal" class="modal-overlay hidden">
         <div class="modal-content" style="border-top: 4px solid var(--primary-color);">
@@ -458,6 +469,11 @@
         <div class="modal-content" style="border-top: 4px solid var(--primary-color);">
             <span class="modal-close-chip" onclick="closeBuyerProfileModal()"><i class="fa fa-times"></i> <span data-i18n="close_label">إغلاق</span></span>
             <h3 style="margin-top:0;" data-i18n="buyer_profile_title">👤 حسابي</h3>
+            <!-- 👋 ترحيب واضح باسم المشتري فور فتح لوحته - عشان يتأكد فورًا إنه فعلاً مسجّل
+                 دخوله ومش محتار "هل سجلت ولا لأ"، من غير ما يدوّر في الصفحة. -->
+            <div id="buyerWelcomeBanner" style="background:linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%); color:#fff; border-radius:10px; padding:10px 14px; margin-bottom:14px; font-size:14px; font-weight:bold; text-align:center;">
+                👋 <span data-i18n="buyer_welcome_banner_prefix">أهلاً بيك</span>، <span id="buyerWelcomeBannerName"></span>
+            </div>
 
             <label style="font-size:12px; font-weight:bold;" data-i18n="buyer_name_label">الاسم:</label>
             <input type="text" id="buyerProfileNameInput">
@@ -528,14 +544,9 @@
         <button class="nav-item" id="cartNavBtn" style="position: relative;" onclick="switchTab('cart', this)"><i class="fa fa-shopping-basket"></i><span id="cartNavLabel" data-i18n="nav_cart">السلة</span> <span id="cartCount" class="badge">0</span></button>
         <button class="nav-item hidden" id="storeAboutNavBtn" onclick="openStoreAboutModal()"><i class="fa fa-shop"></i><span data-i18n="nav_about_store">عن المتجر</span></button>
         <button class="nav-item hidden" id="platformAboutNavBtn" onclick="openPlatformAboutModal()"><i class="fa fa-building"></i><span data-i18n="nav_about_platform">عن المنصة</span></button>
-        <!-- 👤 حساب المشتري - ظاهر بس وانت جوه صفحة متجر معيّن (مش في الصفحة الرئيسية
-             للمنصة)، وبيتغيّر شكله حسب لو فيه جلسة دخول شغالة ولا لأ. -->
-        <button class="nav-item hidden" id="buyerAccountNavBtn" onclick="unifiedEntryClick()" style="position:relative;">
-            <i class="fa fa-user-circle" id="buyerAccountNavIcon"></i>
-            <span id="buyerAccountNavLabel" data-i18n="my_account_label">حسابي</span>
-            <span id="buyerAccountNavDot" class="hidden" style="position:absolute; top:4px; left:calc(50% - 14px); width:9px; height:9px; border-radius:50%; background:#dc2626; border:1.5px solid #fff;"></span>
-        </button>
-        <button class="nav-item" id="authNavBtn" onclick="switchTab('auth', this)"><i class="fa fa-store" id="authNavIcon"></i><span data-i18n="nav_auth" id="authNavLabel">دخول التجار</span></button>
+        <!-- 📦 تتبع الطلبات - نقلناها من زاوية الهيدر هنا في الشريط السفلي، ليها مكان واضح
+             وتسمية مفيدة بدل ما تكون أيقونة صغيرة غامضة في الزاوية. -->
+        <button class="nav-item hidden" id="trackOrderNavBtn" onclick="openTrackOrderModal()"><i class="fa fa-truck-fast"></i><span data-i18n="nav_track_order">تتبع طلباتك</span></button>
     </nav>
 
 
@@ -1270,6 +1281,28 @@
     "buyer_mgmt_fetch_failed_rules": "تعذر تحميل المشترين: قواعد أمان Firestore مش سامحة بقراءة قائمة المشترين. راجع القواعد في Firebase Console وانشرها.",
     "buyer_mgmt_fetch_failed_timeout": "تعذر تحميل المشترين: الاتصال بطيء جدًا أو مقطوع. تأكد من الإنترنت وحاول تاني.",
     "buyer_mgmt_fetch_failed_generic": "تعذر تحميل قائمة المشترين، حاول تاني.",
+    "buyer_welcome_banner_prefix": "أهلاً بيك",
+    "buyer_login_success_toast": "تم تسجيل الدخول بنجاح، أهلاً",
+    "buyer_default_name": "عميلنا العزيز",
+    "admin_quick_msg_store_title": "راسل هذا التاجر مباشرة",
+    "admin_store_search_ph": "🔍 دوّر باسم متجر أو تاجر عشان تراسله أو تديره...",
+    "buyer_chat_search_ph": "🔍 دوّر باسم أو رقم/بريد عميل...",
+    "buyer_chats_no_match": "مفيش عميل بهذا الاسم أو الرقم.",
+    "buyer_mgmt_chat_btn": "راسله",
+    "prod_member_discount_label": "<i class='fa fa-gift'></i> خصم حصري للأعضاء المسجلين فقط (اختياري)",
+    "prod_member_discount_ph": "نسبة الخصم % للأعضاء بس (مثلاً 30)",
+    "prod_member_discount_note": "الخصم ده بيظهر بس للعميل اللي عامل تسجيل دخول كمشترِي في متجرك - الزوار العاديين (غير المسجلين) هيشوفوا السعر العادي أو خصم الكل بس، من غير ما يعرفوا إن فيه عرض أعضاء أصلاً.",
+    "member_discount_badge": "عرض الأعضاء",
+    "discount_label_prefix": "خصم",
+    "unified_entry_customer_btn": "👤 دخول العملاء لهذا المتجر",
+    "unified_entry_merchant_btn": "🏪 دخول التجار / لوحة المنصة",
+    "nav_track_order": "تتبع طلباتك",
+    "review_login_or_register_prompt": "سجّل دخولك بحساب جوجل، أو اعمل حساب مشترِي عادي في المتجر، عشان تقدر تضيف تقييم. تحب تفتح صفحة تسجيل الدخول دلوقتي؟",
+    "dash_quick_stats_today_orders": "طلبات اليوم",
+    "dash_quick_stats_month_orders": "طلبات هذا الشهر",
+    "dash_share_store_btn": "مشاركة رابط متجري",
+    "dash_share_store_copied": "تم نسخ رابط متجرك! الصقه وابعته لعملائك.",
+    "dash_share_store_copy_manual": "انسخ رابط متجرك يدويًا:",
     "set_reviews_require_login_label": "🔒 لازم تسجيل دخول بحساب مشترِي عشان تضيف تقييم",
     "set_reviews_require_login_note": "افتراضيًا (الوضع المقترح) أي زائر يقدر يضيف تقييم باسمه بدون حساب. فعّل ده لو عايز التقييمات تبقى من حسابات موثّقة بس.",
     "review_login_required_msg": "لازم تسجّل دخولك بحساب مشترِي في هذا المتجر الأول عشان تضيف تقييم.",
@@ -2106,6 +2139,28 @@
     "buyer_mgmt_fetch_failed_rules": "Couldn't load buyers: Firestore security rules don't allow reading the buyers list. Review the rules in Firebase Console and publish them.",
     "buyer_mgmt_fetch_failed_timeout": "Couldn't load buyers: the connection is too slow or offline. Check your internet and try again.",
     "buyer_mgmt_fetch_failed_generic": "Couldn't load the buyers list, try again.",
+    "buyer_welcome_banner_prefix": "Welcome",
+    "buyer_login_success_toast": "Logged in successfully, welcome",
+    "buyer_default_name": "valued customer",
+    "admin_quick_msg_store_title": "Message this merchant directly",
+    "admin_store_search_ph": "🔍 Search by store or merchant name to message or manage them...",
+    "buyer_chat_search_ph": "🔍 Search by customer name, phone or email...",
+    "buyer_chats_no_match": "No customer matches this name or number.",
+    "buyer_mgmt_chat_btn": "Message",
+    "prod_member_discount_label": "<i class='fa fa-gift'></i> Exclusive discount for registered members only (optional)",
+    "prod_member_discount_ph": "Discount % for members only (e.g. 30)",
+    "prod_member_discount_note": "This discount shows only to a customer logged in as a buyer in your store - regular (non-logged-in) visitors will see only the normal price or the general discount, with no hint a member offer exists.",
+    "member_discount_badge": "Member offer",
+    "discount_label_prefix": "Discount",
+    "unified_entry_customer_btn": "👤 Customer login for this store",
+    "unified_entry_merchant_btn": "🏪 Merchant login / platform dashboard",
+    "nav_track_order": "Track your orders",
+    "review_login_or_register_prompt": "Sign in with Google, or create a regular buyer account in the store, to add a review. Open the login page now?",
+    "dash_quick_stats_today_orders": "Today's orders",
+    "dash_quick_stats_month_orders": "This month's orders",
+    "dash_share_store_btn": "Share my store link",
+    "dash_share_store_copied": "Your store link was copied! Paste it and send it to your customers.",
+    "dash_share_store_copy_manual": "Copy your store link manually:",
     "set_reviews_require_login_label": "🔒 Require buyer login to add a review",
     "set_reviews_require_login_note": "By default (recommended), any visitor can add a review under their name without an account. Enable this if you want reviews limited to verified accounts only.",
     "review_login_required_msg": "You need to log in with a buyer account in this store first to add a review.",
@@ -2942,6 +2997,28 @@
     "buyer_mgmt_fetch_failed_rules": "无法加载买家：Firestore 安全规则不允许读取买家列表。请在 Firebase 控制台检查并发布规则。",
     "buyer_mgmt_fetch_failed_timeout": "无法加载买家：网络太慢或已断开。请检查网络后重试。",
     "buyer_mgmt_fetch_failed_generic": "无法加载买家列表，请重试。",
+    "buyer_welcome_banner_prefix": "欢迎",
+    "buyer_login_success_toast": "登录成功，欢迎",
+    "buyer_default_name": "尊贵的客户",
+    "admin_quick_msg_store_title": "直接给该商家发消息",
+    "admin_store_search_ph": "🔍 按店铺或商家名称搜索以发送消息或管理...",
+    "buyer_chat_search_ph": "🔍 按客户姓名、电话或邮箱搜索...",
+    "buyer_chats_no_match": "没有与该姓名或号码匹配的客户。",
+    "buyer_mgmt_chat_btn": "发消息",
+    "prod_member_discount_label": "<i class='fa fa-gift'></i> 仅限注册会员的专属折扣（可选）",
+    "prod_member_discount_ph": "仅会员折扣百分比（例如 30）",
+    "prod_member_discount_note": "此折扣仅对已在您店铺登录为买家的客户显示——普通（未登录）访客只会看到正常价格或通用折扣，不会察觉存在会员优惠。",
+    "member_discount_badge": "会员优惠",
+    "discount_label_prefix": "折扣",
+    "unified_entry_customer_btn": "👤 本店客户登录",
+    "unified_entry_merchant_btn": "🏪 商家登录 / 平台后台",
+    "nav_track_order": "追踪您的订单",
+    "review_login_or_register_prompt": "使用 Google 登录，或在店铺创建普通买家账户，即可添加评价。现在打开登录页面吗？",
+    "dash_quick_stats_today_orders": "今日订单",
+    "dash_quick_stats_month_orders": "本月订单",
+    "dash_share_store_btn": "分享我的店铺链接",
+    "dash_share_store_copied": "店铺链接已复制！粘贴并发送给您的客户。",
+    "dash_share_store_copy_manual": "手动复制您的店铺链接：",
     "set_reviews_require_login_label": "🔒 需要买家登录才能添加评价",
     "set_reviews_require_login_note": "默认情况下（推荐），任何访客都可以用自己的名字添加评价而无需账户。如果您希望评价仅限于已验证的账户，请启用此选项。",
     "review_login_required_msg": "您需要先使用该店铺的买家账户登录才能添加评价。",
@@ -3778,6 +3855,28 @@
     "buyer_mgmt_fetch_failed_rules": "Не удалось загрузить покупателей: правила безопасности Firestore не разрешают чтение списка покупателей. Проверьте и опубликуйте правила в Firebase Console.",
     "buyer_mgmt_fetch_failed_timeout": "Не удалось загрузить покупателей: соединение слишком медленное или отсутствует. Проверьте интернет и попробуйте снова.",
     "buyer_mgmt_fetch_failed_generic": "Не удалось загрузить список покупателей, попробуйте снова.",
+    "buyer_welcome_banner_prefix": "Добро пожаловать",
+    "buyer_login_success_toast": "Вход выполнен успешно, добро пожаловать",
+    "buyer_default_name": "уважаемый покупатель",
+    "admin_quick_msg_store_title": "Написать этому продавцу напрямую",
+    "admin_store_search_ph": "🔍 Поиск по названию магазина или продавца, чтобы написать или управлять...",
+    "buyer_chat_search_ph": "🔍 Поиск по имени, телефону или email покупателя...",
+    "buyer_chats_no_match": "Нет покупателя с таким именем или номером.",
+    "buyer_mgmt_chat_btn": "Написать",
+    "prod_member_discount_label": "<i class='fa fa-gift'></i> Эксклюзивная скидка только для зарегистрированных участников (необязательно)",
+    "prod_member_discount_ph": "Скидка % только для участников (например, 30)",
+    "prod_member_discount_note": "Эта скидка видна только покупателю, вошедшему в аккаунт в вашем магазине - обычные (незарегистрированные) посетители увидят только обычную цену или общую скидку, без намёка на существование предложения для участников.",
+    "member_discount_badge": "Предложение для участников",
+    "discount_label_prefix": "Скидка",
+    "unified_entry_customer_btn": "👤 Вход для покупателей этого магазина",
+    "unified_entry_merchant_btn": "🏪 Вход для продавцов / панель платформы",
+    "nav_track_order": "Отследить заказы",
+    "review_login_or_register_prompt": "Войдите через Google или создайте обычный аккаунт покупателя в магазине, чтобы оставить отзыв. Открыть страницу входа сейчас?",
+    "dash_quick_stats_today_orders": "Заказы сегодня",
+    "dash_quick_stats_month_orders": "Заказы за этот месяц",
+    "dash_share_store_btn": "Поделиться ссылкой на магазин",
+    "dash_share_store_copied": "Ссылка на магазин скопирована! Вставьте и отправьте её клиентам.",
+    "dash_share_store_copy_manual": "Скопируйте ссылку на магазин вручную:",
     "set_reviews_require_login_label": "🔒 Требовать вход покупателя для добавления отзыва",
     "set_reviews_require_login_note": "По умолчанию (рекомендуется) любой посетитель может оставить отзыв от своего имени без аккаунта. Включите это, если хотите, чтобы отзывы оставляли только подтверждённые аккаунты.",
     "review_login_required_msg": "Чтобы оставить отзыв, сначала войдите в аккаунт покупателя в этом магазине.",
@@ -4614,6 +4713,28 @@
     "buyer_mgmt_fetch_failed_rules": "Impossible de charger les acheteurs : les règles de sécurité Firestore n'autorisent pas la lecture de la liste des acheteurs. Vérifiez et publiez les règles dans Firebase Console.",
     "buyer_mgmt_fetch_failed_timeout": "Impossible de charger les acheteurs : connexion trop lente ou hors ligne. Vérifiez votre connexion et réessayez.",
     "buyer_mgmt_fetch_failed_generic": "Impossible de charger la liste des acheteurs, réessayez.",
+    "buyer_welcome_banner_prefix": "Bienvenue",
+    "buyer_login_success_toast": "Connexion réussie, bienvenue",
+    "buyer_default_name": "cher client",
+    "admin_quick_msg_store_title": "Envoyer un message direct à ce marchand",
+    "admin_store_search_ph": "🔍 Recherchez par nom de boutique ou de marchand pour envoyer un message ou gérer...",
+    "buyer_chat_search_ph": "🔍 Rechercher par nom, téléphone ou e-mail du client...",
+    "buyer_chats_no_match": "Aucun client ne correspond à ce nom ou numéro.",
+    "buyer_mgmt_chat_btn": "Message",
+    "prod_member_discount_label": "<i class='fa fa-gift'></i> Remise exclusive réservée aux membres inscrits (facultatif)",
+    "prod_member_discount_ph": "Remise % réservée aux membres (ex. 30)",
+    "prod_member_discount_note": "Cette remise n'est visible que pour un client connecté en tant qu'acheteur dans votre boutique - les visiteurs ordinaires (non connectés) ne verront que le prix normal ou la remise générale, sans indice qu'une offre membre existe.",
+    "member_discount_badge": "Offre membre",
+    "discount_label_prefix": "Remise",
+    "unified_entry_customer_btn": "👤 Connexion client pour cette boutique",
+    "unified_entry_merchant_btn": "🏪 Connexion marchand / tableau de bord",
+    "nav_track_order": "Suivre vos commandes",
+    "review_login_or_register_prompt": "Connectez-vous avec Google, ou créez un compte acheteur classique dans la boutique, pour ajouter un avis. Ouvrir la page de connexion maintenant ?",
+    "dash_quick_stats_today_orders": "Commandes du jour",
+    "dash_quick_stats_month_orders": "Commandes du mois",
+    "dash_share_store_btn": "Partager le lien de ma boutique",
+    "dash_share_store_copied": "Le lien de votre boutique a été copié ! Collez-le et envoyez-le à vos clients.",
+    "dash_share_store_copy_manual": "Copiez manuellement le lien de votre boutique :",
     "set_reviews_require_login_label": "🔒 Exiger une connexion acheteur pour ajouter un avis",
     "set_reviews_require_login_note": "Par défaut (recommandé), tout visiteur peut ajouter un avis sous son nom sans compte. Activez cette option si vous souhaitez limiter les avis aux comptes vérifiés.",
     "review_login_required_msg": "Vous devez d'abord vous connecter avec un compte acheteur dans cette boutique pour ajouter un avis.",
@@ -5450,6 +5571,28 @@
     "buyer_mgmt_fetch_failed_rules": "No se pudieron cargar los compradores: las reglas de seguridad de Firestore no permiten leer la lista de compradores. Revisa y publica las reglas en Firebase Console.",
     "buyer_mgmt_fetch_failed_timeout": "No se pudieron cargar los compradores: la conexión es demasiado lenta o está desconectada. Verifica tu internet e inténtalo de nuevo.",
     "buyer_mgmt_fetch_failed_generic": "No se pudo cargar la lista de compradores, inténtalo de nuevo.",
+    "buyer_welcome_banner_prefix": "Bienvenido/a",
+    "buyer_login_success_toast": "Inicio de sesión exitoso, bienvenido/a",
+    "buyer_default_name": "estimado cliente",
+    "admin_quick_msg_store_title": "Enviar mensaje directo a este comerciante",
+    "admin_store_search_ph": "🔍 Busca por nombre de tienda o comerciante para enviar mensajes o gestionar...",
+    "buyer_chat_search_ph": "🔍 Buscar por nombre, teléfono o correo del cliente...",
+    "buyer_chats_no_match": "Ningún cliente coincide con este nombre o número.",
+    "buyer_mgmt_chat_btn": "Mensaje",
+    "prod_member_discount_label": "<i class='fa fa-gift'></i> Descuento exclusivo solo para miembros registrados (opcional)",
+    "prod_member_discount_ph": "Descuento % solo para miembros (p. ej. 30)",
+    "prod_member_discount_note": "Este descuento solo se muestra a un cliente que haya iniciado sesión como comprador en tu tienda - los visitantes normales (sin sesión) solo verán el precio normal o el descuento general, sin indicio de que existe una oferta para miembros.",
+    "member_discount_badge": "Oferta de miembros",
+    "discount_label_prefix": "Descuento",
+    "unified_entry_customer_btn": "👤 Acceso de clientes para esta tienda",
+    "unified_entry_merchant_btn": "🏪 Acceso de comerciantes / panel de la plataforma",
+    "nav_track_order": "Seguir tus pedidos",
+    "review_login_or_register_prompt": "Inicia sesión con Google, o crea una cuenta de comprador normal en la tienda, para añadir una reseña. ¿Abrir la página de inicio de sesión ahora?",
+    "dash_quick_stats_today_orders": "Pedidos de hoy",
+    "dash_quick_stats_month_orders": "Pedidos de este mes",
+    "dash_share_store_btn": "Compartir el enlace de mi tienda",
+    "dash_share_store_copied": "¡Se copió el enlace de tu tienda! Pégalo y envíalo a tus clientes.",
+    "dash_share_store_copy_manual": "Copia manualmente el enlace de tu tienda:",
     "set_reviews_require_login_label": "🔒 Requerir inicio de sesión del comprador para dejar una reseña",
     "set_reviews_require_login_note": "De forma predeterminada (recomendado), cualquier visitante puede dejar una reseña con su nombre sin una cuenta. Activa esto si quieres que las reseñas sean solo de cuentas verificadas.",
     "review_login_required_msg": "Debes iniciar sesión con una cuenta de comprador en esta tienda primero para dejar una reseña.",
@@ -6286,6 +6429,28 @@
     "buyer_mgmt_fetch_failed_rules": "Käufer konnten nicht geladen werden: Die Firestore-Sicherheitsregeln erlauben kein Lesen der Käuferliste. Überprüfe und veröffentliche die Regeln in der Firebase Console.",
     "buyer_mgmt_fetch_failed_timeout": "Käufer konnten nicht geladen werden: Die Verbindung ist zu langsam oder offline. Prüfe dein Internet und versuche es erneut.",
     "buyer_mgmt_fetch_failed_generic": "Käuferliste konnte nicht geladen werden, versuche es erneut.",
+    "buyer_welcome_banner_prefix": "Willkommen",
+    "buyer_login_success_toast": "Erfolgreich angemeldet, willkommen",
+    "buyer_default_name": "geschätzter Kunde",
+    "admin_quick_msg_store_title": "Diesem Händler direkt schreiben",
+    "admin_store_search_ph": "🔍 Nach Shop- oder Händlername suchen, um zu schreiben oder zu verwalten...",
+    "buyer_chat_search_ph": "🔍 Suche nach Kundenname, Telefon oder E-Mail...",
+    "buyer_chats_no_match": "Kein Kunde entspricht diesem Namen oder dieser Nummer.",
+    "buyer_mgmt_chat_btn": "Nachricht",
+    "prod_member_discount_label": "<i class='fa fa-gift'></i> Exklusiver Rabatt nur für registrierte Mitglieder (optional)",
+    "prod_member_discount_ph": "Rabatt % nur für Mitglieder (z. B. 30)",
+    "prod_member_discount_note": "Dieser Rabatt wird nur einem Kunden angezeigt, der als Käufer in deinem Shop angemeldet ist - normale (nicht angemeldete) Besucher sehen nur den normalen Preis oder den allgemeinen Rabatt, ohne Hinweis auf ein Mitgliederangebot.",
+    "member_discount_badge": "Mitgliederangebot",
+    "discount_label_prefix": "Rabatt",
+    "unified_entry_customer_btn": "👤 Kundenanmeldung für diesen Shop",
+    "unified_entry_merchant_btn": "🏪 Händleranmeldung / Plattform-Dashboard",
+    "nav_track_order": "Bestellungen verfolgen",
+    "review_login_or_register_prompt": "Melde dich mit Google an oder erstelle ein normales Käuferkonto im Shop, um eine Bewertung abzugeben. Jetzt die Anmeldeseite öffnen?",
+    "dash_quick_stats_today_orders": "Heutige Bestellungen",
+    "dash_quick_stats_month_orders": "Bestellungen diesen Monat",
+    "dash_share_store_btn": "Meinen Shop-Link teilen",
+    "dash_share_store_copied": "Dein Shop-Link wurde kopiert! Füge ihn ein und sende ihn an deine Kunden.",
+    "dash_share_store_copy_manual": "Kopiere deinen Shop-Link manuell:",
     "set_reviews_require_login_label": "🔒 Käuferanmeldung für Bewertungen erforderlich",
     "set_reviews_require_login_note": "Standardmäßig (empfohlen) kann jeder Besucher ohne Konto eine Bewertung unter seinem Namen abgeben. Aktiviere dies, wenn Bewertungen nur von verifizierten Konten stammen sollen.",
     "review_login_required_msg": "Du musst dich zuerst mit einem Käuferkonto in diesem Shop anmelden, um eine Bewertung abzugeben.",
@@ -7122,6 +7287,28 @@
     "buyer_mgmt_fetch_failed_rules": "Impossibile caricare gli acquirenti: le regole di sicurezza di Firestore non consentono la lettura dell'elenco acquirenti. Controlla e pubblica le regole in Firebase Console.",
     "buyer_mgmt_fetch_failed_timeout": "Impossibile caricare gli acquirenti: la connessione è troppo lenta o assente. Controlla la connessione e riprova.",
     "buyer_mgmt_fetch_failed_generic": "Impossibile caricare l'elenco degli acquirenti, riprova.",
+    "buyer_welcome_banner_prefix": "Benvenuto/a",
+    "buyer_login_success_toast": "Accesso effettuato con successo, benvenuto/a",
+    "buyer_default_name": "gentile cliente",
+    "admin_quick_msg_store_title": "Scrivi direttamente a questo commerciante",
+    "admin_store_search_ph": "🔍 Cerca per nome negozio o commerciante per scrivere o gestire...",
+    "buyer_chat_search_ph": "🔍 Cerca per nome, telefono o email del cliente...",
+    "buyer_chats_no_match": "Nessun cliente corrisponde a questo nome o numero.",
+    "buyer_mgmt_chat_btn": "Messaggio",
+    "prod_member_discount_label": "<i class='fa fa-gift'></i> Sconto esclusivo solo per membri registrati (facoltativo)",
+    "prod_member_discount_ph": "Sconto % solo per i membri (es. 30)",
+    "prod_member_discount_note": "Questo sconto viene mostrato solo a un cliente che ha effettuato l'accesso come acquirente nel tuo negozio - i visitatori normali (non registrati) vedranno solo il prezzo normale o lo sconto generale, senza alcun indizio che esista un'offerta per i membri.",
+    "member_discount_badge": "Offerta membri",
+    "discount_label_prefix": "Sconto",
+    "unified_entry_customer_btn": "👤 Accesso clienti per questo negozio",
+    "unified_entry_merchant_btn": "🏪 Accesso commercianti / pannello piattaforma",
+    "nav_track_order": "Traccia i tuoi ordini",
+    "review_login_or_register_prompt": "Accedi con Google o crea un normale account acquirente nel negozio per aggiungere una recensione. Aprire ora la pagina di accesso?",
+    "dash_quick_stats_today_orders": "Ordini di oggi",
+    "dash_quick_stats_month_orders": "Ordini di questo mese",
+    "dash_share_store_btn": "Condividi il link del mio negozio",
+    "dash_share_store_copied": "Il link del tuo negozio è stato copiato! Incollalo e inviarlo ai tuoi clienti.",
+    "dash_share_store_copy_manual": "Copia manualmente il link del tuo negozio:",
     "set_reviews_require_login_label": "🔒 Richiedi accesso acquirente per aggiungere una recensione",
     "set_reviews_require_login_note": "Per impostazione predefinita (consigliato), qualsiasi visitatore può aggiungere una recensione con il proprio nome senza account. Attiva questa opzione se vuoi che le recensioni provengano solo da account verificati.",
     "review_login_required_msg": "Devi prima accedere con un account acquirente in questo negozio per aggiungere una recensione.",
@@ -7958,6 +8145,28 @@
     "buyer_mgmt_fetch_failed_rules": "Não foi possível carregar os compradores: as regras de segurança do Firestore não permitem ler a lista de compradores. Revise e publique as regras no Firebase Console.",
     "buyer_mgmt_fetch_failed_timeout": "Não foi possível carregar os compradores: a conexão está muito lenta ou offline. Verifique sua internet e tente novamente.",
     "buyer_mgmt_fetch_failed_generic": "Não foi possível carregar a lista de compradores, tente novamente.",
+    "buyer_welcome_banner_prefix": "Bem-vindo(a)",
+    "buyer_login_success_toast": "Login realizado com sucesso, bem-vindo(a)",
+    "buyer_default_name": "caro cliente",
+    "admin_quick_msg_store_title": "Enviar mensagem direta a este comerciante",
+    "admin_store_search_ph": "🔍 Pesquise por nome da loja ou comerciante para enviar mensagem ou gerenciar...",
+    "buyer_chat_search_ph": "🔍 Pesquisar por nome, telefone ou e-mail do cliente...",
+    "buyer_chats_no_match": "Nenhum cliente corresponde a este nome ou número.",
+    "buyer_mgmt_chat_btn": "Mensagem",
+    "prod_member_discount_label": "<i class='fa fa-gift'></i> Desconto exclusivo apenas para membros registrados (opcional)",
+    "prod_member_discount_ph": "Desconto % apenas para membros (ex: 30)",
+    "prod_member_discount_note": "Este desconto aparece apenas para um cliente que fez login como comprador na sua loja - visitantes comuns (não conectados) verão apenas o preço normal ou o desconto geral, sem indício de que existe uma oferta para membros.",
+    "member_discount_badge": "Oferta para membros",
+    "discount_label_prefix": "Desconto",
+    "unified_entry_customer_btn": "👤 Login de cliente para esta loja",
+    "unified_entry_merchant_btn": "🏪 Login de comerciante / painel da plataforma",
+    "nav_track_order": "Rastrear seus pedidos",
+    "review_login_or_register_prompt": "Faça login com o Google ou crie uma conta de comprador normal na loja para adicionar uma avaliação. Abrir a página de login agora?",
+    "dash_quick_stats_today_orders": "Pedidos de hoje",
+    "dash_quick_stats_month_orders": "Pedidos deste mês",
+    "dash_share_store_btn": "Compartilhar o link da minha loja",
+    "dash_share_store_copied": "O link da sua loja foi copiado! Cole e envie para seus clientes.",
+    "dash_share_store_copy_manual": "Copie manualmente o link da sua loja:",
     "set_reviews_require_login_label": "🔒 Exigir login do comprador para adicionar avaliação",
     "set_reviews_require_login_note": "Por padrão (recomendado), qualquer visitante pode adicionar uma avaliação com seu nome sem uma conta. Ative isso se quiser que as avaliações sejam apenas de contas verificadas.",
     "review_login_required_msg": "Você precisa fazer login com uma conta de comprador nesta loja primeiro para adicionar uma avaliação.",
@@ -8794,6 +9003,28 @@
     "buyer_mgmt_fetch_failed_rules": "Alıcılar yüklenemedi: Firestore güvenlik kuralları alıcı listesini okumaya izin vermiyor. Firebase Console'daki kuralları gözden geçirip yayınlayın.",
     "buyer_mgmt_fetch_failed_timeout": "Alıcılar yüklenemedi: bağlantı çok yavaş veya çevrimdışı. İnternetinizi kontrol edip tekrar deneyin.",
     "buyer_mgmt_fetch_failed_generic": "Alıcı listesi yüklenemedi, tekrar deneyin.",
+    "buyer_welcome_banner_prefix": "Hoş geldiniz",
+    "buyer_login_success_toast": "Giriş başarılı, hoş geldiniz",
+    "buyer_default_name": "değerli müşterimiz",
+    "admin_quick_msg_store_title": "Bu satıcıya doğrudan mesaj gönder",
+    "admin_store_search_ph": "🔍 Mesaj göndermek veya yönetmek için mağaza ya da satıcı adına göre ara...",
+    "buyer_chat_search_ph": "🔍 Müşteri adı, telefon veya e-posta ile ara...",
+    "buyer_chats_no_match": "Bu ada veya numaraya uyan müşteri yok.",
+    "buyer_mgmt_chat_btn": "Mesaj",
+    "prod_member_discount_label": "<i class='fa fa-gift'></i> Sadece kayıtlı üyelere özel indirim (isteğe bağlı)",
+    "prod_member_discount_ph": "Sadece üyeler için indirim % (ör. 30)",
+    "prod_member_discount_note": "Bu indirim yalnızca mağazanıza alıcı olarak giriş yapmış bir müşteriye gösterilir - normal (giriş yapmamış) ziyaretçiler yalnızca normal fiyatı veya genel indirimi görür, üyelere özel bir teklif olduğuna dair hiçbir ipucu görmez.",
+    "member_discount_badge": "Üye teklifi",
+    "discount_label_prefix": "İndirim",
+    "unified_entry_customer_btn": "👤 Bu mağaza için müşteri girişi",
+    "unified_entry_merchant_btn": "🏪 Satıcı girişi / platform paneli",
+    "nav_track_order": "Siparişlerinizi takip edin",
+    "review_login_or_register_prompt": "Değerlendirme eklemek için Google ile giriş yapın veya mağazada normal bir alıcı hesabı oluşturun. Giriş sayfası şimdi açılsın mı?",
+    "dash_quick_stats_today_orders": "Bugünkü siparişler",
+    "dash_quick_stats_month_orders": "Bu ayki siparişler",
+    "dash_share_store_btn": "Mağaza bağlantımı paylaş",
+    "dash_share_store_copied": "Mağaza bağlantınız kopyalandı! Yapıştırıp müşterilerinize gönderin.",
+    "dash_share_store_copy_manual": "Mağaza bağlantınızı manuel olarak kopyalayın:",
     "set_reviews_require_login_label": "🔒 Değerlendirme eklemek için alıcı girişi gereksin",
     "set_reviews_require_login_note": "Varsayılan olarak (önerilen) herhangi bir ziyaretçi hesap olmadan adıyla değerlendirme ekleyebilir. Değerlendirmelerin yalnızca doğrulanmış hesaplardan gelmesini istiyorsanız bunu etkinleştirin.",
     "review_login_required_msg": "Değerlendirme eklemek için önce bu mağazada bir alıcı hesabıyla giriş yapmalısınız.",

@@ -3,7 +3,7 @@
 // عشان الفتح التالي للمتجر يكون فوري من الكاش المحلي (زي تيليجرام/واتساب)
 // حتى لو النت بطيء أو مقطوع مؤقتًا، بدل ما يعيد تحميل كل حاجة من الصفر.
 // ============================================================
-const CACHE_NAME = 'store-platform-cache-v10';
+const CACHE_NAME = 'store-platform-cache-v14';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -26,18 +26,22 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// استراتيجية "الشبكة أولاً، والكاش احتياطي": يجرب ياخد أحدث نسخة من النت،
-// ولو النت مقطوع أو بطيء جدًا يرجع فورًا للنسخة المحفوظة بدل ما يعلّق الصفحة.
+// ⚡ استراتيجية "الكاش أولاً مع تحديث في الخلفية" (Stale-While-Revalidate): بدل ما
+// الصفحة تستنى رد الشبكة كل مرة (وده كان بيبطّئ كل زيارة حتى لو النسخة المحفوظة
+// حديثة)، دلوقتي بترجع النسخة المحفوظة فورًا لو موجودة (فتح لحظي زي تطبيق حقيقي)،
+// وفي نفس الوقت بتجيب نسخة جديدة من الشبكة في الخلفية وتحدّث الكاش بيها لزيارة
+// بعد كده - فالتحديثات توصل برضه من غير ما تتسبب في أي تأخير محسوس للمستخدم.
 self.addEventListener('fetch', (event) => {
   if(event.request.method !== 'GET') return;
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
+    caches.match(event.request).then((cached) => {
+      let networkFetch = fetch(event.request).then((response) => {
         let clone = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone)).catch(() => {});
         return response;
-      })
-      .catch(() => caches.match(event.request))
+      }).catch(() => cached);
+      return cached || networkFetch;
+    })
   );
 });
 

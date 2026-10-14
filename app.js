@@ -998,7 +998,7 @@
             setLabel('cartNavLabel', dict.nav_cart);
             setIconLabel('storeAboutNavBtn', dict.nav_about_store);
             setIconLabel('platformAboutNavBtn', dict.nav_about_platform);
-            setIconLabel('authNavBtn', dict.nav_auth);
+            setIconLabel('trackOrderNavBtn', dict.nav_track_order);
             setIconLabel('cartTitleHeading', dict.cart_title);
             setIconLabel('checkoutMainBtn', dict.checkout_btn);
             setIconLabel('backHomeBtn', dict.back_btn);
@@ -1057,6 +1057,38 @@
             } catch(e) {}
         }
 
+        // 🔗 روابط حقيقية (بـ href فعلي) للمنتج والقسم داخل المتجر الحالي - عشان
+        // الضغط المطوّل / زر الفأرة الأيمن يدّي قائمة سياق روابط حقيقية (فتح في تبويب
+        // جديد، نسخ الرابط...) زي أي موقع تسوّق حقيقي، بدل قائمة "صورة" بس.
+        function buildProductUrl(prodName) {
+            try {
+                let url = new URL(window.location.href);
+                url.search = '';
+                url.searchParams.set('store', activeStore);
+                url.searchParams.set('product', prodName);
+                return url.toString();
+            } catch(e) { return '#'; }
+        }
+        function buildCategoryUrl(catName) {
+            try {
+                let url = new URL(window.location.href);
+                url.search = '';
+                url.searchParams.set('store', activeStore);
+                url.searchParams.set('cat', catName);
+                return url.toString();
+            } catch(e) { return '#'; }
+        }
+        // رابط عادي بيتفتح بالضغط العادي عن طريق جافاسكريبت (SPA من غير إعادة تحميل، والدالة
+        // نفسها بتتكفل بتحديث الرابط عن طريق pushState)، لكنه href حقيقي فيفتح صح لو اتفتح
+        // بتبويب جديد (ctrl/cmd+click أو زر النص الأوسط) أو لو حد نسخ الرابط وبعته لحد تاني -
+        // وده اللي بيخلي الضغط المطوّل يدّي قائمة سياق روابط حقيقية زي أي موقع تسوّق.
+        function navClickHandler(event, openFn, arg) {
+            if(event && (event.ctrlKey || event.metaKey || event.shiftKey || event.button === 1)) return true;
+            if(event) event.preventDefault();
+            openFn(arg);
+            return false;
+        }
+
         // يقرر إيه اللي المفروض يظهر (متجر معين وله رابطه الخاص، أو الصفحة الرئيسية للمنصة)
         // بناءً على رابط الصفحة الحالي فعليًا، مش بس بناءً على آخر حالة متخزنة عشوائيًا
         function routeFromUrl() {
@@ -1112,6 +1144,15 @@
                     }, 400);
                 }
             } catch(e) {}
+
+            // 🔗 دعم رابط قسم مباشر (?store=...&cat=اسم_القسم): بيفتح صفحة القسم تلقائيًا،
+            // نفس فكرة رابط المنتج فوق - ده اللي بيخلي "فتح في تبويب جديد" فعليًا يشتغل صح.
+            try {
+                let catParam = new URLSearchParams(window.location.search).get('cat');
+                if(catParam && activeStore) {
+                    setTimeout(function() { openCategoryProducts(catParam); }, 400);
+                }
+            } catch(e) {}
         }
 
         // ============================================================
@@ -1157,24 +1198,24 @@
                 // فيه جلسة دخول شغالة فعلاً (أدمن أو تاجر) ولا زائر عادي؟
                 // ده بيفرق معانا لأن التاجر/الأدمن ممكن يعاين متجر وهو لسه عاوز رجعة سهلة للوحته،
                 // لكن الزائر العادي اللي داخل برابط متجر معين ماله دعوة بمنصة أكبر خالص
-                let isLoggedInSession = (localStorage.getItem('isAdminLoggedIn') === 'true') || !!localStorage.getItem('currentActiveMerchant');
                 if(viewMode === 'store' && savedStore && stores[savedStore]) {
                     activeStore = savedStore;
                     document.getElementById('homeSection').classList.remove('hidden');
                     document.getElementById('cartNavBtn').classList.remove('hidden');
                     document.getElementById('storeAboutNavBtn').classList.remove('hidden');
                     document.getElementById('platformAboutNavBtn').classList.add('hidden');
-                    document.getElementById('authNavBtn').classList.toggle('hidden', !isLoggedInSession);
                     backToCategories();
                 } else {
                     document.getElementById('platformHomeSection').classList.remove('hidden');
                     document.getElementById('cartNavBtn').classList.add('hidden');
                     document.getElementById('storeAboutNavBtn').classList.add('hidden');
                     document.getElementById('platformAboutNavBtn').classList.remove('hidden');
-                    document.getElementById('authNavBtn').classList.remove('hidden');
                     updateHeaderBrand();
                     renderPlatformHome();
                 }
+                // 🔁 نعيد مزامنة أيقونة الدخول/الحساب الموحّدة تاني بعد ما activeStore اتحدّث
+                // فعليًا فوق (المرة اللي فوق في بداية الدالة كانت لسه بالقيمة القديمة).
+                try { syncBuyerAccountIcon(); } catch(e) {}
             } else if(tab === 'cart') {
                 if(localStorage.getItem('viewMode') !== 'store') { switchTab('home'); return; }
                 document.getElementById('cartSection').classList.remove('hidden');
@@ -2361,10 +2402,7 @@
             localStorage.removeItem('currentStaffUsername');
             localStorage.removeItem('isAdminLoggedIn');
             try { syncTopHeaderChatIcon(); } catch(e) {}
-            let authLabel = document.getElementById('authNavLabel');
-            let authIcon = document.getElementById('authNavIcon');
-            if(authLabel) { authLabel.setAttribute('data-i18n', 'nav_auth'); authLabel.textContent = t('nav_auth', 'دخول التجار'); }
-            if(authIcon) { authIcon.className = 'fa fa-store'; }
+            try { syncBuyerAccountIcon(); } catch(e) {}
             switchTab('auth');
         }
 
@@ -2389,12 +2427,10 @@
             try { initBuyerChatThreadsWatch(merchant); } catch(e) { console.error('initBuyerChatThreadsWatch error:', e); }
             try {
                 document.getElementById('dashStoreTitle').innerText = `${t('dash_store_title_prefix', 'إدارة متجر:')} ${merchant}`;
-                // 🔁 التاجر داخل فعلاً دلوقتي، فمنطقي إن الأيقونة السفلية تبقى "لوحة إدارة المتجر"
-                // بدل "دخول التجار" (اللي بقت مالهاش لازمة له بعد ما دخل بالفعل).
-                let authLabel = document.getElementById('authNavLabel');
-                let authIcon = document.getElementById('authNavIcon');
-                if(authLabel) { authLabel.removeAttribute('data-i18n'); authLabel.textContent = t('nav_dashboard', '🏪 لوحة إدارة المتجر'); }
-                if(authIcon) { authIcon.className = 'fa fa-gauge'; }
+                // 🔁 التاجر داخل فعلاً دلوقتي - أيقونة الدخول الموحّدة بتتحدّث تلقائي
+                // لشكل "لوحة إدارة المتجر" بدل أيقونة الدخول العادية.
+                try { syncBuyerAccountIcon(); } catch(e) {}
+                try { renderDashQuickStats(merchant); } catch(e) {}
             } catch(e) {
                 console.error('loadDashboardInner: خطأ في عنوان اللوحة/الأيقونة (الباقي هيكمل عادي):', e);
             }
@@ -2609,6 +2645,56 @@
         function buildStaffLoginLink(storeKey) {
             let base = window.location.origin + window.location.pathname;
             return `${base}?store=${encodeURIComponent(storeKey)}`;
+        }
+
+        // 📤 مشاركة سريعة لرابط المتجر نفسه (مش رابط المساعدين) - بتستخدم مشاركة الجهاز
+        // لو متاحة (واتساب/أي تطبيق)، وإلا بتنسخ الرابط للحافظة كحل بديل مضمون.
+        async function shareMyStoreLink() {
+            let merchant = localStorage.getItem('currentActiveMerchant');
+            if(!merchant) return;
+            let stores = JSON.parse(localStorage.getItem('allStores')) || {};
+            let store = stores[merchant] || {};
+            let link = buildStaffLoginLink(merchant);
+            let title = getStoreDisplayName(merchant, store);
+            if(navigator.share) {
+                try { await navigator.share({ title: title, url: link }); return; } catch(e) { /* المستخدم لغى المشاركة - عادي */ return; }
+            }
+            try {
+                await navigator.clipboard.writeText(link);
+                showToast('🔗 ' + t('dash_share_store_copied', 'تم نسخ رابط متجرك! الصقه وابعته لعملائك.'));
+            } catch(e) {
+                prompt(t('dash_share_store_copy_manual', 'انسخ رابط متجرك يدويًا:'), link);
+            }
+        }
+
+        // 📊 ملخص سريع للمبيعات (اليوم + هذا الشهر) من طلبات المتجر - عدد الطلبات
+        // وإجمالي قيمتها، عشان التاجر ياخد صورة سريعة من غير ما يفتح تقرير كامل.
+        function renderDashQuickStats(merchant) {
+            try {
+                let stores = JSON.parse(localStorage.getItem('allStores')) || {};
+                let store = stores[merchant] || {};
+                let orders = store.orderHistory || [];
+                let now = new Date();
+                let todayCount = 0, todayRevenue = 0, monthCount = 0, monthRevenue = 0;
+                orders.forEach(o => {
+                    if(!o.timestamp) return;
+                    let d = new Date(o.timestamp);
+                    let total = parseFloat(o.total) || 0;
+                    let isToday = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+                    let isThisMonth = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+                    if(isToday) { todayCount++; todayRevenue += total; }
+                    if(isThisMonth) { monthCount++; monthRevenue += total; }
+                });
+                let currency = store.currency || '';
+                let elTodayCount = document.getElementById('dashStatsTodayCount');
+                let elTodayRev = document.getElementById('dashStatsTodayRevenue');
+                let elMonthCount = document.getElementById('dashStatsMonthCount');
+                let elMonthRev = document.getElementById('dashStatsMonthRevenue');
+                if(elTodayCount) elTodayCount.textContent = todayCount;
+                if(elTodayRev) elTodayRev.textContent = todayRevenue.toLocaleString() + ' ' + currency;
+                if(elMonthCount) elMonthCount.textContent = monthCount;
+                if(elMonthRev) elMonthRev.textContent = monthRevenue.toLocaleString() + ' ' + currency;
+            } catch(e) { console.error('renderDashQuickStats error:', e); }
         }
 
         function updateStaffLoginLinkBox(storeKey) {
@@ -4204,17 +4290,21 @@
 
             // ✅ شكل مضغوط جدًا (chip/tag صغير) بدل صف كامل العرض لكل قسم، عشان التاجر
             // يقدر يشوف كل أقسامه مرة واحدة براحته، ويعدّل/يحذف أي قسم بضغطة واحدة بسيطة.
+            // ⚡ نبني الكل في Array ونحطه دفعة واحدة بدل "+=" في اللوب (أسرع مع كثرة الأقسام).
+            let chipsHtml = [], optionsHtml = [];
             categories.forEach((cat, index) => {
-                listDiv.innerHTML += `
+                chipsHtml.push(`
                     <div data-category-chip-index="${index}" style="display:inline-flex; align-items:center; gap:6px; background:#fff; border:1px solid var(--border-color); border-radius:24px; padding:4px 6px 4px 10px;">
                         <img src="${cat.image}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; flex-shrink:0;">
                         <span style="font-size:12px; font-weight:bold; white-space:nowrap;">${cat.name}</span>
                         <button onclick="editCategory(${index})" title="تعديل" style="width:22px; height:22px; border-radius:50%; border:none; background:var(--bg-body); color:var(--text-main); font-size:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; flex-shrink:0;"><i class="fa fa-pen"></i></button>
                         <button onclick="deleteCategory(${index})" title="حذف" style="width:22px; height:22px; border-radius:50%; border:none; background:#fee2e2; color:#dc2626; font-size:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; flex-shrink:0;"><i class="fa fa-trash"></i></button>
                     </div>
-                `;
-                select.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
+                `);
+                optionsHtml.push(`<option value="${cat.name}">${cat.name}</option>`);
             });
+            if(categories.length > 0) listDiv.innerHTML = chipsHtml.join('');
+            select.innerHTML = optionsHtml.join('');
         }
 
         function addCategory() {
@@ -4586,9 +4676,9 @@
 
         function renderDashboardProducts(products, categories, currency) {
             let prodListDiv = document.getElementById('merchantProductsList');
-            prodListDiv.innerHTML = '';
-            if(products.length === 0) prodListDiv.innerHTML = `<p style="font-size:12px; color:var(--text-muted); text-align:center;">${t('no_products_yet', 'لا توجد منتجات.')}</p>`;
-            
+            if(products.length === 0) { prodListDiv.innerHTML = `<p style="font-size:12px; color:var(--text-muted); text-align:center;">${t('no_products_yet', 'لا توجد منتجات.')}</p>`; renderProfitManagementPanel(products, currency); return; }
+            // ⚡ نفس تحسين السرعة: نبني كل صفوف المنتجات في Array ونحطهم دفعة واحدة.
+            let rowsHtml = [];
             products.forEach((p, index) => {
                 let discount = getProductDiscountPercent(p);
                 let priceLine = discount > 0
@@ -4608,7 +4698,7 @@
                     }
                 }
 
-                prodListDiv.innerHTML += `
+                rowsHtml.push(`
                     <div data-product-row-index="${index}" style="background:#fff; padding:10px; margin-bottom:8px; border-radius:8px; border:1px solid var(--border-color); display:flex; gap:10px; align-items:center; transition: box-shadow 0.3s, border-color 0.3s;">
                         <img src="${p.image}" style="width:50px; height:50px; border-radius:6px; object-fit:cover;">
                         <div style="flex:1;">
@@ -4621,8 +4711,9 @@
                             <button class="danger edit" onclick="deleteProduct(${index})"><i class="fa fa-trash"></i></button>
                         </div>
                     </div>
-                `;
+                `);
             });
+            prodListDiv.innerHTML = rowsHtml.join('');
 
             renderProfitManagementPanel(products, currency);
         }
@@ -4914,6 +5005,9 @@
             let discountRaw = safeVal('prodDiscount').trim();
             let discount = discountRaw === '' ? 0 : Math.max(0, Math.min(95, parseFloat(discountRaw) || 0));
             let discountColor = safeVal('prodDiscountColor');
+            // 🎁 خصم حصري للأعضاء المسجلين فقط (اختياري) - منفصل تمامًا عن الخصم العام فوق
+            let memberDiscountRaw = safeVal('prodMemberDiscount').trim();
+            let memberDiscount = memberDiscountRaw === '' ? 0 : Math.max(0, Math.min(95, parseFloat(memberDiscountRaw) || 0));
 
             // مدة الإرجاع بالأيام (اختياري)
             let returnDaysRaw = safeVal('prodReturnDays').trim();
@@ -4965,11 +5059,11 @@
 
             if(editIndex === "-1") {
                 if(!newImage) { showProductFormError(null, 'من فضلك اختر صورة رئيسية للمنتج!'); return; }
-                stores[merchant].products.push({ category, name, price, image: newImage, desc, gallery, discount, discountColor, returnDays, stock, stockUnitLabel, stockAlertEnabled, stockAlertThreshold, showStockToCustomer, costPrice, countdownEnabled, countdownEnd, countdownLabel, countdownColor, reviews: [] });
+                stores[merchant].products.push({ category, name, price, image: newImage, desc, gallery, discount, discountColor, memberDiscount, returnDays, stock, stockUnitLabel, stockAlertEnabled, stockAlertThreshold, showStockToCustomer, costPrice, countdownEnabled, countdownEnd, countdownLabel, countdownColor, reviews: [] });
             } else {
                 let p = stores[merchant].products[editIndex];
                 p.category = category; p.name = name; p.price = price; p.desc = desc; p.gallery = gallery;
-                p.discount = discount; p.discountColor = discountColor; p.returnDays = returnDays;
+                p.discount = discount; p.discountColor = discountColor; p.memberDiscount = memberDiscount; p.returnDays = returnDays;
                 p.stock = stock; p.stockUnitLabel = stockUnitLabel; p.stockAlertEnabled = stockAlertEnabled; p.stockAlertThreshold = stockAlertThreshold; p.showStockToCustomer = showStockToCustomer;
                 p.costPrice = costPrice;
                 p.countdownEnabled = countdownEnabled; p.countdownEnd = countdownEnd; p.countdownLabel = countdownLabel; p.countdownColor = countdownColor;
@@ -5043,6 +5137,7 @@
 
             document.getElementById('prodDiscount').value = p.discount ? p.discount : '';
             document.getElementById('prodDiscountColor').value = p.discountColor || '#ef4444';
+            document.getElementById('prodMemberDiscount').value = p.memberDiscount ? p.memberDiscount : '';
             document.getElementById('prodReturnDays').value = p.returnDays ? p.returnDays : '';
 
             document.getElementById('prodStock').value = (typeof p.stock === 'number') ? p.stock : '';
@@ -5123,6 +5218,7 @@
             try { document.getElementById('prodDesc').innerHTML = ''; } catch(e) {}
             try { document.getElementById('prodDiscount').value = ''; } catch(e) {}
             try { document.getElementById('prodDiscountColor').value = '#ef4444'; } catch(e) {}
+            try { document.getElementById('prodMemberDiscount').value = ''; } catch(e) {}
             try { document.getElementById('prodReturnDays').value = ''; } catch(e) {}
             try { document.getElementById('prodStock').value = ''; } catch(e) {}
             try { document.getElementById('prodStockUnitLabel').value = ''; } catch(e) {}
@@ -5511,11 +5607,11 @@
                 let storeLogo = s.logo || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400';
                 let displayName = getStoreDisplayName(n, s);
                 return `
-                    <div class="cat-card" data-store-name="${displayName.toLowerCase()}" onclick="enterStore('${n}')">
-                        <img src="${storeLogo}">
+                    <a class="cat-card" data-store-name="${displayName.toLowerCase()}" href="${buildStaffLoginLink(n)}" onclick="return navClickHandler(event, enterStore, '${n}')" style="text-decoration:none; color:inherit;">
+                        <img src="${storeLogo}" loading="lazy">
                         <h4>${displayName}</h4>
                         <p style="margin:-6px 0 10px; font-size:11px; color:var(--text-muted);">${pCount} منتج</p>
-                    </div>
+                    </a>
                 `;
             }).join('');
 
@@ -6930,20 +7026,26 @@
 
         function renderCategoriesGrid(categories) {
             let catGrid = document.getElementById('homeCategoriesGrid');
-            catGrid.innerHTML = '';
-            categories.forEach(cat => {
-                catGrid.innerHTML += `
-                    <div class="cat-card" onclick="openCategoryProducts('${cat.name}')">
-                        <img src="${cat.image}" loading="lazy">
-                        <h4>${cat.name}</h4>
-                    </div>
-                `;
-            });
+            // ⚡ نفس تحسين السرعة: نبني كل الكروت أول في Array ونحطهم دفعة واحدة، بدل
+            // "+=" جوه اللوب اللي كانت بتبطّئ الصفحة كل ما عدد الأقسام يزيد.
+            catGrid.innerHTML = categories.map(cat => `
+                <a class="cat-card" href="${buildCategoryUrl(cat.name)}" onclick="return navClickHandler(event, openCategoryProducts, '${cat.name}')" style="text-decoration:none; color:inherit;">
+                    <img src="${cat.image}" loading="lazy">
+                    <h4>${cat.name}</h4>
+                </a>
+            `).join('');
         }
 
         function openCategoryProducts(catName) {
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             let store = stores[activeStore];
+            try {
+                let url = new URL(window.location.href);
+                url.search = '';
+                url.searchParams.set('store', activeStore);
+                url.searchParams.set('cat', catName);
+                window.history.pushState({ store: activeStore, cat: catName }, '', url.toString());
+            } catch(e) {}
             document.getElementById('homeCategoriesGrid').classList.add('hidden');
             document.getElementById('mainTitle').innerText = `${t('category_prefix', 'قسم')}: ${catName}`;
             document.getElementById('backHomeBtn').classList.remove('hidden');
@@ -6960,6 +7062,12 @@
         }
 
         function backToCategories() {
+            try {
+                let url = new URL(window.location.href);
+                url.search = '';
+                url.searchParams.set('store', activeStore);
+                window.history.pushState({ store: activeStore }, '', url.toString());
+            } catch(e) {}
             document.getElementById('productsViewSection').classList.add('hidden');
             document.getElementById('homeCategoriesGrid').classList.remove('hidden');
             document.getElementById('backHomeBtn').classList.add('hidden');
@@ -7125,7 +7233,25 @@
         // ============================================================
         function getProductDiscountPercent(p) {
             let d = parseFloat(p && p.discount);
-            return (!isNaN(d) && d > 0) ? d : 0;
+            let regular = (!isNaN(d) && d > 0) ? d : 0;
+            // 🎁 خصم خاص بالأعضاء المسجلين فقط: ميظهرش للزوار (غير مسجلين) خالص، وبيتفعّل
+            // بس لو فيه جلسة دخول مشترِي شغالة فعلاً جوه المتجر الحالي.
+            let md = parseFloat(p && p.memberDiscount);
+            let memberD = (!isNaN(md) && md > 0) ? md : 0;
+            if(memberD > 0 && typeof activeStore !== 'undefined' && activeStore) {
+                try { if(getBuyerSession(activeStore)) return Math.max(regular, memberD); } catch(e) {}
+            }
+            return regular;
+        }
+        // 🎁 هل الخصم الظاهر دلوقتي لهذا المنتج هو خصم أعضاء حصري (مش خصم عام للجميع)؟
+        // بنستخدمها بس لتلوين/تمييز الشارة في الواجهة.
+        function isMemberOnlyDiscountActive(p) {
+            let d = parseFloat(p && p.discount);
+            let regular = (!isNaN(d) && d > 0) ? d : 0;
+            let md = parseFloat(p && p.memberDiscount);
+            let memberD = (!isNaN(md) && md > 0) ? md : 0;
+            if(memberD <= regular) return false;
+            try { return !!(activeStore && getBuyerSession(activeStore)); } catch(e) { return false; }
         }
 
         function getEffectivePrice(p) {
@@ -7146,10 +7272,14 @@
                 return `<div class="price-tag">${p.price} ${currency}</div>`;
             }
             let effective = getEffectivePrice(p);
+            let memberBadge = isMemberOnlyDiscountActive(p)
+                ? `<span style="background:#7c3aed; color:#fff; font-size:9px; font-weight:bold; padding:1px 6px; border-radius:20px;">🎁 ${t('member_discount_badge', 'عرض الأعضاء')}</span>`
+                : '';
             return `
                 <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:3px 0;">
                     <span style="text-decoration:line-through; color:var(--text-muted); font-size:12px;">${p.price} ${currency}</span>
                     <span class="price-tag" style="margin:0;">${effective} ${currency}</span>
+                    ${memberBadge}
                 </div>
             `;
         }
@@ -7225,12 +7355,15 @@
 
         function renderProductsGrid(prods, currency) {
             let grid = document.getElementById('storeProductsGrid');
-            grid.innerHTML = '';
             if(prods.length === 0) {
                 grid.innerHTML = `<p style="text-align:center; color:var(--text-muted); grid-column:span 2;">${t('no_products_yet', 'لا توجد منتجات.')}</p>`;
                 return;
             }
-            
+            // ⚡ تحسين سرعة مهم: كنا بنضيف كل كارت على حدة بـ "+=" جوه اللوب، وده كان بيخلي
+            // المتصفح يعيد تفسير وبناء كل الكروت اللي اتضافت قبل كده من الصفر مع كل كارت
+            // جديد (كلفة تتضاعف مع عدد المنتجات - أبطأ بشكل واضح في متاجر فيها منتجات كتير).
+            // دلوقتي بنجمّع كل الكروت كـ Array وبنحطها في الصفحة دفعة واحدة بس في الآخر.
+            let cardsHtml = [];
             prods.forEach(p => {
                 let avg = 0;
                 let revCount = p.reviews ? p.reviews.length : 0;
@@ -7246,8 +7379,8 @@
 
                 let effectivePrice = getEffectivePrice(p);
                 let isOutOfStock = typeof p.stock === 'number' && p.stock <= 0;
-                grid.innerHTML += `
-                    <div class="product-card" data-pname="${p.name}" onclick="openProductDetails('${p.name}')">
+                cardsHtml.push(`
+                    <a class="product-card" data-pname="${p.name}" href="${buildProductUrl(p.name)}" onclick="return navClickHandler(event, openProductDetails, '${p.name}')" style="text-decoration:none; color:inherit;">
                         <div>
                             <div style="position:relative;">
                                 <img src="${p.image}" loading="lazy" style="${isOutOfStock ? 'filter:grayscale(60%); opacity:0.7;' : ''}">
@@ -7260,10 +7393,11 @@
                             ${renderPriceBlock(p, currency)}
                             ${renderCountdownBadge(p)}
                         </div>
-                        <div class="cart-btn-area" onclick="event.stopPropagation()">${renderCardCartControl(p.name, effectivePrice, p.stock)}</div>
-                    </div>
-                `;
+                        <div class="cart-btn-area" onclick="event.stopPropagation(); event.preventDefault();">${renderCardCartControl(p.name, effectivePrice, p.stock)}</div>
+                    </a>
+                `);
             });
+            grid.innerHTML = cardsHtml.join('');
         }
 
         // --- عنصر تحكم السلة داخل كارت المنتج: زر إضافة أو عداد +/- إذا كان مضافاً بالفعل ---
@@ -7312,20 +7446,35 @@
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             let store = stores[activeStore];
             let p = store.products.find(item => item.name === prodName);
-            
+            if(!p) return;
+
+            try {
+                let url = new URL(window.location.href);
+                url.search = '';
+                url.searchParams.set('store', activeStore);
+                url.searchParams.set('product', prodName);
+                window.history.pushState({ store: activeStore, product: prodName }, '', url.toString());
+            } catch(e) {}
+
             let modal = document.getElementById('productModal');
             let body = document.getElementById('modalBodyContainer');
 
             let reviewsListHtml = '';
             let isViewingOwnStore = localStorage.getItem('currentActiveMerchant') === activeStore;
             if(p.reviews && p.reviews.length > 0) {
-                p.reviews.forEach((rev, idx) => {
+                // 🆕 الأحدث فوق دايمًا - عشان أي حد يضيف تقييم جديد يشوفه فورًا في أول القائمة
+                // من غير ما يضطر ينزل لآخر الصفحة يدوّر عليه.
+                let __reviewIndexPairs = p.reviews.map((rev, idx) => ({ rev, idx })).reverse();
+                __reviewIndexPairs.forEach(({ rev, idx }) => {
                     let rStars = '';
                     for(let i=0; i<5; i++) rStars += i < rev.rating ? '★' : '☆';
                     reviewsListHtml += `
                         <div style="background:var(--bg-card); padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid var(--border-color);">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <strong style="font-size:12px; color:var(--text-main);">${rev.author || 'عميل'}${rev.viaGoogle ? ' <i class="fa-brands fa-google" title="' + t('review_via_google_label', 'تقييم موثّق عن طريق جوجل') + '" style="color:#4285F4; font-size:10px;"></i>' : ''}</strong>
+                                <span>
+                                    <strong style="font-size:12px; color:var(--text-main);">${rev.author || 'عميل'}${rev.viaGoogle ? ' <i class="fa-brands fa-google" title="' + t('review_via_google_label', 'تقييم موثّق عن طريق جوجل') + '" style="color:#4285F4; font-size:10px;"></i>' : ''}</strong>
+                                    ${rev.viaGoogle && rev.email ? `<br><span style="font-size:10px; color:var(--text-muted); direction:ltr; display:inline-block;">${escapeHtml(rev.email)}</span>` : ''}
+                                </span>
                                 <span style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:8px;">
                                     ${rev.date || ''}
                                     ${isViewingOwnStore ? `
@@ -7363,9 +7512,10 @@
 
             let modalDiscount = getProductDiscountPercent(p);
             let modalEffectivePrice = getEffectivePrice(p);
+            let modalIsMemberDiscount = isMemberOnlyDiscountActive(p);
             let modalPriceHtml = modalDiscount > 0 ? `
                 <div style="text-align:center; background: var(--bg-body); padding:8px; border-radius:8px;">
-                    <span style="background:${p.discountColor || '#ef4444'}; color:#fff; font-size:11px; font-weight:bold; padding:3px 9px; border-radius:20px;">خصم ${modalDiscount}%</span>
+                    <span style="background:${modalIsMemberDiscount ? '#7c3aed' : (p.discountColor || '#ef4444')}; color:#fff; font-size:11px; font-weight:bold; padding:3px 9px; border-radius:20px;">${modalIsMemberDiscount ? '🎁 ' + t('member_discount_badge', 'عرض الأعضاء') + ' ' : t('discount_label_prefix', 'خصم')} ${modalDiscount}%</span>
                     <div style="margin-top:6px;">
                         <span style="text-decoration:line-through; color:var(--text-muted); font-size:13px;">${p.price} ${store.currency}</span>
                         <span class="price-tag" style="font-size:18px; margin-right:6px;">${modalEffectivePrice} ${store.currency}</span>
@@ -7455,6 +7605,7 @@
                             return `<p style="font-size:12px; margin-bottom:8px; background:#fff; padding:6px 10px; border-radius:8px;">
                                 ✅ ${t('review_posting_as_label', 'هتضيف التقييم باسم')}: <strong>${escapeHtml(__buyerSess.name || 'عميل')}</strong>
                                 ${viaGoogle ? ' <i class="fa-brands fa-google" style="color:#4285F4;"></i>' : ''}
+                                ${viaGoogle ? `<br><span style="font-size:10.5px; color:var(--text-muted); direction:ltr; display:inline-block;">${escapeHtml(__buyerSess.buyerId)}</span>` : ''}
                             </p>`;
                         }
                         // 3) زائر عادي، والمتجر مش طالب تسجيل دخول للتقييم - الوضع الاختياري القديم.
@@ -7495,6 +7646,14 @@
 
         function closeProductModal() {
             document.getElementById('productModal').classList.add('hidden');
+            // نشيل "product" من الرابط لما نقفل المودال، عشان رجوع المتصفح يرجّع صح
+            try {
+                let url = new URL(window.location.href);
+                if(url.searchParams.has('product')) {
+                    url.searchParams.delete('product');
+                    window.history.pushState({ store: activeStore }, '', url.toString());
+                }
+            } catch(e) {}
         }
 
         // --- نافذة "سياسة الإرجاع": بتفتح فوق صفحة تفاصيل المنتج لما المشتري يضغط عليها ---
@@ -7539,7 +7698,15 @@
                 alert(t('review_login_required_msg', 'لازم تسجّل دخولك بحساب مشترِي في هذا المتجر الأول عشان تضيف تقييم.'));
                 return;
             } else if(GOOGLE_SIGNIN_ENABLED) {
-                if(!currentReviewerGoogleUser) { alert('برجاء تسجيل الدخول بحساب جوجل أولاً لإضافة تقييم.'); return; }
+                if(!currentReviewerGoogleUser) {
+                    // 🔀 مش جوجل بس - بنوضح إن فيه طريقتين (جوجل أو حساب عادي في المتجر)،
+                    // وبنوديه مباشرة لنافذة الدخول بدل ما نسيبه واقف من غير أي خطوة تالية.
+                    if(confirm(t('review_login_or_register_prompt', 'سجّل دخولك بحساب جوجل، أو اعمل حساب مشترِي عادي في المتجر، عشان تقدر تضيف تقييم. تحب تفتح صفحة تسجيل الدخول دلوقتي؟'))) {
+                        closeProductModal();
+                        openBuyerAuthModal('login');
+                    }
+                    return;
+                }
                 author = currentReviewerGoogleUser.name;
                 email = currentReviewerGoogleUser.email || '';
                 viaGoogle = true;
@@ -7574,8 +7741,10 @@
             }
 
             showToast('تم تسجيل مراجعتك وتقييمك بنجاح! 🌟');
-            closeProductModal();
-            renderHome();
+            // 📍 نفضل في نفس صفحة المنتج ونعيد رسمها في مكانها عشان العميل يشوف تقييمه
+            // اللي لسه ضايفه فورًا قدامه - بدل ما يتقفل المودال ويرجع للرئيسية ويدوّر
+            // على المنتج تاني بنفسه عشان يتأكد إن تقييمه فعلاً اتسجل.
+            openProductDetails(prodName);
         }
 
         // --- يسمح لصاحب المتجر بالرد على مراجعة عميل ---
@@ -7773,19 +7942,20 @@
                 return;
             }
 
-            listDiv.innerHTML = '';
             let subtotal = 0;
 
             if(currentStoreObj && currentStoreObj.vodafoneCash) {
                 vodaCashNum.innerText = currentStoreObj.vodafoneCash;
             }
-            
+
+            // ⚡ نفس تحسين السرعة: نبني سطور السلة في Array ونحطهم دفعة واحدة.
+            let cartRowsHtml = [];
             storeCart.forEach((item) => {
                 let realIndex = cart.indexOf(item);
                 let qty = item.qty || 1;
                 let lineTotal = item.price * qty;
                 subtotal += lineTotal;
-                listDiv.innerHTML += `
+                cartRowsHtml.push(`
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border-color);">
                         <div>
                             <strong style="font-size:13px;">${item.name}${qty > 1 ? ' × ' + qty : ''}</strong><br>
@@ -7798,8 +7968,9 @@
                             <i class="fa fa-trash-alt" style="color:#ef4444; cursor:pointer;" onclick="removeFromCart(${realIndex})"></i>
                         </div>
                     </div>
-                `;
+                `);
             });
+            listDiv.innerHTML = cartRowsHtml.join('');
 
             let finalTotal = subtotal + getDeliveryFeeForCurrentCart(currentStoreObj, subtotal);
             let currency = currentStoreObj ? currentStoreObj.currency : '';
@@ -7950,49 +8121,57 @@
             else openBuyerAuthModal('login');
         }
 
-        // 🔄 يحدّث شكل أيقونة "حسابي" في الهيدر: مخفية خارج المتجر، وشكلها يتغيّر لو
-        // فيه حساب مسجّل دخوله دلوقتي (دائرة ممتلئة) عن لو زائر (دائرة فاضية).
+        // 🔄 بيحدّث شكل أيقونة الدخول/الحساب الموحّدة الوحيدة (في زاوية الهيدر): شكلها
+        // ولونها يتغيّر تلقائي حسب مين بالظبط فاتح الصفحة دلوقتي - مشترِي مسجّل دخوله،
+        // تاجر/أدمن مسجّل دخوله، أو زائر لسه مادخلش - من غير ما يحتاج يدوّر في أكتر من مكان.
         function syncBuyerAccountIcon() {
-            let btn = document.getElementById('buyerAccountBtn');
-            let icon = document.getElementById('buyerAccountIcon');
-            let navBtn = document.getElementById('buyerAccountNavBtn');
-            let navIcon = document.getElementById('buyerAccountNavIcon');
-            let navLabel = document.getElementById('buyerAccountNavLabel');
-            let __onStorePageIcon = localStorage.getItem('viewMode') === 'store';
-            // 🔝 الأيقونة العلوية دلوقتي للصفحة الرئيسية للمنصة بس (دخول التجار/الأدمن) -
-            // حساب المشترِي بقى ليه مكانه الخاص في الشريط السفلي، مش مزاحم حاجة تانية.
-            if(btn && icon) {
-                btn.classList.toggle('hidden', __onStorePageIcon);
-                if(!__onStorePageIcon) {
-                    let loggedMerchant = localStorage.getItem('currentActiveMerchant');
-                    let loggedAdmin = localStorage.getItem('isAdminLoggedIn') === 'true';
-                    icon.className = (loggedMerchant || loggedAdmin) ? 'fa fa-store' : 'fa fa-right-to-bracket';
-                    btn.title = (loggedMerchant || loggedAdmin) ? t('my_store_dashboard_label', 'لوحة إدارة متجري') : t('header_merchant_login_title', 'تسجيل الدخول للمتجر');
+            let btn = document.getElementById('unifiedEntryBtn');
+            let icon = document.getElementById('unifiedEntryIcon');
+            if(!btn || !icon) return;
+            let viewMode = localStorage.getItem('viewMode');
+            let loggedMerchant = localStorage.getItem('currentActiveMerchant');
+            let loggedAdmin = localStorage.getItem('isAdminLoggedIn') === 'true';
+            if(viewMode === 'store') {
+                let sess = getBuyerSession(activeStore);
+                if(sess) {
+                    icon.className = 'fa fa-circle-user';
+                    btn.title = sess.name || t('my_account_label', 'حسابي');
+                    try { ensureBuyerChatBadgeWatch(); } catch(e) {}
+                    return;
                 }
             }
-            if(!__onStorePageIcon) { try { stopBuyerChatWatch(); } catch(e) {} }
-            if(navBtn) {
-                navBtn.classList.toggle('hidden', !__onStorePageIcon);
-                if(__onStorePageIcon && navIcon && navLabel) {
-                    let sess = getBuyerSession(activeStore);
-                    navIcon.className = sess ? 'fa fa-circle-user' : 'fa fa-user-circle';
-                    navLabel.textContent = sess ? (sess.name || t('my_account_label', 'حسابي')) : t('login_register_label', 'تسجيل الدخول');
-                    try { if(sess) ensureBuyerChatBadgeWatch(); else stopBuyerChatWatch(); } catch(e) {}
-                }
+            if(loggedMerchant || loggedAdmin) {
+                icon.className = 'fa fa-store';
+                btn.title = t('my_store_dashboard_label', 'لوحة إدارة متجري');
+            } else {
+                icon.className = 'fa fa-right-to-bracket';
+                btn.title = (viewMode === 'store') ? t('unified_entry_title', 'تسجيل الدخول / حسابي') : t('header_merchant_login_title', 'تسجيل الدخول للمتجر');
             }
+            try { stopBuyerChatWatch(); } catch(e) {}
         }
 
-        // 🚪 نقطة الدخول الموحّدة الوحيدة في الهيدر: بتوجّه أي زائر تلقائيًا للمكان الصح
-        // حسب وضعه بالظبط - عميل مسجّل دخوله، عميل زائر جوه متجر، أو صاحب متجر/أدمن من
-        // الصفحة الرئيسية للمنصة - من غير ما يحتاج يختار بنفسه بين أيقونتين مختلفتين.
+        // 🚪 نقطة الدخول الموحّدة الوحيدة بالكامل في الصفحة - زرار واحد بس، زي أمازون:
+        // - مشترِي مسجّل دخوله جوه متجر → يفتحله ملفه فورًا.
+        // - تاجر/أدمن مسجّل دخوله (في أي صفحة) → يوديه للوحته فورًا.
+        // - زائر جوه متجر معيّن (مش داخل بحساب) → نافذة اختيار بسيطة (عميل / تاجر).
+        // - زائر في الصفحة الرئيسية للمنصة (مفيش متجر محدد، فمفيش معنى لـ"دخول عملاء") → دخول التجار مباشرة.
         function unifiedEntryClick() {
-            if(localStorage.getItem('viewMode') === 'store') {
+            let viewMode = localStorage.getItem('viewMode');
+            if(viewMode === 'store') {
                 let sess = getBuyerSession(activeStore);
                 if(sess) { openBuyerProfileModal(); return; }
-                openBuyerAuthModal('login');
-                return;
             }
+            let loggedMerchant = localStorage.getItem('currentActiveMerchant');
+            let loggedAdmin = localStorage.getItem('isAdminLoggedIn') === 'true';
+            if(loggedMerchant || loggedAdmin) { switchTab('auth'); return; }
+            if(viewMode === 'store') { openUnifiedEntryChoiceModal(); return; }
             switchTab('auth');
+        }
+        function openUnifiedEntryChoiceModal() {
+            document.getElementById('unifiedEntryChoiceModal').classList.remove('hidden');
+        }
+        function closeUnifiedEntryChoiceModal() {
+            document.getElementById('unifiedEntryChoiceModal').classList.add('hidden');
         }
 
         let __buyerAuthPendingMsg = '';
@@ -8045,6 +8224,8 @@
                 setBuyerSession(activeStore, { buyerId: res.buyerId, name: res.name, phone: res.phone || '', address: res.address || '', authProvider: 'google' });
                 await mergeCartOnBuyerLogin(activeStore, res.buyerId, res.savedCart || []);
                 closeBuyerAuthModal();
+                try { syncBuyerAccountIcon(); } catch(e) {}
+                showToast('✅ ' + t('buyer_login_success_toast', 'تم تسجيل الدخول بنجاح، أهلاً') + ' ' + (res.name || '') + ' 👋');
             } catch(e) {
                 console.error('handleGoogleBuyerCredential error:', e);
                 alert(t('buyer_generic_error', 'حصل خطأ، حاول مرة أخرى.'));
@@ -8082,7 +8263,8 @@
                 setBuyerSession(activeStore, { buyerId: res.buyerId, name: res.name, phone: res.phone, address: res.address });
                 await mergeCartOnBuyerLogin(activeStore, res.buyerId);
                 closeBuyerAuthModal();
-                alert(t('buyer_welcome_msg', 'أهلاً بك! تم إنشاء حسابك بنجاح.'));
+                try { syncBuyerAccountIcon(); } catch(e) {}
+                alert('✅ ' + t('buyer_welcome_msg', 'أهلاً بك! تم إنشاء حسابك بنجاح.') + ' ' + (res.name || ''));
             } catch(e) {
                 // 🛟 شبكة أمان: أي خطأ غير متوقع (مثلاً crypto.subtle غير متاحة على صفحة مفتوحة
                 // محليًا من غير https) هيظهر هنا بدل ما الزرار "يعلّق" من غير أي رد فعل ظاهر.
@@ -8114,6 +8296,8 @@
                 setBuyerSession(activeStore, { buyerId: res.buyerId, name: res.name, phone: res.phone, address: res.address });
                 await mergeCartOnBuyerLogin(activeStore, res.buyerId, res.savedCart || []);
                 closeBuyerAuthModal();
+                try { syncBuyerAccountIcon(); } catch(e) {}
+                showToast('✅ ' + t('buyer_login_success_toast', 'تم تسجيل الدخول بنجاح، أهلاً') + ' ' + (res.name || '') + ' 👋');
             } catch(e) {
                 console.error('submitBuyerLogin error:', e);
                 alert(t('buyer_generic_error', 'حصل خطأ، حاول مرة أخرى.') + (e && e.message ? ' (' + e.message + ')' : ''));
@@ -8161,6 +8345,8 @@
             if(!activeStore) return;
             let sess = getBuyerSession(activeStore);
             if(!sess) { openBuyerAuthModal('login'); return; }
+            let welcomeNameEl = document.getElementById('buyerWelcomeBannerName');
+            if(welcomeNameEl) welcomeNameEl.textContent = sess.name || t('buyer_default_name', 'عميلنا العزيز');
             document.getElementById('buyerProfileNameInput').value = sess.name || '';
             document.getElementById('buyerProfilePhoneDisplay').textContent = sess.phone || '';
             document.getElementById('buyerProfileAddressInput').value = sess.address || '';
@@ -8204,7 +8390,7 @@
             __buyerChatUnsub = window.watchBuyerChatMessages(activeStore, sess.buyerId, function(msgs) {
                 __buyerChatMsgsCache = msgs;
                 let unread = msgs.filter(m => m.senderType === 'merchant' && !m.readByBuyer).length;
-                let dot = document.getElementById('buyerAccountNavDot');
+                let dot = document.getElementById('unifiedEntryDot');
                 if(dot) dot.classList.toggle('hidden', unread === 0);
                 let modalBadge = document.getElementById('buyerChatUnreadBadge');
                 if(modalBadge) { modalBadge.textContent = unread; modalBadge.classList.toggle('hidden', unread === 0); }
@@ -8349,6 +8535,7 @@
                 return;
             }
             let buyers = await window.fetchAllStoreBuyers(merchant);
+            window.__buyerMgmtCache = buyers || [];
             let errCode = window.__lastFetchBuyersError;
             if(errCode && (!buyers || buyers.length === 0)) {
                 let msg = errCode === 'permission-denied'
@@ -8366,12 +8553,22 @@
         }
         function renderBuyerManagementList(buyers) {
             let box = document.getElementById('buyerManagementList');
+            window.__buyerMgmtCache = buyers || [];
+            // 🔍 بحث سريع باسم أو رقم/بريد العميل داخل قائمة إدارة المشترين.
+            let __q = (document.getElementById('buyerManagementSearchInput')?.value || '').trim().toLowerCase();
+            let list = buyers || [];
+            if(__q) list = list.filter(b => (b.name || '').toLowerCase().includes(__q) || (b.buyerId || '').toLowerCase().includes(__q));
             if(!buyers || buyers.length === 0) {
                 box.innerHTML = '<p style="text-align:center; color:var(--text-muted); font-size:12px;">' + t('buyer_mgmt_none', 'لا يوجد مشترون مسجّلون في هذا المتجر بعد.') + '</p>';
                 return;
             }
-            box.innerHTML = buyers.map(b => {
+            if(list.length === 0) {
+                box.innerHTML = '<p style="text-align:center; color:var(--text-muted); font-size:12px;">' + t('buyer_chats_no_match', 'مفيش عميل بهذا الاسم أو الرقم.') + '</p>';
+                return;
+            }
+            box.innerHTML = list.map(b => {
                 let bid = escapeHtml(b.buyerId).replace(/'/g, "\\'");
+                let bnameJs = JSON.stringify(b.name || b.buyerId).replace(/"/g, '&quot;');
                 return `
                 <div class="box" style="padding:10px; margin-bottom:8px; font-size:12.5px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -8382,6 +8579,7 @@
                         <button class="secondary" style="width:auto; margin:0; padding:5px 10px; font-size:11px; background:#dc2626; color:#fff; border-color:#dc2626;" onclick="deleteBuyerFromManagement('${bid}')"><i class="fa fa-trash"></i> ${t('buyer_mgmt_delete_btn', 'حذف')}</button>
                     </div>
                     <div style="display:flex; gap:6px; flex-wrap:wrap; border-top:1px solid var(--border-color); padding-top:6px;">
+                        <button class="secondary" style="width:auto; margin:0; padding:4px 8px; font-size:10.5px;" onclick="closeBuyerManagementModal(); openBuyerChatThreadModal('${bid}', ${bnameJs})"><i class="fa fa-comment-dots"></i> ${t('buyer_mgmt_chat_btn', 'راسله')}</button>
                         <button class="secondary" style="width:auto; margin:0; padding:4px 8px; font-size:10.5px;" onclick="resetBuyerPasswordFromManagement('${bid}')"><i class="fa fa-key"></i> ${t('buyer_mgmt_reset_pw_btn', 'تغيير كلمة السر')}</button>
                         <button class="secondary" style="width:auto; margin:0; padding:4px 8px; font-size:10.5px;${b.reviewsBlocked ? ' background:#f59e0b; color:#fff; border-color:#f59e0b;' : ''}" onclick="toggleBuyerReviewsBlocked('${bid}', ${!b.reviewsBlocked})"><i class="fa fa-comment-slash"></i> ${b.reviewsBlocked ? t('buyer_mgmt_unblock_reviews_btn', 'إلغاء منع التعليقات') : t('buyer_mgmt_block_reviews_btn', 'منع التعليقات')}</button>
                     </div>
@@ -8440,9 +8638,9 @@
             let total = __buyerChatThreadsCache.reduce((a, th) => a + (th.unreadByMerchant || 0), 0);
             let badge = document.getElementById('buyerChatsTotalBadge');
             if(badge) { badge.textContent = total; badge.classList.toggle('hidden', total === 0); }
-            // 🔴 نفس النقطة الحمرا المستخدمة مع العميل، لكن هنا على نفس أيقونة الدخول الموحّدة
-            // في الهيدر عشان التاجر يلاحظ فورًا من غير ما يفتح الإعدادات أصلًا.
-            let dot = document.getElementById('buyerAccountChatDot');
+            // 🔴 نفس فكرة النقطة الحمرا بتاعة العميل، لكن هنا على زرار "دخول التجار/لوحة
+            // إدارة المتجر" في الشريط السفلي، عشان التاجر يلاحظ فورًا من غير ما يفتح الإعدادات أصلًا.
+            let dot = document.getElementById('unifiedEntryDot');
             if(dot) dot.classList.toggle('hidden', total === 0);
         }
         function openBuyerChatThreadsModal() {
@@ -8467,7 +8665,16 @@
                 box.innerHTML = '<p style="text-align:center; color:var(--text-muted); font-size:12.5px; padding:10px 0;">' + t('buyer_chats_empty', 'مفيش أي محادثات مع عملاء لسه.') + '</p>';
                 return;
             }
-            box.innerHTML = __buyerChatThreadsCache.map(function(th) {
+            // 🔍 بحث سريع باسم أو رقم/بريد العميل - عشان التاجر يوصل لمحادثة عميل معيّن فورًا
+            // من غير ما يفتش يدويًا وسط عشرات المحادثات.
+            let __q = (document.getElementById('buyerChatThreadsSearchInput')?.value || '').trim().toLowerCase();
+            let __list = __buyerChatThreadsCache;
+            if(__q) __list = __list.filter(th => (th.buyerName || '').toLowerCase().includes(__q) || (th.buyerId || '').toLowerCase().includes(__q));
+            if(__list.length === 0) {
+                box.innerHTML = '<p style="text-align:center; color:var(--text-muted); font-size:12.5px; padding:10px 0;">' + t('buyer_chats_no_match', 'مفيش عميل بهذا الاسم أو الرقم.') + '</p>';
+                return;
+            }
+            box.innerHTML = __list.map(function(th) {
                 let unread = th.unreadByMerchant || 0;
                 return '<div onclick="openBuyerChatThreadModal(\'' + th.buyerId + '\', ' + JSON.stringify(th.buyerName || th.buyerId).replace(/"/g, '&quot;') + ')" style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px; border-bottom:1px solid var(--border-color); cursor:pointer;">' +
                     '<div style="overflow:hidden;"><strong style="font-size:13px;">' + escapeHtml(th.buyerName || th.buyerId) + '</strong>' +
@@ -10586,9 +10793,7 @@
                 }
             }
 
-            let __searchQ = (document.getElementById('adminStoreSearchInput')?.value || '').trim().toLowerCase();
-            if(__searchQ) visibleNames = visibleNames.filter(n => n.toLowerCase().includes(__searchQ) || (stores[n].displayName || '').toLowerCase().includes(__searchQ));
-            if(visibleNames.length === 0 && __searchQ) { list.innerHTML = '<p style="font-size:12px; color:var(--text-muted);">مفيش متاجر بالاسم ده.</p>'; return; }
+            if(visibleNames.length === 0 && searchQ) { list.innerHTML = '<p style="font-size:12px; color:var(--text-muted);">مفيش متاجر بالاسم ده.</p>'; return; }
 
             for(let name of visibleNames) {
                 let s = stores[name];
@@ -10658,6 +10863,7 @@
                     </span>` : '';
 
                 let topButtons =
+                    `<button class="edit" onclick="openAdminChatThreadModal('${name}')" title="${t('admin_quick_msg_store_title', 'راسل هذا التاجر مباشرة')}"><i class="fa fa-comment-dots"></i></button>` +
                     (canVisit  ? `<button class="edit" onclick="visitStoreAsAdmin('${name}')" title="زيارة المتجر"><i class="fa fa-eye"></i></button>` : '') +
                     (canToggle ? `<button class="edit" onclick="toggleStoreStatus('${name}')">${st === 'active' ? 'إيقاف' : 'تفعيل'}</button>` : '') +
                     (canDelete ? `<button class="danger edit" onclick="deleteStore('${name}')">حذف</button>` : '');

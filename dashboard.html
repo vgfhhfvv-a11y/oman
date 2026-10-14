@@ -36,6 +36,24 @@
                 <div id="newOrdersDropdown" class="hidden" style="position:absolute; top:38px; left:0; z-index:50; background:#fff; border:1px solid var(--border-color); border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.15); width:270px; max-height:340px; overflow:auto; padding:8px;"></div>
             </div>
 
+            <!-- 📊 ملخص سريع وخفيف لأهم أرقام المتجر، ظاهر فورًا أول ما تفتح لوحتك من غير
+                 ما تفتح أي قسم - مبيعات اليوم والشهر + زرار مشاركة سريع لرابط متجرك. -->
+            <div class="box" style="background:linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%); border:none; margin-bottom:10px; padding:12px;">
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <div style="flex:1; background:rgba(255,255,255,0.15); border-radius:10px; padding:8px; text-align:center;">
+                        <div id="dashStatsTodayCount" style="font-size:18px; font-weight:bold; color:#fff;">0</div>
+                        <div style="font-size:10px; color:#fff; opacity:0.9;" data-i18n="dash_quick_stats_today_orders">طلبات اليوم</div>
+                        <div id="dashStatsTodayRevenue" style="font-size:11px; color:#fff; opacity:0.95; margin-top:2px;">0</div>
+                    </div>
+                    <div style="flex:1; background:rgba(255,255,255,0.15); border-radius:10px; padding:8px; text-align:center;">
+                        <div id="dashStatsMonthCount" style="font-size:18px; font-weight:bold; color:#fff;">0</div>
+                        <div style="font-size:10px; color:#fff; opacity:0.9;" data-i18n="dash_quick_stats_month_orders">طلبات هذا الشهر</div>
+                        <div id="dashStatsMonthRevenue" style="font-size:11px; color:#fff; opacity:0.95; margin-top:2px;">0</div>
+                    </div>
+                </div>
+                <button type="button" onclick="shareMyStoreLink()" style="width:100%; margin:0; background:#fff; color:var(--primary-color); font-weight:bold; padding:9px;"><i class="fa fa-share-nodes"></i> <span data-i18n="dash_share_store_btn">مشاركة رابط متجري</span></button>
+            </div>
+
             <!-- 👤 شريط توضيحي بيظهر بس لما اللي داخل مساعد (مش صاحب المتجر نفسه)، عشان يبقى
                  واضح دايمًا مين الداخل وبأي صلاحيات، وميحصلش لبس مع صاحب المتجر. -->
             <!-- 👤 شريط توضيحي بيظهر بس لما اللي داخل مساعد (مش صاحب المتجر نفسه)، عشان يبقى
@@ -189,6 +207,17 @@
                         </label>
                     </div>
                     <small data-i18n="prod_discount_note" style="color:var(--text-muted); font-size:10.5px;">اتركها فارغة لو مفيش خصم على المنتج ده. لو حطيت رقم، السعر بعد الخصم هيتحسب ويتظهر تلقائي بدل السعر الأصلي.</small>
+                </div>
+
+                <!-- ============================================================
+                     🎁 خصم حصري للأعضاء المسجلين فقط: مش بيظهر خالص للزوار غير المسجلين،
+                     وبيتفعّل بس لو العميل عامل تسجيل دخول كمشترِي في المتجر ده. لو أكبر من
+                     خصم الكل العادي فوق، هو اللي هيظهر للعضو المسجّل بشارة مميزة "عرض الأعضاء".
+                     ============================================================ -->
+                <div class="box" style="background:var(--bg-body); padding:10px; margin:8px 0; border:1px dashed #7c3aed;">
+                    <label style="font-size:12px; font-weight:bold; display:block; margin-bottom:4px; color:#7c3aed;" data-i18n-html="prod_member_discount_label"><i class="fa fa-gift"></i> خصم حصري للأعضاء المسجلين فقط (اختياري)</label>
+                    <input type="number" id="prodMemberDiscount" data-i18n-ph="prod_member_discount_ph" placeholder="نسبة الخصم % للأعضاء بس (مثلاً 30)" min="0" max="95" style="margin:0;">
+                    <small data-i18n="prod_member_discount_note" style="color:var(--text-muted); font-size:10.5px;">الخصم ده بيظهر بس للعميل اللي عامل تسجيل دخول كمشترِي في متجرك - الزوار العاديين (غير المسجلين) هيشوفوا السعر العادي أو خصم الكل بس، من غير ما يعرفوا إن فيه عرض أعضاء أصلاً.</small>
                 </div>
 
                 <!-- ============================================================
@@ -937,8 +966,7 @@
                     <p style="font-size:10.5px; color:var(--text-muted); margin:6px 0 0;">بتحسب آخر مرة سجل فيها دخول صاحب المتجر أو أي مساعد له. لو المتجر لسه ما سجلش دخول تاني من يوم ما اتعمل، بناخد تاريخ التسجيل نفسه كمرجع.</p>
                 </div>
 
-                <input type="text" id="adminStoreSearchInput" placeholder="🔍 دوّر باسم المتجر..." oninput="renderAdminStores()" style="margin-bottom:8px;">
-                <input type="text" id="adminStoresSearchInput" placeholder="🔍 دوّر باسم المتجر..." oninput="renderAdminStores()" style="margin-bottom:8px;">
+                <input type="text" id="adminStoresSearchInput" data-i18n-ph="admin_store_search_ph" placeholder="🔍 دوّر باسم متجر أو تاجر عشان تراسله أو تديره..." oninput="renderAdminStores()" style="margin-bottom:8px;">
                 <div id="adminStoresList"></div>
             </div>
             </details>
@@ -1559,6 +1587,7 @@
             <h3 style="margin:0; color:var(--primary-color); font-size:15px;"><i class="fa fa-users"></i> <span data-i18n="set_buyer_mgmt_btn">إدارة المشترين المسجلين</span></h3>
             <button class="secondary" style="width:auto; margin:0; padding:4px 10px;" onclick="closeBuyerManagementModal()"><i class="fa fa-times"></i></button>
         </div>
+        <input type="text" id="buyerManagementSearchInput" data-i18n-ph="buyer_chat_search_ph" placeholder="🔍 دوّر باسم أو رقم/بريد عميل..." oninput="renderBuyerManagementList(window.__buyerMgmtCache || [])" style="margin-bottom:8px;">
         <div id="buyerManagementList" style="max-height:60vh; overflow-y:auto;"></div>
     </div>
     </div>
@@ -1570,6 +1599,7 @@
             <h3 style="margin:0; color:var(--primary-color); font-size:15px;"><i class="fa fa-comments"></i> <span data-i18n="buyer_chats_mgmt_btn">محادثات العملاء</span></h3>
             <button class="secondary" style="width:auto; margin:0; padding:4px 10px;" onclick="closeBuyerChatThreadsModal()"><i class="fa fa-times"></i></button>
         </div>
+        <input type="text" id="buyerChatThreadsSearchInput" data-i18n-ph="buyer_chat_search_ph" placeholder="🔍 دوّر باسم أو رقم عميل..." oninput="renderBuyerChatThreadsList()" style="margin-bottom:8px;">
         <div id="buyerChatThreadsList" style="max-height:65vh; overflow-y:auto;"></div>
     </div>
     </div>
