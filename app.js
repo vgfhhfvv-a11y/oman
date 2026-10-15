@@ -543,10 +543,10 @@
         let cart = JSON.parse(localStorage.getItem('appCart')) || [];
         // اختيار المتجر النشط: يفضّل آخر متجر تم تصفحه، وإلا يقع تلقائياً على أول متجر مسجل بالمنصة (لا يبقى أبداً بدون متجر فعلي)
         let allStoresAtLoad = JSON.parse(localStorage.getItem('allStores')) || {};
-        let savedActiveStore = localStorage.getItem('currentActiveStore');
+        let savedActiveStore = getTabState('currentActiveStore');
         let activeStore = (savedActiveStore && allStoresAtLoad[savedActiveStore]) ? savedActiveStore : Object.keys(allStoresAtLoad)[0];
         let currentViewingCategory = null; // القسم اللي العميل/التاجر شايفه دلوقتي (بيتستخدم في زرار "إضافة منتج" السريع)
-        if(activeStore) localStorage.setItem('currentActiveStore', activeStore);
+        if(activeStore) setTabState('currentActiveStore', activeStore);
         let selectedPayment = 'COD';
         let selectedDeliveryMode = 'pickup';
         let tempSelectedRating = 5;
@@ -904,6 +904,7 @@
             // 🏷️ ليبل زرار الدخول/الحساب الموحّد تحت تتبنى ديناميكيًا بـ t()، فمحتاج
             // يتحدّث هو كمان لما اللغة تتغيّر، زي باقي المحتوى الديناميكي فوق.
             try { syncBuyerAccountIcon(); } catch(e) {}
+            try { ['dashboardSection', 'adminSection'].forEach(function(id) { let el = document.getElementById(id); if(el && el.querySelector('.dash-groups-bar')) initDashGroups(id); }); } catch(e) {}
 
             let merchant = localStorage.getItem('currentActiveMerchant');
             if(!merchant) return;
@@ -1027,6 +1028,23 @@
             }
         }
 
+        // 🗂️ حالة "أنا في متجر ولا في المنصة" و"أنهي متجر" لازم تبقى خاصة بكل تاب لوحده
+        // (sessionStorage) مش مشتركة بين كل التابات (localStorage) - وإلا لو فاتح تابين
+        // (واحد كمشتري في متجر وواحد كتاجر/أدمن) كل تاب كان بيغيّر الحالة للتاب التاني، فالمشتري
+        // كان بيتحوّل لصفحة دخول التاجر والعكس. بنكتب كمان نسخة في localStorage عشان أي
+        // تاب جديد يفتح يبدأ من آخر حالة معروفة (نفس السلوك القديم).
+        function getTabState(key) {
+            try {
+                let v = sessionStorage.getItem('tab_' + key);
+                if(v !== null) return v;
+            } catch(e) {}
+            return localStorage.getItem(key);
+        }
+        function setTabState(key, value) {
+            try { sessionStorage.setItem('tab_' + key, value); } catch(e) {}
+            localStorage.setItem(key, value);
+        }
+
         function initApp() {
             updateHeaderBrand();
             updateCartBadge();
@@ -1101,8 +1119,8 @@
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             if(storeParam && stores[storeParam] && stores[storeParam].status !== 'stopped') {
                 activeStore = storeParam;
-                localStorage.setItem('currentActiveStore', storeParam);
-                localStorage.setItem('viewMode', 'store');
+                setTabState('currentActiveStore', storeParam);
+                setTabState('viewMode', 'store');
             } else {
                 // مفيش رابط متجر محدد في العنوان — لو التاجر مسجل دخول بالفعل بجلسته،
                 // المفروض يشوف متجره هو تلقائي بدل ما يتفاجئ بدليل كل متاجر المنصة
@@ -1110,10 +1128,10 @@
                 let loggedMerchant = localStorage.getItem('currentActiveMerchant');
                 if(loggedMerchant && stores[loggedMerchant] && stores[loggedMerchant].status !== 'stopped') {
                     activeStore = loggedMerchant;
-                    localStorage.setItem('currentActiveStore', loggedMerchant);
-                    localStorage.setItem('viewMode', 'store');
+                    setTabState('currentActiveStore', loggedMerchant);
+                    setTabState('viewMode', 'store');
                 } else {
-                    localStorage.setItem('viewMode', 'platform');
+                    setTabState('viewMode', 'platform');
                     if(storeParam) {
                         // رابط متجر غير موجود أو موقوف حاليًا: ننظف الرابط ونرجع لصفحة المنصة الرئيسية
                         try {
@@ -1185,6 +1203,61 @@
             });
         }
 
+
+        // ============================================================
+        // 🗂️ تجميع بنود لوحة التاجر/الأدمن/المشرفين في مجموعات (شرائح فوق اللوحة): كل مجموعة
+        // تعرض بنودها المحددة بس بدل 10-16 بند ورا بعض. البحث الشامل بيرجّع "الكل" تلقائيًا.
+        // ============================================================
+        const DASH_GROUPS = {
+            dashboardSection: [
+                { id: 'sales', key: 'dash_group_sales', fb: '📊 المبيعات والتقارير', items: ['dash_orders_title', 'dash_bestsellers_title', 'dash_revenue_title', 'dash_profit_title'] },
+                { id: 'store', key: 'dash_group_store', fb: '⚙️ المتجر والاشتراك', items: ['dash_settings_title', 'dash_subscription_title'] },
+                { id: 'marketing', key: 'dash_group_marketing', fb: '🎨 الواجهة والتسويق', items: ['dash_shortcuts_title', 'dash_banners_title'] },
+                { id: 'team', key: 'dash_group_team', fb: '👥 الفريق', items: ['dash_staff_title'] }
+            ],
+            adminSection: [
+                { id: 'platform', key: 'admin_group_platform', fb: '🏪 المتاجر والمنصة', items: ['admin_stats_title', 'admin_renewals_title', 'admin_stores_title', 'admin_broadcast_title'] },
+                { id: 'support', key: 'admin_group_support', fb: '💬 الدعم والشات', items: ['chat_admin_title', 'admin_support_team_title'] },
+                { id: 'billing', key: 'admin_group_billing', fb: '🏷️ الباقات والاشتراكات', items: ['admin_plans_title', 'admin_subscription_settings_title'] },
+                { id: 'appearance', key: 'admin_group_appearance', fb: '🎨 واجهة المنصة', items: ['admin_home_banner_title', 'admin_about_platform_title', 'admin_guide_title', 'admin_home_sections_title', 'admin_custom_code_title'] },
+                { id: 'accounts', key: 'admin_group_accounts', fb: '🔐 الحسابات والأمان', items: ['admin_account_title', 'admin_admins_title', 'admin_backup_title'] }
+            ]
+        };
+        function selectDashGroup(sectionId, groupId) {
+            let sec = document.getElementById(sectionId);
+            if(!sec) return;
+            let groups = DASH_GROUPS[sectionId] || [];
+            let g = groups.find(x => x.id === groupId);
+            sec.querySelectorAll('details.dash-accordion').forEach(function(d) {
+                let k = d.querySelector('summary [data-i18n]');
+                let key = k ? k.getAttribute('data-i18n') : '';
+                let show = !g || (g.items.indexOf(key) !== -1) || !groups.some(x => x.items.indexOf(key) !== -1);
+                d.classList.toggle('dash-group-hidden', !show);
+            });
+            let bar = sec.querySelector('.dash-groups-bar');
+            if(bar) bar.querySelectorAll('button').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-group') === (groupId || 'all')); });
+        }
+        function initDashGroups(sectionId) {
+            let sec = document.getElementById(sectionId);
+            if(!sec) return;
+            let groups = DASH_GROUPS[sectionId] || [];
+            let bar = sec.querySelector('.dash-groups-bar');
+            if(!bar) {
+                bar = document.createElement('div');
+                bar.className = 'dash-groups-bar';
+                let searchBox = sec.querySelector('input[id$="SearchInput"]');
+                let anchor = searchBox && searchBox.parentElement ? searchBox.parentElement : null;
+                if(anchor && anchor.parentElement === sec) anchor.insertAdjacentElement('afterend', bar);
+                else sec.insertBefore(bar, sec.firstChild);
+                if(searchBox) searchBox.addEventListener('input', function() { if(this.value.trim()) selectDashGroup(sectionId, null); else selectDashGroup(sectionId, groups[0] && groups[0].id); });
+            }
+            bar.innerHTML = groups.map(g => `<button type="button" data-group="${g.id}" onclick="selectDashGroup('${sectionId}', '${g.id}')">${t(g.key, g.fb)}</button>`).join('')
+                + `<button type="button" data-group="all" onclick="selectDashGroup('${sectionId}', null)">${t('dash_group_all', '📂 الكل')}</button>`;
+            let current = bar.getAttribute('data-current') || (groups[0] && groups[0].id);
+            bar.setAttribute('data-current', current);
+            selectDashGroup(sectionId, current === 'all' ? null : current);
+        }
+
         function switchTab(tab, btn) {
             const sectionIds = ['platformHomeSection', 'homeSection', 'authSection', 'dashboardSection', 'adminSection', 'cartSection', 'productModal', 'deliveryModal', 'aboutUsModal', 'orderConfirmModal', 'directOrderSuccessModal', 'returnPolicyModal', 'storeCustomCodeModal', 'usageGuideModal', 'storeColorsModal', 'editAdminPermsModal', 'productsModal', 'categoriesModal'];
             sectionIds.forEach(id => {
@@ -1198,8 +1271,8 @@
 
             if(tab === 'home') {
                 let stores = JSON.parse(localStorage.getItem('allStores')) || {};
-                let viewMode = localStorage.getItem('viewMode');
-                let savedStore = localStorage.getItem('currentActiveStore');
+                let viewMode = getTabState('viewMode');
+                let savedStore = getTabState('currentActiveStore');
                 // فيه جلسة دخول شغالة فعلاً (أدمن أو تاجر) ولا زائر عادي؟
                 // ده بيفرق معانا لأن التاجر/الأدمن ممكن يعاين متجر وهو لسه عاوز رجعة سهلة للوحته،
                 // لكن الزائر العادي اللي داخل برابط متجر معين ماله دعوة بمنصة أكبر خالص
@@ -1221,8 +1294,9 @@
                 // 🔁 نعيد مزامنة أيقونة الدخول/الحساب الموحّدة تاني بعد ما activeStore اتحدّث
                 // فعليًا فوق (المرة اللي فوق في بداية الدالة كانت لسه بالقيمة القديمة).
                 try { syncBuyerAccountIcon(); } catch(e) {}
+                try { syncTrackOrderNavVisibility(); } catch(e) {}
             } else if(tab === 'cart') {
-                if(localStorage.getItem('viewMode') !== 'store') { switchTab('home'); return; }
+                if(getTabState('viewMode') !== 'store') { switchTab('home'); return; }
                 document.getElementById('cartSection').classList.remove('hidden');
                 renderCart();
             } else if(tab === 'auth') {
@@ -1240,16 +1314,25 @@
                             // أي متجر تمت معاينته قبل كده عن طريق "زيارة المتجر" — عشان كده بنرجّعها
                             // لوضع المنصة الافتراضي (اللون + الهيدر) في كل مرة تُفتح فيها
                             applyStoreTheme(null);
-                            localStorage.setItem('viewMode', 'platform');
+                            setTabState('viewMode', 'platform');
                             updateHeaderBrand();
                             document.getElementById('adminSection').classList.remove('hidden');
                             renderAdminPanel();
+                            try { initDashGroups('adminSection'); } catch(e) {}
                         } else if(loggedMerchant) {
                             document.getElementById('dashboardSection').classList.remove('hidden');
                             loadDashboard();
+                            try { initDashGroups('dashboardSection'); } catch(e) {}
                         }
                     });
                 } else {
+                    // 🛡️ مشتري مسجّل دخوله فعلاً في المتجر اللي بيتصفحه: ماينفعش يشوف صفحة دخول
+                    // التاجر أبدًا - نرجّعه للمتجر ونفتحله حسابه بدلها.
+                    if(getTabState('viewMode') === 'store' && getBuyerSession(activeStore)) {
+                        switchTab('home');
+                        try { openBuyerProfileModal(); } catch(e) {}
+                        return;
+                    }
                     // شاشة تسجيل الدخول العامة برضه محايدة دايمًا، مش بلون آخر متجر تمت معاينته كزائر
                     applyStoreTheme(null);
                     document.getElementById('authSection').classList.remove('hidden');
@@ -1258,7 +1341,7 @@
                     // ⚠️ المعيار الصح هنا هو viewMode ('store' ولا 'platform') مش activeStore -
                     // activeStore فضلت دايمًا فيها قيمة (آخر متجر اتزار) حتى وانت في الصفحة الرئيسية
                     // للمنصة، فاستخدامها هنا كان بيخلي الزرار يظهر/يختفي غلط.
-                    let __onStorePage = localStorage.getItem('viewMode') === 'store';
+                    let __onStorePage = getTabState('viewMode') === 'store';
                     try { document.getElementById('merchantRegisterCtaBox').classList.toggle('hidden', __onStorePage); } catch(e) {}
                     // 🔗 رابط "عميل؟ ادخل من هنا" يظهر بس وانت جوه متجر معيّن (عشان بوابة الدخول
                     // الموحّدة وفرت المكان المظبوط للعميل، وده الرابط الاحتياطي لو وصل هنا غلط).
@@ -1278,7 +1361,7 @@
         }
 
         function updateHeaderBrand() {
-            let viewMode = localStorage.getItem('viewMode');
+            let viewMode = getTabState('viewMode');
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             let store = stores[activeStore];
 
@@ -1382,7 +1465,9 @@
                 ctx.drawImage(img, 0, 0, w, h);
                 let compressed;
                 try {
-                    compressed = canvas.toDataURL('image/jpeg', 0.85);
+                    // 🖼️ WebP أصغر بنحو 30% من JPEG بنفس الجودة تقريبًا؛ لو المتصفح مش بيدعمه بنرجع JPEG تلقائيًا
+                    compressed = canvas.toDataURL('image/webp', 0.82);
+                    if(compressed.indexOf('data:image/webp') !== 0) compressed = canvas.toDataURL('image/jpeg', 0.85);
                 } catch(err) {
                     compressed = rawDataUrl; // فشل الضغط (مثلاً صورة SVG) - استخدم الأصلية
                 }
@@ -1581,8 +1666,8 @@
                 stores[staffStoreKey].lastActivityAt = Date.now();
                 saveAllStores(stores);
                 activeStore = staffStoreKey;
-                localStorage.setItem('currentActiveStore', staffStoreKey);
-                localStorage.setItem('viewMode', 'store');
+                setTabState('currentActiveStore', staffStoreKey);
+                setTabState('viewMode', 'store');
                 updateHeaderBrand();
                 switchTab('auth');
                 return;
@@ -1612,8 +1697,8 @@
                 stores[coOwnerStoreKey].lastActivityAt = Date.now();
                 saveAllStores(stores);
                 activeStore = coOwnerStoreKey;
-                localStorage.setItem('currentActiveStore', coOwnerStoreKey);
-                localStorage.setItem('viewMode', 'store');
+                setTabState('currentActiveStore', coOwnerStoreKey);
+                setTabState('viewMode', 'store');
                 updateHeaderBrand();
                 switchTab('auth');
                 return;
@@ -1701,8 +1786,8 @@
                     stores[key].lastActivityAt = Date.now();
                     saveAllStores(stores);
                     activeStore = key;
-                    localStorage.setItem('currentActiveStore', key);
-                    localStorage.setItem('viewMode', 'store');
+                    setTabState('currentActiveStore', key);
+                    setTabState('viewMode', 'store');
                     updateHeaderBrand();
                     switchTab('auth');
                     return;
@@ -1803,8 +1888,8 @@
             stores[matchedKey].lastActivityAt = Date.now();
             saveAllStores(stores);
             activeStore = matchedKey;
-            localStorage.setItem('currentActiveStore', matchedKey);
-            localStorage.setItem('viewMode', 'store');
+            setTabState('currentActiveStore', matchedKey);
+            setTabState('viewMode', 'store');
             updateHeaderBrand();
             switchTab('auth');
         }
@@ -2011,8 +2096,8 @@
             if(!saveAllStores(stores2)) return;
             localStorage.setItem('currentActiveMerchant', name);
             activeStore = name;
-            localStorage.setItem('currentActiveStore', name);
-            localStorage.setItem('viewMode', 'store');
+            setTabState('currentActiveStore', name);
+            setTabState('viewMode', 'store');
             updateHeaderBrand();
             document.getElementById('merchantRegisterForm').classList.add('hidden');
             document.getElementById('regStoreName').value = '';
@@ -2854,7 +2939,7 @@
             if(editIndex < 0) {
                 let plan = getPlanForStore(store);
                 if(plan.staffLimit !== -1 && store.staff.length >= plan.staffLimit) {
-                    alert(`⛔ وصلت للحد الأقصى لعدد المساعدين في باقتك الحالية (${plan.name} - ${plan.staffLimit === 0 ? 'مفيش مساعدين مسموح بيهم في الباقة دي' : plan.staffLimit + ' مساعد'}). ترقّى لباقة أعلى عشان تضيف مساعدين أكتر.`);
+                    alert(t('plan_limit_staff', '⛔ وصلت للحد الأقصى لعدد المساعدين في باقتك الحالية ({plan} - {n}). ترقّى لباقة أعلى عشان تضيف مساعدين أكتر.').replace('{plan}', planDisplayName(plan)).replace('{n}', plan.staffLimit));
                     return;
                 }
             }
@@ -2959,6 +3044,11 @@
             if(usernameTaken) { alert(t('alert_username_taken')); return; }
 
             stores[name].coOwners = stores[name].coOwners || [];
+            let coPlan = getPlanForStore(stores[name]);
+            if(coPlan.coOwnerLimit !== undefined && coPlan.coOwnerLimit !== null && coPlan.coOwnerLimit !== -1 && stores[name].coOwners.length >= coPlan.coOwnerLimit) {
+                alert(t('plan_limit_coowner', '⛔ وصلت للحد الأقصى لمشاركة المشرفين في باقتك الحالية ({plan} - {n}). ترقّى لباقة أعلى.').replace('{plan}', planDisplayName(coPlan)).replace('{n}', coPlan.coOwnerLimit));
+                return;
+            }
 
             // 🔐 نفس نمط حساب المساعد: حساب Firebase حقيقي عبر اتصال ثانوي (بدون التأثير
             // على جلسة التاجر أو الأدمن الحالية)، مع الاحتفاظ بكلمة السر محليًا للعمل
@@ -3275,7 +3365,13 @@
                         <label style="margin:0;">حد المنتجات (-1 = بلا حدود)<input type="number" value="${p.productLimit}" style="margin:2px 0 0;" onchange="updateSubscriptionPlanField(${i}, 'productLimit', parseInt(this.value))"></label>
                         <label style="margin:0;">مساحة التخزين (MB)<input type="number" value="${p.storageMB}" style="margin:2px 0 0;" onchange="updateSubscriptionPlanField(${i}, 'storageMB', parseInt(this.value))"></label>
                         <label style="margin:0;">حد المساعدين (-1 = بلا حدود)<input type="number" value="${p.staffLimit}" style="margin:2px 0 0;" onchange="updateSubscriptionPlanField(${i}, 'staffLimit', parseInt(this.value))"></label>
+                        <label style="margin:0;">${t('plan_ed_monthly_quota', 'حصة المنتجات الشهرية (0 = بدون حصة)')}<input type="number" value="${p.monthlyProductQuota || 0}" style="margin:2px 0 0;" onchange="updateSubscriptionPlanField(${i}, 'monthlyProductQuota', parseInt(this.value) || 0)"></label>
+                        <label style="margin:0;">${t('plan_ed_buyer_limit', 'حد المشترين المسجلين (-1 = بلا حدود)')}<input type="number" value="${p.buyerLimit === undefined ? -1 : p.buyerLimit}" style="margin:2px 0 0;" onchange="updateSubscriptionPlanField(${i}, 'buyerLimit', parseInt(this.value))"></label>
+                        <label style="margin:0;">${t('plan_ed_cat_limit', 'حد الأقسام (-1 = بلا حدود)')}<input type="number" value="${p.categoryLimit === undefined ? -1 : p.categoryLimit}" style="margin:2px 0 0;" onchange="updateSubscriptionPlanField(${i}, 'categoryLimit', parseInt(this.value))"></label>
+                        <label style="margin:0;">${t('plan_ed_coowner_limit', 'حد مشاركة المشرفين (-1 = بلا حدود)')}<input type="number" value="${p.coOwnerLimit === undefined ? -1 : p.coOwnerLimit}" style="margin:2px 0 0;" onchange="updateSubscriptionPlanField(${i}, 'coOwnerLimit', parseInt(this.value))"></label>
                     </div>
+                    <label style="margin:8px 0 0; display:block; font-size:11px;">${t('plan_ed_buyer_msg', 'رسالة الوصول لحد المشترين (اتركها فارغة للرسالة الافتراضية)')}<input type="text" value="${(p.buyerLimitMessage || '').replace(/"/g, '&quot;')}" style="margin:2px 0 0;" onchange="updateSubscriptionPlanField(${i}, 'buyerLimitMessage', this.value)"></label>
+                    <label style="margin:8px 0 0; display:flex; align-items:center; gap:4px; font-size:11.5px;"><input type="checkbox" style="width:auto; margin:0;" ${p.quotaAccumulate ? 'checked' : ''} onchange="updateSubscriptionPlanField(${i}, 'quotaAccumulate', this.checked)"> ${t('plan_ed_accumulate', 'الحصة الشهرية تتراكم (شهر1: 5، شهر2: 10…) — بدونها تبقى ثابتة')}</label>
                     <div style="display:flex; gap:14px; margin-top:8px; font-size:11.5px;">
                         <label style="margin:0; display:flex; align-items:center; gap:4px;"><input type="checkbox" style="width:auto; margin:0;" ${p.allowColors ? 'checked' : ''} onchange="updateSubscriptionPlanField(${i}, 'allowColors', this.checked)"> 🎨 ألوان مخصصة</label>
                         <label style="margin:0; display:flex; align-items:center; gap:4px;"><input type="checkbox" style="width:auto; margin:0;" ${p.allowBanners ? 'checked' : ''} onchange="updateSubscriptionPlanField(${i}, 'allowBanners', this.checked)"> 🖼️ لافتات إعلانية</label>
@@ -3289,6 +3385,7 @@
             if(!plans[index]) return;
             plans[index][field] = value;
             saveSubscriptionPlans(plans);
+            if(['buyerLimit','buyerLimitMessage'].indexOf(field) !== -1) stampAllStoresPlanLimits();
             showToast('✅ تم تحديث الباقة');
         }
 
@@ -3329,12 +3426,23 @@
             let productsCount = (store.products || []).length;
             let staffCount = (store.staff || []).length;
             let unlimitedLabel = t('unlimited_label', 'بلا حدود');
+            let _allow = getProductAllowance(store, plan);
+            let planQuotaHtml = '';
+            if(_allow.quota > 0) {
+                let explain = _allow.accumulate
+                    ? t('plan_quota_explain_acc', '📅 حصتك: {quota} منتجات كل شهر وتتراكم (الشهر 1: {q1}، الشهر 2: {q2}، الشهر 3: {q3}…). المسموح الآن: {allowed} (الشهر رقم {months}).')
+                    : t('plan_quota_explain_fixed', '📅 باقتك لها حد ثابت: {quota} منتجات فقط بدون تراكم شهري. ترقّى لباقة مدفوعة لتحصل على حصة شهرية تتراكم.');
+                explain = explain.replace(/\{quota\}/g, _allow.quota).replace('{q1}', _allow.quota).replace('{q2}', _allow.quota * 2).replace('{q3}', _allow.quota * 3).replace('{allowed}', _allow.allowed).replace('{months}', _allow.months);
+                planQuotaHtml = `<span style="font-size:11px; line-height:1.6; color:#6d28d9;">${explain}</span>`;
+            }
             let planUsageHtml = `
                 <div style="margin-top:10px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:10px; padding:10px; font-size:12px;">
                     <strong style="color:#6d28d9;">🏷️ ${t('current_plan_label', 'باقتك الحالية')}: ${planDisplayName(plan)}${plan.price ? ' (' + plan.price + ')' : ' (' + t('free_label', 'مجانية') + ')'}</strong>
                     <div style="margin-top:6px; display:flex; flex-direction:column; gap:3px; color:var(--text-muted);">
-                        <span>📦 ${t('plan_products_label', 'المنتجات')}: ${productsCount} / ${plan.productLimit === -1 ? unlimitedLabel : plan.productLimit}</span>
+                        <span>📦 ${t('plan_products_label', 'المنتجات')}: ${productsCount} / ${_allow.allowed === -1 ? unlimitedLabel : _allow.allowed}</span>
                         <span>👥 ${t('plan_staff_label', 'المساعدين')}: ${staffCount} / ${plan.staffLimit === -1 ? unlimitedLabel : plan.staffLimit}</span>
+                        <span>🗂️ ${t('plan_cats_label', 'الأقسام')}: ${(store.categories || []).length} / ${(plan.categoryLimit === undefined || plan.categoryLimit === -1) ? unlimitedLabel : plan.categoryLimit}</span>
+                        ${planQuotaHtml}
                         <span>🎨 ${t('plan_colors_label', 'ألوان مخصصة')}: ${plan.allowColors ? t('available_label', 'متاحة ✅') : t('unavailable_label', 'غير متاحة')}</span>
                         <span>🖼️ ${t('plan_banners_label', 'لافتات إعلانية')}: ${plan.allowBanners ? t('available_label', 'متاحة ✅') : t('unavailable_label', 'غير متاحة')}</span>
                     </div>
@@ -4038,7 +4146,7 @@
 
             localStorage.setItem('currentActiveMerchant', newName);
             activeStore = newName;
-            localStorage.setItem('currentActiveStore', newName);
+            setTabState('currentActiveStore', newName);
             document.getElementById('storeLoginNameInput').value = newName;
             updateHeaderBrand();
             showToast(`✅ تم تغيير اسم الدخول إلى "${newName}" بنجاح.`);
@@ -4323,6 +4431,11 @@
 
             if(editIndex === "-1") {
                 if(!catName || !catImage) { alert(t('alert_cat_name_image_required')); return; }
+                let catPlan = getPlanForStore(stores[merchant]);
+                if(catPlan.categoryLimit !== undefined && catPlan.categoryLimit !== null && catPlan.categoryLimit !== -1 && (stores[merchant].categories || []).length >= catPlan.categoryLimit) {
+                    alert(t('plan_limit_category', '⛔ وصلت للحد الأقصى لعدد الأقسام في باقتك الحالية ({plan} - {n} قسم). ترقّى لباقة أعلى.').replace('{plan}', planDisplayName(catPlan)).replace('{n}', catPlan.categoryLimit));
+                    return;
+                }
                 stores[merchant].categories.push({ name: catName, image: catImage });
             } else {
                 if(!catName) { alert(t('alert_cat_name_required')); return; }
@@ -4347,7 +4460,7 @@
                 let wasQuick = !!quickNavReturnSectionId;
                 closeCategoriesModal();
                 try {
-                    if(!wasQuick && localStorage.getItem('viewMode') === 'store' && localStorage.getItem('currentActiveStore') === merchant) {
+                    if(!wasQuick && getTabState('viewMode') === 'store' && getTabState('currentActiveStore') === merchant) {
                         switchTab('home');
                     }
                     renderHome();
@@ -4972,7 +5085,14 @@
             return el ? sanitizeRichHtml(el.innerHTML) : (fallback !== undefined ? fallback : '');
         }
 
+        let __productSaveLock = false;
         function saveProduct() {
+            // 🛡️ منع الضغط المتكرر: القفل يتفك بعد ثانيتين، والزرار يتعطل خلال كده
+            if(__productSaveLock) return;
+            __productSaveLock = true;
+            let __sb = document.getElementById('saveProductBtn');
+            if(__sb) __sb.disabled = true;
+            setTimeout(function() { __productSaveLock = false; if(__sb) __sb.disabled = false; }, 2000);
             // ⏳ لو لسه فيه صور بترفع على ImgBB في الخلفية، منستناش تفشل العملية، لكن نبلّغ
             // التاجر بلطف إنه ينتظر ثانية بس عشان الصورة تتحفظ بالجودة النهائية الصحيحة.
             if(__pendingImageUploads > 0) {
@@ -5048,8 +5168,18 @@
             // وقت إضافة منتج جديد، مش وقت تعديل منتج موجود بالفعل)
             if(editIndex === "-1") {
                 let plan = getPlanForStore(stores[merchant]);
-                if(plan.productLimit !== -1 && stores[merchant].products.length >= plan.productLimit) {
-                    showProductFormError(null, `⛔ وصلت للحد الأقصى لعدد المنتجات في باقتك الحالية (${plan.name} - ${plan.productLimit} منتج). ترقّى لباقة أعلى عشان تضيف منتجات أكتر.`);
+                let allow = getProductAllowance(stores[merchant], plan);
+                if(allow.allowed !== -1 && stores[merchant].products.length >= allow.allowed) {
+                    let cap = plan.productLimit;
+                    let msg;
+                    if(allow.quota > 0 && allow.accumulate && (cap === -1 || allow.allowed < cap)) {
+                        msg = t('plan_quota_wait', '⛔ وصلت لحصة منتجاتك حتى الآن ({used}/{allowed}). انتظر حتى الشهر القادم لإضافة {extra} منتجات أخرى، أو ترقّ لباقة أعلى.')
+                            .replace('{used}', stores[merchant].products.length).replace('{allowed}', allow.allowed).replace('{extra}', allow.quota);
+                    } else {
+                        msg = t('plan_limit_products', '⛔ وصلت للحد الأقصى لعدد المنتجات في باقتك الحالية ({plan} - {n} منتج). ترقّى لباقة أعلى عشان تضيف منتجات أكتر.')
+                            .replace('{plan}', planDisplayName(plan)).replace('{n}', allow.allowed);
+                    }
+                    showProductFormError(null, msg);
                     return;
                 }
                 // 💾 فحص مساحة التخزين المسموح بها حسب باقة الاشتراك: بيستخدم الرقم
@@ -5455,8 +5585,8 @@
         function renderHome() {
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             let store = stores[activeStore];
-            document.getElementById('trackOrderNavBtn').classList.toggle('hidden', !store);
             syncBuyerAccountIcon();
+            syncTrackOrderNavVisibility();
             if(!store || store.status === 'stopped') {
                 document.getElementById('homeCategoriesGrid').innerHTML = '<p style="text-align:center; color:red; grid-column:span 2;">هذا المتجر موقوف حالياً.</p>';
                 document.getElementById('amazonTopBarContainer').classList.add('hidden');
@@ -5488,8 +5618,8 @@
         // حقيقي قابل للمشاركة ومستقل، مش مجرد تنقل داخلي جوه نفس الرابط
         function enterStore(name) {
             activeStore = name;
-            localStorage.setItem('currentActiveStore', name);
-            localStorage.setItem('viewMode', 'store');
+            setTabState('currentActiveStore', name);
+            setTabState('viewMode', 'store');
             // 🐛 إصلاح: الدالة دي كانت بتغيّر المتجر النشط من غير ما تحدّث عداد السلة في
             // الهيدر، فيفضل العداد شايل رقم المتجر اللي فات (مش فاضي زي ما المفروض) لحد ما
             // أي حدث تاني (إضافة/حذف منتج) يصادف يحصل ويحدّثه. updateCartBadge() بيفلتر
@@ -5502,7 +5632,7 @@
 
         // --- الرجوع من متجر تاجر معين لدليل المتاجر (الصفحة الرئيسية للمنصة) ---
         function exitToPlatformHome() {
-            localStorage.setItem('viewMode', 'platform');
+            setTabState('viewMode', 'platform');
             pushPlatformUrl();
             switchTab('home');
         }
@@ -6939,7 +7069,7 @@
             stores[storeSnippetModalTarget].customCodeSnippets = snippets;
             if(!saveAllStores(stores)) return;
             // لو حاليًا واقف تعاين نفس المتجر ده، نطبّق التغيير فورًا من غير ما تحتاج تعمل رفريش
-            if(activeStore === storeSnippetModalTarget && localStorage.getItem('viewMode') === 'store') {
+            if(activeStore === storeSnippetModalTarget && getTabState('viewMode') === 'store') {
                 injectStoreCustomCode(stores[storeSnippetModalTarget]);
             }
             renderStoreSnippets();
@@ -7124,6 +7254,7 @@
                 } catch(e) {
                     console.error('goToMerchantDashboardQuick: حصل خطأ أثناء تحميل بيانات لوحة التاجر', e);
                 }
+                try { initDashGroups('dashboardSection'); } catch(e) {}
             });
         }
 
@@ -7402,7 +7533,34 @@
                     </a>
                 `);
             });
-            grid.innerHTML = cardsHtml.join('');
+            // ⚡ تحميل تدريجي: أول 12 كارت فقط، والباقي يتضاف تلقائيًا لما الزائر ينزل لآخر الصفحة
+            // (أو بزرار "عرض المزيد") - المتصفح مش بيبني مئات الكروت مرة واحدة.
+            const PAGE_SIZE = 12;
+            if(grid.__moreObs) { try { grid.__moreObs.disconnect(); } catch(e) {} grid.__moreObs = null; }
+            let oldSentinel = document.getElementById('storeProductsMoreSentinel');
+            if(oldSentinel) oldSentinel.remove();
+            grid.innerHTML = cardsHtml.slice(0, PAGE_SIZE).join('');
+            if(cardsHtml.length > PAGE_SIZE) {
+                let shown = PAGE_SIZE;
+                let sentinel = document.createElement('div');
+                sentinel.id = 'storeProductsMoreSentinel';
+                sentinel.style.cssText = 'text-align:center; padding:14px 0;';
+                sentinel.innerHTML = `<button type="button" class="secondary" style="width:auto; padding:8px 22px;">${t('show_more_btn', 'عرض المزيد')}</button>`;
+                grid.insertAdjacentElement('afterend', sentinel);
+                let obs = null;
+                const more = function() {
+                    grid.insertAdjacentHTML('beforeend', cardsHtml.slice(shown, shown + PAGE_SIZE).join(''));
+                    shown += PAGE_SIZE;
+                    if(shown >= cardsHtml.length) { if(obs) obs.disconnect(); grid.__moreObs = null; sentinel.remove(); }
+                    else if(obs) { obs.unobserve(sentinel); obs.observe(sentinel); }
+                };
+                sentinel.querySelector('button').addEventListener('click', more);
+                if('IntersectionObserver' in window) {
+                    obs = new IntersectionObserver(function(es) { if(es.some(e => e.isIntersecting)) more(); }, { rootMargin: '400px' });
+                    obs.observe(sentinel);
+                    grid.__moreObs = obs;
+                }
+            }
         }
 
         // --- عنصر تحكم السلة داخل كارت المنتج: زر إضافة أو عداد +/- إذا كان مضافاً بالفعل ---
@@ -8112,10 +8270,12 @@
         function setBuyerSession(storeKey, data) {
             localStorage.setItem('buyerSession_' + storeKey, JSON.stringify(data));
             syncBuyerAccountIcon();
+            try { syncTrackOrderNavVisibility(); } catch(e) {}
         }
         function clearBuyerSession(storeKey) {
             localStorage.removeItem('buyerSession_' + storeKey);
             syncBuyerAccountIcon();
+            try { syncTrackOrderNavVisibility(); } catch(e) {}
         }
 
         // 🔘 زر "حسابي" في الشريط العلوي: لو مسجّل دخوله يفتحله ملفه وطلباته، لو لأ يفتحله
@@ -8129,6 +8289,17 @@
         // 🔄 بيحدّث شكل أيقونة الدخول/الحساب الموحّدة الوحيدة (في زاوية الهيدر): شكلها
         // ولونها يتغيّر تلقائي حسب مين بالظبط فاتح الصفحة دلوقتي - مشترِي مسجّل دخوله،
         // تاجر/أدمن مسجّل دخوله، أو زائر لسه مادخلش - من غير ما يحتاج يدوّر في أكتر من مكان.
+        // 📦 أيقونة "تتبع طلباتك" للزائر بس (اللي مش مسجّل): المشتري المسجّل (حساب عادي أو
+        // جوجل) بيتابع حالة طلباته من جوه حسابه الشخصي، فمفيش داعي للأيقونة ومساحتها.
+        function syncTrackOrderNavVisibility() {
+            let btn = document.getElementById('trackOrderNavBtn');
+            if(!btn) return;
+            let stores = JSON.parse(localStorage.getItem('allStores')) || {};
+            let inStore = getTabState('viewMode') === 'store' && !!stores[activeStore];
+            let buyerLoggedIn = inStore && !!getBuyerSession(activeStore);
+            btn.classList.toggle('hidden', !inStore || buyerLoggedIn);
+        }
+
         function syncBuyerAccountIcon() {
             let btn = document.getElementById('unifiedEntryBtn');
             let icon = document.getElementById('unifiedEntryIcon');
@@ -8136,7 +8307,7 @@
             // 🏷️ الليبل الصغير تحت الأيقونة في الشريط السفلي - بيتحدّث مع الأيقونة بنفس
             // المنطق، عشان التاجر/المشتري يلاقي كلام واضح تحت الأيقونة مش بس تلميح title.
             let label = document.getElementById('unifiedEntryLabel');
-            let viewMode = localStorage.getItem('viewMode');
+            let viewMode = getTabState('viewMode');
             let loggedMerchant = localStorage.getItem('currentActiveMerchant');
             let loggedAdmin = localStorage.getItem('isAdminLoggedIn') === 'true';
             if(viewMode === 'store') {
@@ -8152,12 +8323,13 @@
             if(loggedMerchant || loggedAdmin) {
                 icon.className = 'fa fa-store';
                 btn.title = t('my_store_dashboard_label', 'لوحة إدارة متجري');
-                if(label) label.textContent = t('my_store_dashboard_label', 'لوحة إدارة متجري');
+                if(label) label.textContent = t('my_account_label', 'حسابي');
             } else {
                 icon.className = 'fa fa-right-to-bracket';
                 let txt = (viewMode === 'store') ? t('unified_entry_title', 'تسجيل الدخول / حسابي') : t('header_merchant_login_title', 'تسجيل الدخول للمتجر');
                 btn.title = txt;
-                if(label) label.textContent = txt;
+                // الكلمة تحت الأيقونة قصيرة: "تسجيل الدخول" لو محدش داخل، و"حسابي" لو فيه حد داخل
+                if(label) label.textContent = t('buyer_login_tab', 'تسجيل الدخول');
             }
             try { stopBuyerChatWatch(); } catch(e) {}
         }
@@ -8168,7 +8340,7 @@
         // - زائر جوه متجر معيّن (مش داخل بحساب) → نافذة اختيار بسيطة (عميل / تاجر).
         // - زائر في الصفحة الرئيسية للمنصة (مفيش متجر محدد، فمفيش معنى لـ"دخول عملاء") → دخول التجار مباشرة.
         function unifiedEntryClick() {
-            let viewMode = localStorage.getItem('viewMode');
+            let viewMode = getTabState('viewMode');
             if(viewMode === 'store') {
                 let sess = getBuyerSession(activeStore);
                 if(sess) { openBuyerProfileModal(); return; }
@@ -8231,7 +8403,9 @@
             if(!payload || !payload.email) { alert(t('buyer_generic_error', 'حصل خطأ، حاول مرة أخرى.')); return; }
             if(!window.loginOrRegisterBuyerWithGoogle) { alert(t('alert_no_internet', 'لا يوجد اتصال بالإنترنت حاليًا، حاول مرة أخرى.')); return; }
             try {
-                let res = await window.loginOrRegisterBuyerWithGoogle(activeStore, payload.email, payload.name || '');
+                let _gs = (JSON.parse(localStorage.getItem('allStores')) || {})[activeStore] || {};
+                let res = await window.loginOrRegisterBuyerWithGoogle(activeStore, payload.email, payload.name || '', _gs.buyerLimit);
+                if(!res.ok && res.error === 'limit') { alert(_gs.buyerLimitMessage || t('buyer_limit_default_msg', 'تم الوصول للحد الأقصى لتسجيل مشترين جدد لهذا المتجر في الباقة المشترك فيها')); return; }
                 if(!res.ok) { alert(t('buyer_generic_error', 'حصل خطأ، حاول مرة أخرى.')); return; }
                 setBuyerSession(activeStore, { buyerId: res.buyerId, name: res.name, phone: res.phone || '', address: res.address || '', authProvider: 'google' });
                 await mergeCartOnBuyerLogin(activeStore, res.buyerId, res.savedCart || []);
@@ -8263,9 +8437,10 @@
                 if(!name || !identifier || !password) { alert(t('buyer_fill_required', 'من فضلك اكتب الاسم ورقم الهاتف وكلمة السر')); return; }
                 if(!window.registerBuyerAccount) { alert(t('alert_no_internet', 'لا يوجد اتصال بالإنترنت حاليًا، حاول مرة أخرى.')); return; }
                 if(btn) btn.disabled = true;
-                let res = await window.registerBuyerAccount(activeStore, { name, identifier, address, password });
+                let res = await window.registerBuyerAccount(activeStore, { name, identifier, address, password, limit: store ? store.buyerLimit : undefined });
                 if(!res.ok) {
                     let msg = res.error === 'already_exists' ? t('buyer_phone_registered', 'رقم الهاتف/البريد ده مسجّل بحساب بالفعل، جرب تسجيل الدخول بدل كده.')
+                        : res.error === 'limit' ? ((store && store.buyerLimitMessage) || t('buyer_limit_default_msg', 'تم الوصول للحد الأقصى لتسجيل مشترين جدد لهذا المتجر في الباقة المشترك فيها'))
                         : res.error === 'weak_password' ? t('buyer_weak_password', 'كلمة السر لازم تكون 4 حروف/أرقام على الأقل.')
                         : res.error === 'invalid_identifier' ? t('buyer_invalid_identifier', 'اكتب رقم هاتف أو بريد إلكتروني صحيح.')
                         : t('buyer_generic_error', 'حصل خطأ، حاول مرة أخرى.');
@@ -8651,7 +8826,7 @@
             let badge = document.getElementById('buyerChatsTotalBadge');
             if(badge) { badge.textContent = total; badge.classList.toggle('hidden', total === 0); }
             // 🆕 نفس العدد على الزرار البارز الجديد فوق لوحة التاجر (شات العملاء)
-            let badgeTop = document.getElementById('buyerChatsTotalBadgeTop');
+            let badgeTop = document.getElementById('topHeaderBuyerChatBadge');
             if(badgeTop) { badgeTop.textContent = total; badgeTop.classList.toggle('hidden', total === 0); }
             // 🔴 نفس فكرة النقطة الحمرا بتاعة العميل، لكن هنا على زرار "دخول التجار/لوحة
             // إدارة المتجر" في الشريط السفلي، عشان التاجر يلاحظ فورًا من غير ما يفتح الإعدادات أصلًا.
@@ -8749,6 +8924,20 @@
             input.value = '';
             let ok = await window.sendBuyerChatMessage(merchant, __activeBuyerChatThreadBuyerId, 'merchant', text, '');
             if(!ok) { alert(buyerChatErrorMessage(window.__lastBuyerChatSendError)); input.value = text; }
+        }
+        async function endAndDeleteBuyerChatThread() {
+            let merchant = localStorage.getItem('currentActiveMerchant');
+            let buyerId = __activeBuyerChatThreadBuyerId;
+            if(!merchant || !buyerId) return;
+            if(!confirm(t('buyer_chat_end_delete_confirm', 'هتنتهي المحادثة وتتحذف نهائيًا من عندك ومن عند العميل. متأكد؟'))) return;
+            if(!window.deleteBuyerChatThread) { alert(t('alert_no_internet', 'لا يوجد اتصال بالإنترنت حاليًا، حاول مرة أخرى.')); return; }
+            let ok = await window.deleteBuyerChatThread(merchant, buyerId);
+            if(ok) {
+                closeBuyerChatThreadModal();
+                showToast('✅ ' + t('buyer_chat_end_delete_done', 'تم إنهاء المحادثة وحذفها'));
+            } else {
+                alert(t('buyer_generic_error', 'حصل خطأ، حاول مرة أخرى.'));
+            }
         }
         function deleteMerchantBuyerChatMsgUI(msgId) {
             let merchant = localStorage.getItem('currentActiveMerchant');
@@ -9325,6 +9514,12 @@
             let trackBox = document.getElementById('directOrderTrackBox');
             if(trackBox && trackingCode) {
                 document.getElementById('directOrderTrackCode').textContent = trackingCode;
+                // 👤 مشتري مسجّل دخوله: يتابع طلبه من حسابه الشخصي - نبدّل الشرح العام بملحوظة توجّهه لـ"حسابي"
+                let __loggedBuyer = !!getBuyerSession(activeStore);
+                let __stepsEl = document.getElementById('directOrderTrackStepsText');
+                let __noteEl = document.getElementById('directOrderTrackAccountNote');
+                if(__stepsEl) __stepsEl.classList.toggle('hidden', __loggedBuyer);
+                if(__noteEl) __noteEl.classList.toggle('hidden', !__loggedBuyer);
                 trackBox.classList.remove('hidden');
             } else if(trackBox) {
                 trackBox.classList.add('hidden');
@@ -10439,8 +10634,8 @@
             // ويخليه بس اسم متجره هو (store_only)، ولا لأ وبيتفرض عليه الوضع المدمج
             // (combined - فيه اسم متجره + "بدعم من" اسم المنصة) زي باقي الباقات العادية.
             let defaults = [
-                { id: 'free',    name: 'مجانية',  price: 0,   productLimit: 10,  storageMB: 10,   staffLimit: 0, allowColors: false, allowBanners: false, allowWhiteLabel: false },
-                { id: 'basic',   name: 'أساسي',   price: 100, productLimit: 50,  storageMB: 50,   staffLimit: 1, allowColors: false, allowBanners: true,  allowWhiteLabel: false },
+                { id: 'free',    name: 'مجانية',  price: 0,   productLimit: 10,  storageMB: 10,   staffLimit: 0, allowColors: false, allowBanners: false, allowWhiteLabel: false, monthlyProductQuota: 5, quotaAccumulate: false, buyerLimit: 20, categoryLimit: 3, coOwnerLimit: 0 },
+                { id: 'basic',   name: 'أساسي',   price: 100, productLimit: 50,  storageMB: 50,   staffLimit: 1, allowColors: false, allowBanners: true,  allowWhiteLabel: false, monthlyProductQuota: 5, quotaAccumulate: true, buyerLimit: 100, categoryLimit: 10, coOwnerLimit: 1 },
                 { id: 'pro',     name: 'متقدم',   price: 250, productLimit: 300, storageMB: 200,  staffLimit: 5, allowColors: true,  allowBanners: true,  allowWhiteLabel: false },
                 { id: 'premium', name: 'بريميوم', price: 500, productLimit: -1,  storageMB: 1000, staffLimit: -1, allowColors: true, allowBanners: true, allowWhiteLabel: true  },
             ];
@@ -10466,6 +10661,43 @@
             return plan || plans.find(p => p.id === 'free') || plans[0] || { id:'free', name:'مجانية', price:0, productLimit:10, storageMB:10, staffLimit:0, allowColors:false, allowBanners:false };
         }
 
+        // 📅 عدد الشهور منذ بداية الباقة (الشهر الأول = 1) - أساس الحصة الشهرية التراكمية
+        function getPlanMonthsActive(store) {
+            let start = store.planStartedAt || store.subscriptionActivatedAt || store.registeredAt || Date.now();
+            let s = typeof start === 'number' ? start : new Date(start).getTime();
+            if(!s || isNaN(s)) s = Date.now();
+            let d0 = new Date(s), d1 = new Date();
+            let m = (d1.getFullYear() - d0.getFullYear()) * 12 + (d1.getMonth() - d0.getMonth());
+            if(d1.getDate() < d0.getDate()) m--;
+            return Math.max(0, m) + 1;
+        }
+        // 📦 المسموح به الآن من المنتجات: حصة شهرية (تتراكم في الباقات المدفوعة، ثابتة في المجانية)
+        // أو الحد الثابت القديم لو الباقة معندهاش حصة شهرية. -1 = بلا حدود.
+        function getProductAllowance(store, plan) {
+            let q = parseInt(plan.monthlyProductQuota) || 0;
+            let hard = (plan.productLimit === undefined || plan.productLimit === null) ? -1 : plan.productLimit;
+            if(q <= 0) return { allowed: hard, quota: 0, accumulate: false, months: 1 };
+            let acc = plan.quotaAccumulate === true;
+            let months = acc ? getPlanMonthsActive(store) : 1;
+            let allowed = q * months;
+            if(hard !== -1 && hard >= 0) allowed = Math.min(allowed, hard);
+            return { allowed, quota: q, accumulate: acc, months };
+        }
+        // 📌 بننسخ حدود المشترين على كائن المتجر نفسه (بيتزامن للسحابة) عشان جهاز المشتري
+        // يعرف الحد والرسالة من غير ما يوصل لإعدادات الباقات المحلية عند الأدمن.
+        function stampPlanLimitsOnStore(store) {
+            try {
+                let p = getPlanForStore(store);
+                store.buyerLimit = (p.buyerLimit === undefined || p.buyerLimit === null || p.buyerLimit === '') ? -1 : p.buyerLimit;
+                store.buyerLimitMessage = p.buyerLimitMessage || '';
+            } catch(e) {}
+        }
+        function stampAllStoresPlanLimits() {
+            let stores = JSON.parse(localStorage.getItem('allStores')) || {};
+            Object.keys(stores).forEach(k => stampPlanLimitsOnStore(stores[k]));
+            saveAllStores(stores);
+        }
+
         function setStorePlan(name, planId) {
             if(!currentAdminHasPermission('manageStorePlans') && !currentAdminHasPermission('renewSubscription')) {
                 alert('ليس لديك صلاحية تغيير باقة المتاجر.'); return;
@@ -10473,6 +10705,8 @@
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             if(!stores[name]) return;
             stores[name].planId = planId;
+            stores[name].planStartedAt = Date.now();
+            stampPlanLimitsOnStore(stores[name]);
             // 🏷️ لما التاجر يترقّى/ينزل باقة، مساحة التخزين المسموحة بتتحدث تلقائيًا لتطابق
             // الباقة الجديدة. الأدمن برضه يقدر بعد كده يعدّلها يدويًا من حقل "المساحة" لو حب.
             let newPlan = getSubscriptionPlans().find(p => p.id === planId);
@@ -10551,7 +10785,7 @@
             // لو كنت واقف حاليًا بتعاين نفس المتجر ده (activeStore)، حدّث المرجع عشان ميحصلش تعارض
             if(activeStore === oldName) {
                 activeStore = newName;
-                localStorage.setItem('currentActiveStore', newName);
+                setTabState('currentActiveStore', newName);
             }
             showToast(`✅ تم تغيير اسم دخول المتجر إلى "${newName}".`);
             renderAdminStores();
@@ -11110,8 +11344,8 @@
         function visitStoreAsAdmin(name) {
             if(!currentAdminHasPermission('visit')) { alert('ليس لديك صلاحية معاينة المتاجر.'); return; }
             activeStore = name;
-            localStorage.setItem('currentActiveStore', name);
-            localStorage.setItem('viewMode', 'store');
+            setTabState('currentActiveStore', name);
+            setTabState('viewMode', 'store');
             pushStoreUrl(name);
             switchTab('home');
             showToast(`أنت الآن تشاهد متجر "${name}" — اضغط "دخول التجار والمشرفين" للعودة للوحة الإدارة`);
@@ -11244,6 +11478,12 @@
         }
 
         // --- البحث السريع ---
+        // ⏱️ Debounce: مفيش بحث (ولا إعادة رسم) مع كل حرف - بنستنى المستخدم يوقف كتابة لحظة
+        let __searchDebounceTimer = null;
+        function debouncedHandleSearch(query) {
+            clearTimeout(__searchDebounceTimer);
+            __searchDebounceTimer = setTimeout(function() { handleSearch(query); }, 350);
+        }
         function handleSearch(query) {
             backToCategories();
             let stores = JSON.parse(localStorage.getItem('allStores'));
@@ -11374,6 +11614,15 @@
             if(!btn) return;
             let merchant = localStorage.getItem('currentActiveMerchant');
             let isAdmin = localStorage.getItem('isAdminLoggedIn') === 'true';
+            // 👥 أيقونة رسائل العملاء: للتاجر بس، وبنضمن إن مراقبة المحادثات شغالة حتى لو لسه ما فتحش لوحته
+            let __buyerChatBtn = document.getElementById('topHeaderBuyerChatBtn');
+            if(__buyerChatBtn) {
+                __buyerChatBtn.classList.toggle('hidden', !merchant);
+                try {
+                    if(merchant && !__buyerChatThreadsUnsub) initBuyerChatThreadsWatch(merchant);
+                    if(!merchant) stopBuyerChatThreadsWatch();
+                } catch(e) {}
+            }
             if(merchant) {
                 btn.classList.toggle('hidden', __platformChatConfig.enabled === false);
                 let unread = __merchantChatMsgsCache.filter(m => m.senderType === 'staff' && !m.readByMerchant).length;
@@ -11841,3 +12090,36 @@
         // يفوز، كانت هي اللي شغالة فعليًا (مش الاستدعاء البسيط لـ syncTopHeaderChatIcon
         // المعرّف فوق في بداية قسم الشات) - يعني أيقونة الهيدر الموحّدة ما كانتش بتتحدّث
         // صح بعد كل حدث. اتشالت نهائيًا والاسم دلوقتي بيشاور بس على النسخة الموحّدة فوق.
+
+        // ============================================================
+        // 💤 تحميل كسول لأقسام اللوحات (التاجر/الأدمن): القوائم التقيلة (المنتجات، المتاجر، السجلات،
+        // الحسابات...) ماتترسمش غير لما القسم يظهر فعلاً على الشاشة (أو ينفتح) - زي المنتجات بالظبط.
+        // بعد أول ظهور، أي استدعاء لاحق (بعد تعديل مثلاً) بيرسم فورًا زي الأول.
+        // ============================================================
+        (function() {
+            function makeLazy(fnName, containerId) {
+                let orig = window[fnName];
+                if(typeof orig !== 'function') return;
+                let seen = false, pendingArgs = null, obs = null;
+                window[fnName] = function() {
+                    let el = document.getElementById(containerId);
+                    if(seen || !el || !('IntersectionObserver' in window)) { seen = true; return orig.apply(this, arguments); }
+                    pendingArgs = arguments;
+                    if(obs) return;
+                    obs = new IntersectionObserver(function(es) {
+                        if(es.some(e => e.isIntersecting)) {
+                            seen = true; obs.disconnect(); obs = null;
+                            try { orig.apply(null, pendingArgs || []); } catch(e) { console.error('lazy render error (' + fnName + '):', e); }
+                        }
+                    }, { rootMargin: '400px' });
+                    obs.observe(el);
+                };
+            }
+            makeLazy('renderDashboardProducts', 'merchantProductsList');
+            makeLazy('renderAdminStores', 'adminStoresList');
+            makeLazy('renderSupportLogs', 'adminSupportLogs');
+            makeLazy('renderSupportTeam', 'adminSupportTeamList');
+            makeLazy('renderAdminAccounts', 'adminAccountsList');
+            makeLazy('renderBroadcastTargets', 'broadcastTargetsChecklist');
+            makeLazy('renderSubscriptionPlansList', 'subscriptionPlansList');
+        })();

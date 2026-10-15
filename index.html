@@ -89,6 +89,12 @@
             <button class="corner-icon-btn hidden" id="storeAboutNavBtn" onclick="openStoreAboutModal()" data-i18n-title="nav_about_store" title="عن المتجر"><i class="fa fa-shop"></i></button>
             <!-- 💬 أيقونة شات موحّدة في الشريط العلوي، نفس الشكل عند الجميع (تاجر/أدمن/مشرف
                  دعم) - بتقرر هي نفسها مين الداخل وتفتح اللوحة المناسبة له لحظة الضغط. -->
+            <!-- 👥 أيقونة رسائل العملاء (المشترين) - منفصلة عن أيقونة الدعم الفني جنبها، بلون مختلف،
+                 وبتظهر للتاجر بس، وعليها عداد الرسائل الجديدة. -->
+            <button class="corner-icon-btn hidden" id="topHeaderBuyerChatBtn" onclick="openBuyerChatThreadsModal()" data-i18n-title="buyer_chats_mgmt_btn" title="محادثات العملاء" style="position:relative; background:#1d4ed8;">
+                <i class="fa fa-user-group"></i>
+                <span id="topHeaderBuyerChatBadge" class="hidden" style="position:absolute; top:-4px; left:-4px; background:#dc2626; color:#fff; font-size:9px; min-width:16px; height:16px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 3px;">0</span>
+            </button>
             <button class="corner-icon-btn hidden" id="topHeaderChatBtn" onclick="handleTopHeaderChatClick()" title="الشات" style="position:relative;">
                 <i class="fa fa-comment-dots"></i>
                 <span id="topHeaderChatBadge" class="hidden" style="position:absolute; top:-4px; left:-4px; background:#dc2626; color:#fff; font-size:9px; min-width:16px; height:16px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 3px;">0</span>
@@ -164,7 +170,7 @@
             <div class="amazon-top-bar hidden" id="amazonTopBarContainer"></div>
 
             <div style="margin-bottom: 15px;">
-                <input type="text" id="searchInput" placeholder="🔍 ابحث عن منتج أو قسم..." oninput="handleSearch(this.value)" style="margin: 0; border-radius: 20px;">
+                <input type="text" id="searchInput" placeholder="🔍 ابحث عن منتج أو قسم..." oninput="debouncedHandleSearch(this.value)" style="margin: 0; border-radius: 20px;">
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -324,7 +330,8 @@
             <!-- 🔗 كود التتبع الآمن - الطريقة الوحيدة الرسمية لتتبع الطلب. نعرض الكود فقط (بدون أي رابط طويل) عشان يبقى سهل الحفظ والنسخ -->
             <div id="directOrderTrackBox" class="hidden" style="background:#ecfdf5; border:1px solid #6ee7b7; border-radius:10px; padding:12px; margin-bottom:16px; text-align:right;">
                 <p data-i18n="track_code_save_hint" style="font-size:12.5px; font-weight:bold; color:#065f46; margin:0 0 8px;">🔐 كود تتبع طلبك - احفظه عشان تعرف حالة طلبك في أي وقت:</p>
-                <p data-i18n="track_where_steps" style="font-size:12px; color:#065f46; margin:0 0 10px; line-height:1.9; white-space:pre-line;"></p>
+                <p id="directOrderTrackStepsText" data-i18n="track_where_steps" style="font-size:12px; color:#065f46; margin:0 0 10px; line-height:1.9; white-space:pre-line;"></p>
+                <p id="directOrderTrackAccountNote" data-i18n="track_logged_in_note" class="hidden" style="font-size:12.5px; color:#065f46; margin:0 0 10px; line-height:1.9; font-weight:bold;">طلبك محفوظ في حسابك الشخصي - افتح «حسابي» لمتابعة حالة الطلب بدون الحاجة للكود.</p>
                 <div style="display:flex; gap:6px; align-items:center;">
                     <div style="flex:1; background:#fff; border-radius:8px; padding:8px 12px; font-family:monospace; letter-spacing:3px; text-align:center; font-size:15px; font-weight:bold; direction:ltr;" id="directOrderTrackCode"></div>
                     <button type="button" class="secondary" style="width:auto; margin:0; padding:8px 12px; font-size:11px;" onclick="copyTrackOrderLink()"><i class="fa fa-copy"></i> <span data-i18n="copy_code_btn">نسخ الكود</span></button>
@@ -565,7 +572,7 @@
         <button class="nav-item" id="unifiedEntryBtn" onclick="unifiedEntryClick()" style="position:relative;">
             <i class="fa fa-user-circle" id="unifiedEntryIcon"></i>
             <span id="unifiedEntryDot" class="hidden" style="position:absolute; top:-2px; right:8px; width:9px; height:9px; border-radius:50%; background:#dc2626; border:1.5px solid #fff;"></span>
-            <span id="unifiedEntryLabel" data-i18n="unified_entry_title">تسجيل الدخول / حسابي</span>
+            <span id="unifiedEntryLabel" data-i18n="buyer_login_tab">تسجيل الدخول</span>
         </button>
     </nav>
 
@@ -1324,6 +1331,20 @@
     "dash_share_store_copied": "تم نسخ رابط متجرك! الصقه وابعته لعملائك.",
     "dash_share_store_copy_manual": "انسخ رابط متجرك يدويًا:",
     "buyer_chats_dashboard_banner": "💬 رسائل عملاء متجرك",
+    "buyer_limit_default_msg": "تم الوصول للحد الأقصى لتسجيل مشترين جدد لهذا المتجر في الباقة المشترك فيها", "plan_limit_category": "⛔ وصلت للحد الأقصى لعدد الأقسام في باقتك الحالية ({plan} - {n} قسم). ترقّى لباقة أعلى.", "plan_limit_coowner": "⛔ وصلت للحد الأقصى لمشاركة المشرفين في باقتك الحالية ({plan} - {n}). ترقّى لباقة أعلى.", "plan_limit_staff": "⛔ وصلت للحد الأقصى لعدد المساعدين في باقتك الحالية ({plan} - {n}). ترقّى لباقة أعلى عشان تضيف مساعدين أكتر.", "plan_limit_products": "⛔ وصلت للحد الأقصى لعدد المنتجات في باقتك الحالية ({plan} - {n} منتج). ترقّى لباقة أعلى عشان تضيف منتجات أكتر.", "plan_quota_wait": "⛔ وصلت لحصة منتجاتك حتى الآن ({used}/{allowed}). انتظر حتى الشهر القادم لإضافة {extra} منتجات أخرى، أو ترقّ لباقة أعلى.", "plan_quota_explain_acc": "📅 حصتك: {quota} منتجات كل شهر وتتراكم (الشهر 1: {q1}، الشهر 2: {q2}، الشهر 3: {q3}…). المسموح الآن: {allowed} (الشهر رقم {months}).", "plan_quota_explain_fixed": "📅 باقتك لها حد ثابت: {quota} منتجات فقط بدون تراكم شهري. ترقّى لباقة مدفوعة لتحصل على حصة شهرية تتراكم.", "plan_cats_label": "الأقسام", "plan_ed_monthly_quota": "حصة المنتجات الشهرية (0 = بدون حصة)", "plan_ed_buyer_limit": "حد المشترين المسجلين (-1 = بلا حدود)", "plan_ed_cat_limit": "حد الأقسام (-1 = بلا حدود)", "plan_ed_coowner_limit": "حد مشاركة المشرفين (-1 = بلا حدود)", "plan_ed_buyer_msg": "رسالة الوصول لحد المشترين (اتركها فارغة للرسالة الافتراضية)", "plan_ed_accumulate": "الحصة الشهرية تتراكم (شهر1: 5، شهر2: 10…) — بدونها تبقى ثابتة", "show_more_btn": "عرض المزيد", "buyer_chat_end_delete_btn": "إنهاء المحادثة وحذفها",
+    "dash_group_sales": "📊 المبيعات والتقارير",
+    "dash_group_store": "⚙️ المتجر والاشتراك",
+    "dash_group_marketing": "🎨 الواجهة والتسويق",
+    "dash_group_team": "👥 الفريق",
+    "dash_group_all": "📂 الكل",
+    "admin_group_platform": "🏪 المتاجر والمنصة",
+    "admin_group_support": "💬 الدعم والشات",
+    "admin_group_billing": "🏷️ الباقات والاشتراكات",
+    "admin_group_appearance": "🎨 واجهة المنصة",
+    "admin_group_accounts": "🔐 الحسابات والأمان",
+    "buyer_chat_end_delete_confirm": "هتنتهي المحادثة وتتحذف نهائيًا من عندك ومن عند العميل. متأكد؟",
+    "buyer_chat_end_delete_done": "تم إنهاء المحادثة وحذفها",
+    "track_logged_in_note": "طلبك محفوظ في حسابك الشخصي - افتح «حسابي» لمتابعة حالة الطلب بدون الحاجة للكود.",
     "review_section_title": "التقييمات والمراجعات السابقة 💬",
     "add_review_section_title": "أضف تقييمك ومراجعتك:",
     "review_comment_ph": "اكتب تعليقك هنا...",
@@ -2193,6 +2214,20 @@
     "dash_share_store_copied": "Your store link was copied! Paste it and send it to your customers.",
     "dash_share_store_copy_manual": "Copy your store link manually:",
     "buyer_chats_dashboard_banner": "💬 Your store's customer messages",
+    "buyer_limit_default_msg": "This store has reached the maximum number of new buyer registrations allowed in its current plan.", "plan_limit_category": "⛔ You reached the category limit of your current plan ({plan} - {n} categories). Upgrade to a higher plan.", "plan_limit_coowner": "⛔ You reached the co-admin sharing limit of your current plan ({plan} - {n}). Upgrade to a higher plan.", "plan_limit_staff": "⛔ You reached the assistants limit of your current plan ({plan} - {n}). Upgrade to add more assistants.", "plan_limit_products": "⛔ You reached the product limit of your current plan ({plan} - {n} products). Upgrade to add more products.", "plan_quota_wait": "⛔ You used your product allowance so far ({used}/{allowed}). Wait until next month to add {extra} more products, or upgrade your plan.", "plan_quota_explain_acc": "📅 Your quota: {quota} products per month, accumulating (month 1: {q1}, month 2: {q2}, month 3: {q3}…). Allowed now: {allowed} (month #{months}).", "plan_quota_explain_fixed": "📅 Your plan has a fixed limit: only {quota} products with no monthly accumulation. Upgrade to a paid plan for an accumulating monthly quota.", "plan_cats_label": "Categories", "plan_ed_monthly_quota": "Monthly product quota (0 = no quota)", "plan_ed_buyer_limit": "Registered buyers limit (-1 = unlimited)", "plan_ed_cat_limit": "Categories limit (-1 = unlimited)", "plan_ed_coowner_limit": "Co-admin sharing limit (-1 = unlimited)", "plan_ed_buyer_msg": "Message when buyer limit is reached (empty = default message)", "plan_ed_accumulate": "Monthly quota accumulates (month 1: 5, month 2: 10…) — otherwise fixed", "show_more_btn": "Show more", "buyer_chat_end_delete_btn": "End chat & delete it",
+    "dash_group_sales": "📊 Sales & reports",
+    "dash_group_store": "⚙️ Store & subscription",
+    "dash_group_marketing": "🎨 Look & marketing",
+    "dash_group_team": "👥 Team",
+    "dash_group_all": "📂 All",
+    "admin_group_platform": "🏪 Stores & platform",
+    "admin_group_support": "💬 Support & chat",
+    "admin_group_billing": "🏷️ Plans & subscriptions",
+    "admin_group_appearance": "🎨 Platform look",
+    "admin_group_accounts": "🔐 Accounts & security",
+    "buyer_chat_end_delete_confirm": "The chat will end and be permanently deleted for you and the customer. Sure?",
+    "buyer_chat_end_delete_done": "Chat ended and deleted",
+    "track_logged_in_note": "Your order is saved in your account - open “My account” to follow its status, no code needed.",
     "review_section_title": "Ratings & previous reviews 💬",
     "add_review_section_title": "Add your rating and review:",
     "review_comment_ph": "Write your comment here...",
@@ -3062,6 +3097,20 @@
     "dash_share_store_copied": "店铺链接已复制！粘贴并发送给您的客户。",
     "dash_share_store_copy_manual": "手动复制您的店铺链接：",
     "buyer_chats_dashboard_banner": "💬 您店铺的客户消息",
+    "buyer_limit_default_msg": "该店铺已达到当前套餐允许的新买家注册上限。", "plan_limit_category": "⛔ 已达到当前套餐的分类上限（{plan} - {n} 个分类）。请升级套餐。", "plan_limit_coowner": "⛔ 已达到当前套餐的共同管理员上限（{plan} - {n}）。请升级套餐。", "plan_limit_staff": "⛔ 已达到当前套餐的助手上限（{plan} - {n}）。请升级以添加更多助手。", "plan_limit_products": "⛔ 已达到当前套餐的商品上限（{plan} - {n} 件）。请升级以添加更多商品。", "plan_quota_wait": "⛔ 目前的商品额度已用完（{used}/{allowed}）。请等到下个月再添加 {extra} 件商品，或升级套餐。", "plan_quota_explain_acc": "📅 您的额度：每月 {quota} 件商品，可累计（第1个月：{q1}，第2个月：{q2}，第3个月：{q3}…）。当前可用：{allowed}（第 {months} 个月）。", "plan_quota_explain_fixed": "📅 您的套餐为固定上限：仅 {quota} 件商品，不按月累计。升级到付费套餐可获得按月累计的额度。", "plan_cats_label": "分类", "plan_ed_monthly_quota": "每月商品额度（0 = 无额度）", "plan_ed_buyer_limit": "注册买家上限（-1 = 不限）", "plan_ed_cat_limit": "分类上限（-1 = 不限）", "plan_ed_coowner_limit": "共同管理员上限（-1 = 不限）", "plan_ed_buyer_msg": "达到买家上限时的提示（留空 = 默认提示）", "plan_ed_accumulate": "每月额度可累计（第1月：5，第2月：10…）— 否则固定", "show_more_btn": "显示更多", "buyer_chat_end_delete_btn": "结束并删除对话",
+    "dash_group_sales": "📊 销售与报告",
+    "dash_group_store": "⚙️ 店铺与订阅",
+    "dash_group_marketing": "🎨 外观与营销",
+    "dash_group_team": "👥 团队",
+    "dash_group_all": "📂 全部",
+    "admin_group_platform": "🏪 店铺与平台",
+    "admin_group_support": "💬 支持与聊天",
+    "admin_group_billing": "🏷️ 套餐与订阅",
+    "admin_group_appearance": "🎨 平台外观",
+    "admin_group_accounts": "🔐 账户与安全",
+    "buyer_chat_end_delete_confirm": "对话将结束，并为您和客户永久删除。确定吗？",
+    "buyer_chat_end_delete_done": "已结束并删除对话",
+    "track_logged_in_note": "您的订单已保存在您的账户中 - 打开“我的账户”即可查看订单状态，无需代码。",
     "review_section_title": "评分和以往评价 💬",
     "add_review_section_title": "添加您的评分和评价：",
     "review_comment_ph": "在此输入您的评论……",
@@ -3931,6 +3980,20 @@
     "dash_share_store_copied": "Ссылка на магазин скопирована! Вставьте и отправьте её клиентам.",
     "dash_share_store_copy_manual": "Скопируйте ссылку на магазин вручную:",
     "buyer_chats_dashboard_banner": "💬 Сообщения клиентов вашего магазина",
+    "buyer_limit_default_msg": "Магазин достиг максимального числа новых регистраций покупателей по текущему тарифу.", "plan_limit_category": "⛔ Достигнут лимит категорий вашего тарифа ({plan} - {n}). Перейдите на тариф выше.", "plan_limit_coowner": "⛔ Достигнут лимит со-администраторов вашего тарифа ({plan} - {n}). Перейдите на тариф выше.", "plan_limit_staff": "⛔ Достигнут лимит помощников вашего тарифа ({plan} - {n}). Перейдите на тариф выше.", "plan_limit_products": "⛔ Достигнут лимит товаров вашего тарифа ({plan} - {n}). Перейдите на тариф выше.", "plan_quota_wait": "⛔ Ваша квота товаров исчерпана ({used}/{allowed}). Подождите до следующего месяца, чтобы добавить ещё {extra} товаров, или смените тариф.", "plan_quota_explain_acc": "📅 Ваша квота: {quota} товаров в месяц с накоплением (1-й месяц: {q1}, 2-й: {q2}, 3-й: {q3}…). Доступно сейчас: {allowed} (месяц №{months}).", "plan_quota_explain_fixed": "📅 У вашего тарифа фиксированный лимит: только {quota} товаров без ежемесячного накопления. Платный тариф даёт накапливаемую месячную квоту.", "plan_cats_label": "Категории", "plan_ed_monthly_quota": "Месячная квота товаров (0 = без квоты)", "plan_ed_buyer_limit": "Лимит зарегистрированных покупателей (-1 = без лимита)", "plan_ed_cat_limit": "Лимит категорий (-1 = без лимита)", "plan_ed_coowner_limit": "Лимит со-администраторов (-1 = без лимита)", "plan_ed_buyer_msg": "Сообщение при достижении лимита покупателей (пусто = по умолчанию)", "plan_ed_accumulate": "Месячная квота накапливается (1-й мес.: 5, 2-й: 10…) — иначе фиксирована", "show_more_btn": "Показать ещё", "buyer_chat_end_delete_btn": "Завершить и удалить чат",
+    "dash_group_sales": "📊 Продажи и отчёты",
+    "dash_group_store": "⚙️ Магазин и подписка",
+    "dash_group_marketing": "🎨 Оформление и маркетинг",
+    "dash_group_team": "👥 Команда",
+    "dash_group_all": "📂 Все",
+    "admin_group_platform": "🏪 Магазины и платформа",
+    "admin_group_support": "💬 Поддержка и чат",
+    "admin_group_billing": "🏷️ Тарифы и подписки",
+    "admin_group_appearance": "🎨 Оформление платформы",
+    "admin_group_accounts": "🔐 Аккаунты и безопасность",
+    "buyer_chat_end_delete_confirm": "Чат будет завершён и навсегда удалён у вас и у клиента. Уверены?",
+    "buyer_chat_end_delete_done": "Чат завершён и удалён",
+    "track_logged_in_note": "Заказ сохранён в вашем аккаунте - откройте «Мой аккаунт», чтобы следить за статусом без кода.",
     "review_section_title": "Оценки и предыдущие отзывы 💬",
     "add_review_section_title": "Добавьте вашу оценку и отзыв:",
     "review_comment_ph": "Напишите свой комментарий здесь...",
@@ -4800,6 +4863,20 @@
     "dash_share_store_copied": "Le lien de votre boutique a été copié ! Collez-le et envoyez-le à vos clients.",
     "dash_share_store_copy_manual": "Copiez manuellement le lien de votre boutique :",
     "buyer_chats_dashboard_banner": "💬 Messages des clients de votre boutique",
+    "buyer_limit_default_msg": "Cette boutique a atteint le nombre maximum de nouvelles inscriptions d’acheteurs autorisé par son offre actuelle.", "plan_limit_category": "⛔ Limite de catégories de votre offre atteinte ({plan} - {n}). Passez à une offre supérieure.", "plan_limit_coowner": "⛔ Limite de co-administrateurs de votre offre atteinte ({plan} - {n}). Passez à une offre supérieure.", "plan_limit_staff": "⛔ Limite d’assistants de votre offre atteinte ({plan} - {n}). Passez à une offre supérieure.", "plan_limit_products": "⛔ Limite de produits de votre offre atteinte ({plan} - {n}). Passez à une offre supérieure.", "plan_quota_wait": "⛔ Votre quota de produits est atteint ({used}/{allowed}). Attendez le mois prochain pour ajouter {extra} produits de plus, ou changez d’offre.", "plan_quota_explain_acc": "📅 Votre quota : {quota} produits par mois, cumulables (mois 1 : {q1}, mois 2 : {q2}, mois 3 : {q3}…). Autorisé maintenant : {allowed} (mois n°{months}).", "plan_quota_explain_fixed": "📅 Votre offre a une limite fixe : seulement {quota} produits, sans cumul mensuel. Passez à une offre payante pour un quota mensuel cumulable.", "plan_cats_label": "Catégories", "plan_ed_monthly_quota": "Quota mensuel de produits (0 = aucun quota)", "plan_ed_buyer_limit": "Limite d’acheteurs inscrits (-1 = illimité)", "plan_ed_cat_limit": "Limite de catégories (-1 = illimité)", "plan_ed_coowner_limit": "Limite de co-administrateurs (-1 = illimité)", "plan_ed_buyer_msg": "Message à la limite d’acheteurs (vide = message par défaut)", "plan_ed_accumulate": "Le quota mensuel se cumule (mois 1 : 5, mois 2 : 10…) — sinon fixe", "show_more_btn": "Afficher plus", "buyer_chat_end_delete_btn": "Terminer et supprimer la conversation",
+    "dash_group_sales": "📊 Ventes et rapports",
+    "dash_group_store": "⚙️ Boutique et abonnement",
+    "dash_group_marketing": "🎨 Apparence et marketing",
+    "dash_group_team": "👥 Équipe",
+    "dash_group_all": "📂 Tout",
+    "admin_group_platform": "🏪 Boutiques et plateforme",
+    "admin_group_support": "💬 Support et chat",
+    "admin_group_billing": "🏷️ Forfaits et abonnements",
+    "admin_group_appearance": "🎨 Apparence de la plateforme",
+    "admin_group_accounts": "🔐 Comptes et sécurité",
+    "buyer_chat_end_delete_confirm": "La conversation sera terminée et supprimée définitivement pour vous et le client. Sûr ?",
+    "buyer_chat_end_delete_done": "Conversation terminée et supprimée",
+    "track_logged_in_note": "Votre commande est enregistrée dans votre compte - ouvrez « Mon compte » pour suivre son état, sans code.",
     "review_section_title": "Notes et avis précédents 💬",
     "add_review_section_title": "Ajoutez votre note et votre avis :",
     "review_comment_ph": "Écrivez votre commentaire ici...",
@@ -5669,6 +5746,20 @@
     "dash_share_store_copied": "¡Se copió el enlace de tu tienda! Pégalo y envíalo a tus clientes.",
     "dash_share_store_copy_manual": "Copia manualmente el enlace de tu tienda:",
     "buyer_chats_dashboard_banner": "💬 Mensajes de los clientes de tu tienda",
+    "buyer_limit_default_msg": "Esta tienda alcanzó el máximo de nuevos registros de compradores permitido por su plan actual.", "plan_limit_category": "⛔ Alcanzaste el límite de categorías de tu plan ({plan} - {n}). Mejora tu plan.", "plan_limit_coowner": "⛔ Alcanzaste el límite de coadministradores de tu plan ({plan} - {n}). Mejora tu plan.", "plan_limit_staff": "⛔ Alcanzaste el límite de asistentes de tu plan ({plan} - {n}). Mejora tu plan.", "plan_limit_products": "⛔ Alcanzaste el límite de productos de tu plan ({plan} - {n}). Mejora tu plan.", "plan_quota_wait": "⛔ Usaste tu cupo de productos hasta ahora ({used}/{allowed}). Espera al próximo mes para añadir {extra} más, o mejora tu plan.", "plan_quota_explain_acc": "📅 Tu cupo: {quota} productos al mes, acumulables (mes 1: {q1}, mes 2: {q2}, mes 3: {q3}…). Permitido ahora: {allowed} (mes n.º {months}).", "plan_quota_explain_fixed": "📅 Tu plan tiene un límite fijo: solo {quota} productos, sin acumulación mensual. Mejora a un plan de pago para un cupo mensual acumulable.", "plan_cats_label": "Categorías", "plan_ed_monthly_quota": "Cupo mensual de productos (0 = sin cupo)", "plan_ed_buyer_limit": "Límite de compradores registrados (-1 = ilimitado)", "plan_ed_cat_limit": "Límite de categorías (-1 = ilimitado)", "plan_ed_coowner_limit": "Límite de coadministradores (-1 = ilimitado)", "plan_ed_buyer_msg": "Mensaje al alcanzar el límite de compradores (vacío = predeterminado)", "plan_ed_accumulate": "El cupo mensual se acumula (mes 1: 5, mes 2: 10…) — si no, fijo", "show_more_btn": "Ver más", "buyer_chat_end_delete_btn": "Terminar y eliminar el chat",
+    "dash_group_sales": "📊 Ventas e informes",
+    "dash_group_store": "⚙️ Tienda y suscripción",
+    "dash_group_marketing": "🎨 Aspecto y marketing",
+    "dash_group_team": "👥 Equipo",
+    "dash_group_all": "📂 Todo",
+    "admin_group_platform": "🏪 Tiendas y plataforma",
+    "admin_group_support": "💬 Soporte y chat",
+    "admin_group_billing": "🏷️ Planes y suscripciones",
+    "admin_group_appearance": "🎨 Aspecto de la plataforma",
+    "admin_group_accounts": "🔐 Cuentas y seguridad",
+    "buyer_chat_end_delete_confirm": "El chat terminará y se eliminará permanentemente para ti y para el cliente. ¿Seguro?",
+    "buyer_chat_end_delete_done": "Chat terminado y eliminado",
+    "track_logged_in_note": "Tu pedido está guardado en tu cuenta: abre «Mi cuenta» para seguir su estado, sin código.",
     "review_section_title": "Calificaciones y reseñas anteriores 💬",
     "add_review_section_title": "Añade tu calificación y reseña:",
     "review_comment_ph": "Escribe tu comentario aquí...",
@@ -6538,6 +6629,20 @@
     "dash_share_store_copied": "Dein Shop-Link wurde kopiert! Füge ihn ein und sende ihn an deine Kunden.",
     "dash_share_store_copy_manual": "Kopiere deinen Shop-Link manuell:",
     "buyer_chats_dashboard_banner": "💬 Kundennachrichten deines Shops",
+    "buyer_limit_default_msg": "Dieser Shop hat die maximale Anzahl neuer Käuferregistrierungen seines aktuellen Tarifs erreicht.", "plan_limit_category": "⛔ Kategorielimit Ihres Tarifs erreicht ({plan} - {n}). Wechseln Sie zu einem höheren Tarif.", "plan_limit_coowner": "⛔ Limit für Mit-Administratoren Ihres Tarifs erreicht ({plan} - {n}). Wechseln Sie zu einem höheren Tarif.", "plan_limit_staff": "⛔ Assistentenlimit Ihres Tarifs erreicht ({plan} - {n}). Wechseln Sie zu einem höheren Tarif.", "plan_limit_products": "⛔ Produktlimit Ihres Tarifs erreicht ({plan} - {n}). Wechseln Sie zu einem höheren Tarif.", "plan_quota_wait": "⛔ Ihr Produktkontingent ist bisher aufgebraucht ({used}/{allowed}). Warten Sie bis nächsten Monat, um {extra} weitere Produkte hinzuzufügen, oder wechseln Sie den Tarif.", "plan_quota_explain_acc": "📅 Ihr Kontingent: {quota} Produkte pro Monat, kumulativ (Monat 1: {q1}, Monat 2: {q2}, Monat 3: {q3}…). Jetzt erlaubt: {allowed} (Monat Nr. {months}).", "plan_quota_explain_fixed": "📅 Ihr Tarif hat ein festes Limit: nur {quota} Produkte ohne monatliche Ansammlung. Ein bezahlter Tarif bietet ein kumulatives Monatskontingent.", "plan_cats_label": "Kategorien", "plan_ed_monthly_quota": "Monatliches Produktkontingent (0 = kein Kontingent)", "plan_ed_buyer_limit": "Limit registrierter Käufer (-1 = unbegrenzt)", "plan_ed_cat_limit": "Kategorielimit (-1 = unbegrenzt)", "plan_ed_coowner_limit": "Limit für Mit-Administratoren (-1 = unbegrenzt)", "plan_ed_buyer_msg": "Nachricht bei Käuferlimit (leer = Standardnachricht)", "plan_ed_accumulate": "Monatskontingent sammelt sich an (Monat 1: 5, Monat 2: 10…) — sonst fest", "show_more_btn": "Mehr anzeigen", "buyer_chat_end_delete_btn": "Chat beenden und löschen",
+    "dash_group_sales": "📊 Verkäufe & Berichte",
+    "dash_group_store": "⚙️ Shop & Abonnement",
+    "dash_group_marketing": "🎨 Design & Marketing",
+    "dash_group_team": "👥 Team",
+    "dash_group_all": "📂 Alle",
+    "admin_group_platform": "🏪 Shops & Plattform",
+    "admin_group_support": "💬 Support & Chat",
+    "admin_group_billing": "🏷️ Pakete & Abos",
+    "admin_group_appearance": "🎨 Plattform-Design",
+    "admin_group_accounts": "🔐 Konten & Sicherheit",
+    "buyer_chat_end_delete_confirm": "Der Chat wird beendet und für dich und den Kunden endgültig gelöscht. Sicher?",
+    "buyer_chat_end_delete_done": "Chat beendet und gelöscht",
+    "track_logged_in_note": "Deine Bestellung ist in deinem Konto gespeichert - öffne „Mein Konto“, um den Status ohne Code zu verfolgen.",
     "review_section_title": "Bewertungen und frühere Rezensionen 💬",
     "add_review_section_title": "Füge deine Bewertung und Rezension hinzu:",
     "review_comment_ph": "Schreibe hier deinen Kommentar...",
@@ -7407,6 +7512,20 @@
     "dash_share_store_copied": "Il link del tuo negozio è stato copiato! Incollalo e inviarlo ai tuoi clienti.",
     "dash_share_store_copy_manual": "Copia manualmente il link del tuo negozio:",
     "buyer_chats_dashboard_banner": "💬 Messaggi dei clienti del tuo negozio",
+    "buyer_limit_default_msg": "Questo negozio ha raggiunto il numero massimo di nuove registrazioni di acquirenti consentito dal piano attuale.", "plan_limit_category": "⛔ Hai raggiunto il limite di categorie del tuo piano ({plan} - {n}). Passa a un piano superiore.", "plan_limit_coowner": "⛔ Hai raggiunto il limite di co-amministratori del tuo piano ({plan} - {n}). Passa a un piano superiore.", "plan_limit_staff": "⛔ Hai raggiunto il limite di assistenti del tuo piano ({plan} - {n}). Passa a un piano superiore.", "plan_limit_products": "⛔ Hai raggiunto il limite di prodotti del tuo piano ({plan} - {n}). Passa a un piano superiore.", "plan_quota_wait": "⛔ Hai esaurito la quota di prodotti finora ({used}/{allowed}). Attendi il mese prossimo per aggiungerne altri {extra}, oppure cambia piano.", "plan_quota_explain_acc": "📅 La tua quota: {quota} prodotti al mese, cumulabili (mese 1: {q1}, mese 2: {q2}, mese 3: {q3}…). Consentiti ora: {allowed} (mese n. {months}).", "plan_quota_explain_fixed": "📅 Il tuo piano ha un limite fisso: solo {quota} prodotti, senza accumulo mensile. Passa a un piano a pagamento per una quota mensile cumulabile.", "plan_cats_label": "Categorie", "plan_ed_monthly_quota": "Quota mensile di prodotti (0 = nessuna quota)", "plan_ed_buyer_limit": "Limite acquirenti registrati (-1 = illimitato)", "plan_ed_cat_limit": "Limite categorie (-1 = illimitato)", "plan_ed_coowner_limit": "Limite co-amministratori (-1 = illimitato)", "plan_ed_buyer_msg": "Messaggio al raggiungimento del limite acquirenti (vuoto = predefinito)", "plan_ed_accumulate": "La quota mensile si accumula (mese 1: 5, mese 2: 10…) — altrimenti fissa", "show_more_btn": "Mostra altro", "buyer_chat_end_delete_btn": "Termina ed elimina la chat",
+    "dash_group_sales": "📊 Vendite e report",
+    "dash_group_store": "⚙️ Negozio e abbonamento",
+    "dash_group_marketing": "🎨 Aspetto e marketing",
+    "dash_group_team": "👥 Team",
+    "dash_group_all": "📂 Tutto",
+    "admin_group_platform": "🏪 Negozi e piattaforma",
+    "admin_group_support": "💬 Supporto e chat",
+    "admin_group_billing": "🏷️ Piani e abbonamenti",
+    "admin_group_appearance": "🎨 Aspetto della piattaforma",
+    "admin_group_accounts": "🔐 Account e sicurezza",
+    "buyer_chat_end_delete_confirm": "La chat verrà terminata ed eliminata definitivamente per te e per il cliente. Sicuro?",
+    "buyer_chat_end_delete_done": "Chat terminata ed eliminata",
+    "track_logged_in_note": "Il tuo ordine è salvato nel tuo account: apri «Il mio account» per seguirne lo stato, senza codice.",
     "review_section_title": "Valutazioni e recensioni precedenti 💬",
     "add_review_section_title": "Aggiungi la tua valutazione e recensione:",
     "review_comment_ph": "Scrivi qui il tuo commento...",
@@ -8276,6 +8395,20 @@
     "dash_share_store_copied": "O link da sua loja foi copiado! Cole e envie para seus clientes.",
     "dash_share_store_copy_manual": "Copie manualmente o link da sua loja:",
     "buyer_chats_dashboard_banner": "💬 Mensagens dos clientes da sua loja",
+    "buyer_limit_default_msg": "Esta loja atingiu o número máximo de novos registros de compradores permitido pelo plano atual.", "plan_limit_category": "⛔ Você atingiu o limite de categorias do seu plano ({plan} - {n}). Faça upgrade.", "plan_limit_coowner": "⛔ Você atingiu o limite de coadministradores do seu plano ({plan} - {n}). Faça upgrade.", "plan_limit_staff": "⛔ Você atingiu o limite de assistentes do seu plano ({plan} - {n}). Faça upgrade.", "plan_limit_products": "⛔ Você atingiu o limite de produtos do seu plano ({plan} - {n}). Faça upgrade.", "plan_quota_wait": "⛔ Você usou sua cota de produtos até agora ({used}/{allowed}). Aguarde o próximo mês para adicionar mais {extra}, ou faça upgrade.", "plan_quota_explain_acc": "📅 Sua cota: {quota} produtos por mês, cumulativa (mês 1: {q1}, mês 2: {q2}, mês 3: {q3}…). Permitido agora: {allowed} (mês nº {months}).", "plan_quota_explain_fixed": "📅 Seu plano tem limite fixo: apenas {quota} produtos, sem acúmulo mensal. Faça upgrade para um plano pago e tenha cota mensal cumulativa.", "plan_cats_label": "Categorias", "plan_ed_monthly_quota": "Cota mensal de produtos (0 = sem cota)", "plan_ed_buyer_limit": "Limite de compradores registrados (-1 = ilimitado)", "plan_ed_cat_limit": "Limite de categorias (-1 = ilimitado)", "plan_ed_coowner_limit": "Limite de coadministradores (-1 = ilimitado)", "plan_ed_buyer_msg": "Mensagem ao atingir o limite de compradores (vazio = padrão)", "plan_ed_accumulate": "A cota mensal acumula (mês 1: 5, mês 2: 10…) — senão, fixa", "show_more_btn": "Ver mais", "buyer_chat_end_delete_btn": "Encerrar e excluir a conversa",
+    "dash_group_sales": "📊 Vendas e relatórios",
+    "dash_group_store": "⚙️ Loja e assinatura",
+    "dash_group_marketing": "🎨 Aparência e marketing",
+    "dash_group_team": "👥 Equipe",
+    "dash_group_all": "📂 Tudo",
+    "admin_group_platform": "🏪 Lojas e plataforma",
+    "admin_group_support": "💬 Suporte e chat",
+    "admin_group_billing": "🏷️ Planos e assinaturas",
+    "admin_group_appearance": "🎨 Aparência da plataforma",
+    "admin_group_accounts": "🔐 Contas e segurança",
+    "buyer_chat_end_delete_confirm": "A conversa será encerrada e excluída permanentemente para você e para o cliente. Tem certeza?",
+    "buyer_chat_end_delete_done": "Conversa encerrada e excluída",
+    "track_logged_in_note": "Seu pedido está salvo na sua conta - abra “Minha conta” para acompanhar o status, sem código.",
     "review_section_title": "Avaliações e comentários anteriores 💬",
     "add_review_section_title": "Adicione sua avaliação e comentário:",
     "review_comment_ph": "Escreva seu comentário aqui...",
@@ -9145,6 +9278,20 @@
     "dash_share_store_copied": "Mağaza bağlantınız kopyalandı! Yapıştırıp müşterilerinize gönderin.",
     "dash_share_store_copy_manual": "Mağaza bağlantınızı manuel olarak kopyalayın:",
     "buyer_chats_dashboard_banner": "💬 Mağazanızın müşteri mesajları",
+    "buyer_limit_default_msg": "Bu mağaza, mevcut paketinde izin verilen yeni alıcı kaydı sınırına ulaştı.", "plan_limit_category": "⛔ Paketinizin kategori sınırına ulaştınız ({plan} - {n}). Daha yüksek pakete geçin.", "plan_limit_coowner": "⛔ Paketinizin ortak yönetici sınırına ulaştınız ({plan} - {n}). Daha yüksek pakete geçin.", "plan_limit_staff": "⛔ Paketinizin yardımcı sınırına ulaştınız ({plan} - {n}). Daha yüksek pakete geçin.", "plan_limit_products": "⛔ Paketinizin ürün sınırına ulaştınız ({plan} - {n}). Daha yüksek pakete geçin.", "plan_quota_wait": "⛔ Şimdiye kadarki ürün kotanızı doldurdunuz ({used}/{allowed}). {extra} ürün daha eklemek için gelecek ayı bekleyin veya paketi yükseltin.", "plan_quota_explain_acc": "📅 Kotanız: ayda {quota} ürün, birikimli (1. ay: {q1}, 2. ay: {q2}, 3. ay: {q3}…). Şu an izin verilen: {allowed} ({months}. ay).", "plan_quota_explain_fixed": "📅 Paketinizin sabit bir sınırı var: yalnızca {quota} ürün, aylık birikim yok. Birikimli aylık kota için ücretli pakete geçin.", "plan_cats_label": "Kategoriler", "plan_ed_monthly_quota": "Aylık ürün kotası (0 = kota yok)", "plan_ed_buyer_limit": "Kayıtlı alıcı sınırı (-1 = sınırsız)", "plan_ed_cat_limit": "Kategori sınırı (-1 = sınırsız)", "plan_ed_coowner_limit": "Ortak yönetici sınırı (-1 = sınırsız)", "plan_ed_buyer_msg": "Alıcı sınırına ulaşılınca mesaj (boş = varsayılan)", "plan_ed_accumulate": "Aylık kota birikir (1. ay: 5, 2. ay: 10…) — aksi halde sabit", "show_more_btn": "Daha fazla göster", "buyer_chat_end_delete_btn": "Sohbeti bitir ve sil",
+    "dash_group_sales": "📊 Satışlar ve raporlar",
+    "dash_group_store": "⚙️ Mağaza ve abonelik",
+    "dash_group_marketing": "🎨 Görünüm ve pazarlama",
+    "dash_group_team": "👥 Ekip",
+    "dash_group_all": "📂 Tümü",
+    "admin_group_platform": "🏪 Mağazalar ve platform",
+    "admin_group_support": "💬 Destek ve sohbet",
+    "admin_group_billing": "🏷️ Paketler ve abonelikler",
+    "admin_group_appearance": "🎨 Platform görünümü",
+    "admin_group_accounts": "🔐 Hesaplar ve güvenlik",
+    "buyer_chat_end_delete_confirm": "Sohbet sona erecek ve sizden ve müşteriden kalıcı olarak silinecek. Emin misiniz?",
+    "buyer_chat_end_delete_done": "Sohbet bitirildi ve silindi",
+    "track_logged_in_note": "Siparişiniz hesabınıza kaydedildi - kodsuz durumu takip etmek için “Hesabım”ı açın.",
     "review_section_title": "Değerlendirmeler ve önceki yorumlar 💬",
     "add_review_section_title": "Değerlendirmenizi ve yorumunuzu ekleyin:",
     "review_comment_ph": "Yorumunuzu buraya yazın...",

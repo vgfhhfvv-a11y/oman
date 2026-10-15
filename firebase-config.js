@@ -40,6 +40,9 @@ let __cloudEnabled = false;
 try {
   firebase.initializeApp(firebaseConfig);
   __cloudDb = firebase.firestore();
+  // 💾 كاش دائم متعدد التبويبات: القراءات المتكررة تيجي من المتصفح بدل السيرفر (توفير قراءات + فتح أسرع).
+  // لو المتصفح مش بيدعمه (أو تبويب تاني مانع) بنكمل عادي بدونه.
+  try { __cloudDb.enablePersistence({ synchronizeTabs: true }).catch(function(){}); } catch (e) {}
   __cloudEnabled = true;
   // 🔐 Firebase Authentication الحقيقي: بيحل محل نظام كلمات السر النصية القديم
   // بالكامل لحساب صاحب المتجر. window.firebaseAuth معروضة بشكل صريح هنا عشان
@@ -847,6 +850,22 @@ window.hashBuyerPassword = hashBuyerPassword;
 
 // 📝 تسجيل حساب مشتري جديد داخل متجر معيّن - data.identifier ممكن يكون رقم هاتف أو
 // بريد إلكتروني (resolveBuyerIdentifier بيحدد النوع تلقائيًا).
+// 🔢 عدّاد المشترين: مستند صغير تحت chatMeta (مجموعة مفتوحة أصلًا في القواعد) عشان
+// حد الباقة يتفحص من جهاز المشتري من غير ما يحتاج صلاحية list على المشترين.
+async function __buyerLimitReached(storeKey, limit) {
+    if (limit === undefined || limit === null || limit === '' || limit < 0) return false;
+    try {
+        let s = await __cloudDb.collection('stores').doc(storeKey).collection('chatMeta').doc('buyerStats').get();
+        let c = s.exists ? (s.data().count || 0) : 0;
+        return c >= limit;
+    } catch (e) { return false; }
+}
+async function __bumpBuyerCount(storeKey, delta) {
+    try {
+        await __cloudDb.collection('stores').doc(storeKey).collection('chatMeta').doc('buyerStats')
+            .set({ count: firebase.firestore.FieldValue.increment(delta) }, { merge: true });
+    } catch (e) {}
+}
 async function registerBuyerAccount(storeKey, data) {
     if (!__cloudEnabled || !__cloudDb) return { ok: false, error: 'offline' };
     let identifier = resolveBuyerIdentifier(data.identifier != null ? data.identifier : data.phone);
@@ -856,6 +875,7 @@ async function registerBuyerAccount(storeKey, data) {
         let ref = __cloudDb.collection('stores').doc(storeKey).collection('buyers').doc(identifier);
         let existing = await ref.get();
         if (existing.exists) return { ok: false, error: 'already_exists' };
+        if (await __buyerLimitReached(storeKey, data.limit)) return { ok: false, error: 'limit' };
         let passwordHash = await hashBuyerPassword(data.password);
         if (!passwordHash) return { ok: false, error: 'hash_failed' };
         let isEmail = identifier.includes('@');
@@ -870,6 +890,7 @@ async function registerBuyerAccount(storeKey, data) {
             orderTrackingCodes: []
         };
         await ref.set(buyerDoc);
+        __bumpBuyerCount(storeKey, 1);
         return { ok: true, buyerId: identifier, name: buyerDoc.name, phone: buyerDoc.phone, address: buyerDoc.address };
     } catch (err) {
         console.warn('⚠️ تعذر تسجيل حساب المشتري:', err.message);
@@ -987,7 +1008,7 @@ window.saveBuyerCart = saveBuyerCart;
 // 🔵 تسجيل دخول/إنشاء حساب فوري عن طريق جوجل (بدون كلمة سر - الهوية موثّقة من جوجل
 // نفسه). معرّف المستند هنا هو البريد الإلكتروني (بعد تحويله لحروف صغيرة) بدل رقم
 // الهاتف، عشان نفرّق بين النوعين من الحسابات جوه نفس المجموعة الفرعية.
-async function loginOrRegisterBuyerWithGoogle(storeKey, email, name) {
+async function loginOrRegisterBuyerWithGoogle(storeKey, email, name, limit) {
     if (!__cloudEnabled || !__cloudDb) return { ok: false, error: 'offline' };
     let normEmail = String(email || '').trim().toLowerCase();
     if (!normEmail) return { ok: false, error: 'invalid_email' };
@@ -998,6 +1019,7 @@ async function loginOrRegisterBuyerWithGoogle(storeKey, email, name) {
             let buyer = snap.data();
             return { ok: true, buyerId: normEmail, name: buyer.name || name || '', phone: buyer.phone || '', address: buyer.address || '', savedCart: buyer.savedCart || [] };
         }
+        if (await __buyerLimitReached(storeKey, limit)) return { ok: false, error: 'limit' };
         let buyerDoc = {
             name: name || '',
             email: normEmail,
@@ -1010,6 +1032,7 @@ async function loginOrRegisterBuyerWithGoogle(storeKey, email, name) {
             orderTrackingCodes: []
         };
         await ref.set(buyerDoc);
+        __bumpBuyerCount(storeKey, 1);
         return { ok: true, buyerId: normEmail, name: buyerDoc.name, phone: '', address: '', savedCart: [] };
     } catch (err) {
         console.warn('⚠️ تعذر تسجيل الدخول بجوجل للمشتري:', err.message);
@@ -1028,6 +1051,7 @@ async function fetchAllStoreBuyers(storeKey) {
             __cloudDb.collection('stores').doc(storeKey).collection('buyers').get()
         );
         window.__lastFetchBuyersError = null;
+        try { __cloudDb.collection('stores').doc(storeKey).collection('chatMeta').doc('buyerStats').set({ count: snap.size }, { merge: true }); } catch (e) {}
         return snap.docs.map(d => Object.assign({ buyerId: d.id }, d.data()));
     } catch (err) {
         window.__lastFetchBuyersError = (err && err.code) || 'unknown';
@@ -1041,7 +1065,7 @@ window.fetchAllStoreBuyers = fetchAllStoreBuyers;
 function deleteBuyerAccount(storeKey, buyerId) {
     if (!__cloudEnabled || !__cloudDb || !storeKey || !buyerId) return Promise.resolve(false);
     return __cloudDb.collection('stores').doc(storeKey).collection('buyers').doc(buyerId).delete()
-        .then(() => true)
+        .then(() => { __bumpBuyerCount(storeKey, -1); return true; })
         .catch(err => { console.warn('⚠️ تعذر حذف حساب المشتري:', err.message); return false; });
 }
 window.deleteBuyerAccount = deleteBuyerAccount;
@@ -1138,6 +1162,26 @@ function deleteBuyerChatMessage(storeKey, buyerId, msgId) {
         .catch(err => { console.warn('⚠️ تعذر حذف رسالة شات المشترِي:', err.message); return false; });
 }
 window.deleteBuyerChatMessage = deleteBuyerChatMessage;
+
+
+// 🗑️ إنهاء المحادثة وحذفها نهائيًا (كل الرسائل + مستند الثريد نفسه) - بتتحذف عند التاجر
+// وعند المشتري في نفس الوقت لأنها نفس المستند في Firestore، وده بيوفّر المساحة.
+function deleteBuyerChatThread(storeKey, buyerId) {
+    if (!__cloudEnabled || !__cloudDb || !storeKey || !buyerId) return Promise.resolve(false);
+    let threadRef = __cloudDb.collection('stores').doc(storeKey).collection('buyerChats').doc(buyerId);
+    function deleteBatch() {
+        return threadRef.collection('messages').limit(400).get().then(function(snap) {
+            if (snap.empty) return 0;
+            let batch = __cloudDb.batch();
+            snap.forEach(function(d) { batch.delete(d.ref); });
+            return batch.commit().then(function() { return snap.size; });
+        }).then(function(n) { return n >= 400 ? deleteBatch() : null; });
+    }
+    return __withFirestoreTimeout(deleteBatch().then(function() { return threadRef.delete(); }), 20000)
+        .then(() => true)
+        .catch(err => { console.warn('⚠️ تعذر حذف محادثة المشترِي:', err && err.message); return false; });
+}
+window.deleteBuyerChatThread = deleteBuyerChatThread;
 
 // 🧹 تنظيف رسائل شات العملاء الأقدم من مدة الاحتفاظ اللي حددها التاجر (لكل ثريدات
 // المشترين في المتجر مرة واحدة) - عشان الفاتورة متكبرش من رسائل قديمة محدش محتاجها.

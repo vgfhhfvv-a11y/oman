@@ -252,37 +252,25 @@
            عمود ضيق وسط شاشة كمبيوتر كبيرة، من غير ما تأثر على شكل الموبايل خالص.
            ============================================================ */
         @media (min-width: 700px) {
-            .container { max-width: 760px; }
-            .banner-slideshow { height: 240px; }
-            .cat-card img { height: 135px; }
-            .cat-card h4 { font-size: 16px; }
-            .product-card img { height: 155px; }
-            .product-title { font-size: 15px; height: auto; }
-            .categories-grid, .products-grid { gap: 16px; }
-            .modal-overlay { align-items: center; padding: 20px; }
-            .modal-content { border-radius: 20px; max-height: 88vh; }
-        }
-        @media (min-width: 1000px) {
-            .container { max-width: 940px; }
-            /* 🖥️ auto-fit بدل عدد أعمدة ثابت (3): لو المتجر عنده أقسام/منتجات قليلة (2 أو 3 بس)،
-               عدد أعمدة ثابت كان بيسيب عمود فاضي يبان وكأن نص الصفحة فاضي وبعيد عن بعضه (ده
-               بالظبط اللي كان شكله "سيء" على شاشة الكمبيوتر رغم إنه نفسه كان شكله حلو على
-               الموبايل لإن الموبايل عمود واحد أصلاً فمفيش فراغ يبان). auto-fit بيخلي الكروت
-               الموجودة فعليًا تكبر وتملا المساحة بدل ما تسيب فراغ جنبها. */
-            .products-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); justify-content:center; }
-            .categories-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); justify-content:center; }
-            /* 🔒 حد أقصى لعرض الكارت نفسه، عشان لو فيه قسم أو منتج واحد بس، ميتمططش
-               يملا الصف كله بشكل غريب - يفضل بحجم طبيعي ومتمركز بدل ما "يتمدد". */
-            .cat-card, .product-card { max-width: 340px; width: 100%; justify-self: center; }
-            .banner-slideshow { height: 320px; border-radius: 18px; }
+            /* 🖥️ شاشات الكمبيوتر / وضع "سطح المكتب": الصفحة تملا العرض بدل عمود ضيق في النص،
+               والأقسام والمنتجات 3 جنب بعض (أو أكتر على الشاشات الأعرض) بدل 2 */
+            .container { max-width: 1200px; padding: 20px 24px; }
+            #authSection, #cartSection { max-width: 720px; margin-inline: auto; }
+            #dashboardSection, #adminSection { max-width: 980px; margin-inline: auto; }
+            .banner-slideshow { height: 300px; border-radius: 18px; }
+            .categories-grid { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+            .products-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
             .cat-card img { height: 170px; }
             .cat-card h4 { font-size: 17px; margin: 14px 0; }
             .product-card { padding: 14px; }
-            .product-card img { height: 190px; border-radius: 12px; }
-            .product-title { font-size: 15.5px; margin: 10px 0 4px; }
+            .product-card img { height: 200px; border-radius: 12px; }
+            .product-title { font-size: 15.5px; height: auto; min-height: 36px; margin: 10px 0 4px; }
             .price-tag { font-size: 18px; }
-            .categories-grid, .products-grid { gap: 20px; }
-            .box { padding: 24px; }
+            .box { padding: 22px; }
+            .modal-overlay { align-items: center; padding: 20px; }
+            .modal-content { border-radius: 20px; max-height: 88vh; max-width: 760px; }
+        }
+        @media (min-width: 1000px) {
             #platformHeroName { font-size: 30px !important; }
             #platformHeroTagline { font-size: 15px !important; }
             #platformHeroEmoji { font-size: 58px !important; }
@@ -292,21 +280,17 @@
             .product-modal-media { flex: 0 0 360px; }
             .product-modal-media img#mainProductImg { max-height: 360px; }
             .product-modal-info { flex: 1; min-width: 0; }
+            .banner-slideshow { height: 340px; }
         }
         @media (min-width: 1300px) {
-            .container { max-width: 1280px; }
-            /* auto-fill: بيوزّع الكروت بعدد أعمدة مرن حسب عرض الشاشة الفعلي (مش رقم ثابت)،
-               كل كارت بعرض لا يقل عن 280px - كده الشبكة بتملا الفراغ بدل ما تفضل 4 أعمدة فاضية
-               على الشاشات الأعرض من كده. */
-            /* auto-fit مش auto-fill: لو عدد الكروت قليل، بتكبر وتملا الصف بدل ما تسيب أعمدة
-               فاضية بعرضها المحجوز (ده كان سبب رئيسي في شكل "الفراغ" على شاشات الكمبيوتر الكبيرة). */
-            .products-grid, .categories-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
-            .banner-slideshow { height: 380px; }
+            .container { max-width: 1360px; }
+            .banner-slideshow { height: 400px; }
+            .cat-card img { height: 190px; }
+            .product-card img { height: 220px; }
         }
         @media (min-width: 1700px) {
-            .container { max-width: 1440px; }
+            .container { max-width: 1560px; }
         }
-        /* شاشات صغيرة جدًا (موبايلات قديمة/ضيقة أقل من 340px): تقليل بادينج بسيط لمنع أي ضغط */
         @media (max-width: 340px) {
             .container { padding: 10px; }
             .box { padding: 14px; }
@@ -331,3 +315,10 @@
 .rich-editor-content:empty:before { content: attr(data-placeholder); color:#9ca3af; }
 .rich-editor-content ul { margin:4px 0; padding-inline-start:20px; }
 .rich-content-display ul { margin:4px 0; padding-inline-start:20px; }
+
+        /* 🗂️ شرائح تجميع بنود لوحة التاجر/الأدمن */
+        .dash-group-hidden { display: none !important; }
+        .dash-groups-bar { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 10px; margin-bottom: 6px; scrollbar-width: none; }
+        .dash-groups-bar::-webkit-scrollbar { display: none; }
+        .dash-groups-bar button { width: auto; margin: 0; flex-shrink: 0; padding: 8px 14px; font-size: 12.5px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 20px; white-space: nowrap; }
+        .dash-groups-bar button.active { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
