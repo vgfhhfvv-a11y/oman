@@ -54,6 +54,17 @@
                 <button type="button" onclick="shareMyStoreLink()" style="width:100%; margin:0; background:#fff; color:var(--primary-color); font-weight:bold; padding:9px;"><i class="fa fa-share-nodes"></i> <span data-i18n="dash_share_store_btn">مشاركة رابط متجري</span></button>
             </div>
 
+            <!-- 💬 زرار واضح ومستقل لرسائل العملاء (المشترين) - منفصل تمامًا شكلًا ومكانًا
+                 عن شات الدعم الفني/الأدمن (اللي أيقونته في الشريط العلوي topHeaderChatBtn).
+                 ده عشان التاجر يعرف فورًا، بنظرة واحدة، إن ده تحديدًا رسائل جاية من عملاء
+                 متجره، مش من فريق الدعم بتاع المنصة - أيقونة مختلفة، لون مختلف، ومكان بارز
+                 أول ما يفتح لوحته (مش متخبي جوه إعدادات متفرعة). -->
+            <button type="button" onclick="openBuyerChatThreadsModal()" style="width:100%; margin:0 0 10px; background:#fff; border:1.5px solid #3b82f6; color:#1e40af; font-weight:bold; padding:10px; display:flex; align-items:center; justify-content:center; gap:8px; position:relative;">
+                <i class="fa fa-comments" style="font-size:16px;"></i>
+                <span data-i18n="buyer_chats_dashboard_banner">💬 رسائل عملاء متجرك</span>
+                <span id="buyerChatsTotalBadgeTop" class="hidden" style="background:#dc2626; color:#fff; font-size:11px; min-width:20px; height:20px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; padding:0 5px;">0</span>
+            </button>
+
             <!-- 👤 شريط توضيحي بيظهر بس لما اللي داخل مساعد (مش صاحب المتجر نفسه)، عشان يبقى
                  واضح دايمًا مين الداخل وبأي صلاحيات، وميحصلش لبس مع صاحب المتجر. -->
             <!-- 👤 شريط توضيحي بيظهر بس لما اللي داخل مساعد (مش صاحب المتجر نفسه)، عشان يبقى

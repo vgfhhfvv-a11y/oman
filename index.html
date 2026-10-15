@@ -47,7 +47,25 @@
     </script>
     <link rel="stylesheet" href="style.css">
     <!-- Google Identity Services: مطلوب لتفعيل تسجيل الدخول بجوجل للمراجعات (راجع تعليمات التفعيل بجانب GOOGLE_CLIENT_ID في الأسفل) -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- 🌍 بنحط باراميتر hl= بلغة الزائر المحفوظة (أو عربي افتراضيًا) عشان زرار جوجل نفسه
+         (اللي بيتحكم فيه جوجل مش إحنا - "المواصلة باسم...") يظهر بنفس لغة المتجر، بدل ما
+         يفضل ثابت بلغة متصفح الزائر مهما غيّر لغة المتجر. -->
+    <script>
+        (function() {
+            try {
+                var savedLang = localStorage.getItem('appLanguage') || 'ar';
+                var s = document.createElement('script');
+                s.src = 'https://accounts.google.com/gsi/client?hl=' + encodeURIComponent(savedLang);
+                s.async = true; s.defer = true;
+                document.head.appendChild(s);
+            } catch(e) {
+                var fallback = document.createElement('script');
+                fallback.src = 'https://accounts.google.com/gsi/client';
+                fallback.async = true; fallback.defer = true;
+                document.head.appendChild(fallback);
+            }
+        })();
+    </script>
     <!-- EmailJS: لإرسال أكواد تفعيل البريد الإلكتروني الحقيقية للتجار عند التسجيل (راجع تعليمات EMAILJS_PUBLIC_KEY بالأسفل) -->
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <!-- 📱 مكتبة توليد QR كود (لرابط المتجر) - خفيفة جدًا (~4 كيلوبايت) -->
@@ -65,14 +83,10 @@
         <!-- أيقونات صغيرة متناسقة الحجم: تتبع الطلب + تسجيل الدخول + اللغة -->
         <div style="position:absolute; top:8px; left:10px; z-index:1500; display:flex; align-items:center; gap:8px;">
             <button class="corner-icon-btn hidden" id="installAppBtn" onclick="triggerInstallPrompt()" title="ثبّت المتجر على شاشتك"><i class="fa fa-download"></i></button>
-            <!-- 🚪 أيقونة دخول/حساب واحدة موحّدة فقط - زي أمازون: ضغطة واحدة، وهي نفسها
-                 بتقرر تاخدك فين (ملفك الشخصي لو داخل بالفعل، لوحة التاجر لو تاجر/أدمن داخل،
-                 أو نافذة اختيار بسيطة لو زائر: "دخول العملاء" أو "دخول التجار"). مفيش أي
-                 أيقونة دخول تانية في أي مكان تاني بالصفحة - مكان واحد بس، واضح وثابت. -->
-            <button class="corner-icon-btn" id="unifiedEntryBtn" onclick="unifiedEntryClick()" data-i18n-title="unified_entry_title" title="تسجيل الدخول / حسابي" style="position:relative;">
-                <i class="fa fa-user-circle" id="unifiedEntryIcon"></i>
-                <span id="unifiedEntryDot" class="hidden" style="position:absolute; top:-2px; left:-2px; width:10px; height:10px; border-radius:50%; background:#dc2626; border:1.5px solid #fff;"></span>
-            </button>
+            <!-- ℹ️ أيقونة "عن المتجر" نقلناها هنا فوق في الهيدر (مكانها القديم كان في الشريط
+                 السفلي) - بتظهر بس وإحنا جوه متجر معين (نفس منطق الإظهار/الإخفاء القديم،
+                 ماتغيرش، بس اتنقل العنصر مكانه). زر دخول/الحساب نزل تحت في الشريط السفلي. -->
+            <button class="corner-icon-btn hidden" id="storeAboutNavBtn" onclick="openStoreAboutModal()" data-i18n-title="nav_about_store" title="عن المتجر"><i class="fa fa-shop"></i></button>
             <!-- 💬 أيقونة شات موحّدة في الشريط العلوي، نفس الشكل عند الجميع (تاجر/أدمن/مشرف
                  دعم) - بتقرر هي نفسها مين الداخل وتفتح اللوحة المناسبة له لحظة الضغط. -->
             <button class="corner-icon-btn hidden" id="topHeaderChatBtn" onclick="handleTopHeaderChatClick()" title="الشات" style="position:relative;">
@@ -145,7 +159,7 @@
             <!-- ملحوظة: متجر التاجر صفحة مستقلة بذاتها بمجرد دخولها من رابطها الخاص (?store=اسم_المتجر)،
                  فمفيش هنا أي زر يرجّع لصفحة المنصة أو يلمّح إنه جزء من منصة أكبر تضم متاجر تانية.
                  التاجر/الأدمن اللي عنده جلسة دخول شغالة بس هو اللي بيفضل شايف زر "دخول التجار" في الشريط السفلي عشان يرجع للوحته.
-                 زر "من نحن" الخاص بالمتجر موجود في الشريط السفلي بجانب "السلة" فقط (id="storeAboutNavBtn") - مفيش نسخة تانية منه هنا. -->
+                 زر "من نحن" الخاص بالمتجر (id="storeAboutNavBtn") بقى فوق في الهيدر جنب أيقونة اللغة - مفيش نسخة تانية منه هنا. -->
             <div id="merchantBannerContainer"></div>
             <div class="amazon-top-bar hidden" id="amazonTopBarContainer"></div>
 
@@ -542,11 +556,17 @@
     <nav class="bottom-nav">
         <button class="nav-item active" id="homeNavBtn" onclick="switchTab('home', this)"><i class="fa fa-home"></i><span data-i18n="nav_home">الرئيسية</span></button>
         <button class="nav-item" id="cartNavBtn" style="position: relative;" onclick="switchTab('cart', this)"><i class="fa fa-shopping-basket"></i><span id="cartNavLabel" data-i18n="nav_cart">السلة</span> <span id="cartCount" class="badge">0</span></button>
-        <button class="nav-item hidden" id="storeAboutNavBtn" onclick="openStoreAboutModal()"><i class="fa fa-shop"></i><span data-i18n="nav_about_store">عن المتجر</span></button>
-        <button class="nav-item hidden" id="platformAboutNavBtn" onclick="openPlatformAboutModal()"><i class="fa fa-building"></i><span data-i18n="nav_about_platform">عن المنصة</span></button>
-        <!-- 📦 تتبع الطلبات - نقلناها من زاوية الهيدر هنا في الشريط السفلي، ليها مكان واضح
-             وتسمية مفيدة بدل ما تكون أيقونة صغيرة غامضة في الزاوية. -->
+        <!-- 📦 تتبع الطلبات - تالت أيقونة في الشريط السفلي -->
         <button class="nav-item hidden" id="trackOrderNavBtn" onclick="openTrackOrderModal()"><i class="fa fa-truck-fast"></i><span data-i18n="nav_track_order">تتبع طلباتك</span></button>
+        <button class="nav-item hidden" id="platformAboutNavBtn" onclick="openPlatformAboutModal()"><i class="fa fa-building"></i><span data-i18n="nav_about_platform">عن المنصة</span></button>
+        <!-- 🚪 أيقونة دخول/حساب واحدة موحّدة - نزلت هنا تحت (كانت فوق في الهيدر)، آخر
+             أيقونة في الشريط السفلي. نفس منطقها بالظبط (unifiedEntryClick/syncBuyerAccountIcon)،
+             بس اتنقل مكانها فقط. الليبل تحت الأيقونة بيتحدّث ديناميكيًا حسب حالة الدخول. -->
+        <button class="nav-item" id="unifiedEntryBtn" onclick="unifiedEntryClick()" style="position:relative;">
+            <i class="fa fa-user-circle" id="unifiedEntryIcon"></i>
+            <span id="unifiedEntryDot" class="hidden" style="position:absolute; top:-2px; right:8px; width:9px; height:9px; border-radius:50%; background:#dc2626; border:1.5px solid #fff;"></span>
+            <span id="unifiedEntryLabel" data-i18n="unified_entry_title">تسجيل الدخول / حسابي</span>
+        </button>
     </nav>
 
 
@@ -1303,6 +1323,17 @@
     "dash_share_store_btn": "مشاركة رابط متجري",
     "dash_share_store_copied": "تم نسخ رابط متجرك! الصقه وابعته لعملائك.",
     "dash_share_store_copy_manual": "انسخ رابط متجرك يدويًا:",
+    "buyer_chats_dashboard_banner": "💬 رسائل عملاء متجرك",
+    "review_section_title": "التقييمات والمراجعات السابقة 💬",
+    "add_review_section_title": "أضف تقييمك ومراجعتك:",
+    "review_comment_ph": "اكتب تعليقك هنا...",
+    "submit_review_btn": "🌟 إرسال التقييم",
+    "product_details_title": "تفاصيل المنتج",
+    "member_offer_badge": "عرض الأعضاء 15% 🎁",
+    "google_continue_as_label": "المواصلة باسم",
+    "buyer_new_account_btn": "حساب جديد",
+    "buyer_phone_email_label": "رقم الهاتف أو البريد الإلكتروني:",
+    "buyer_password_label": "كلمة السر:",
     "set_reviews_require_login_label": "🔒 لازم تسجيل دخول بحساب مشترِي عشان تضيف تقييم",
     "set_reviews_require_login_note": "افتراضيًا (الوضع المقترح) أي زائر يقدر يضيف تقييم باسمه بدون حساب. فعّل ده لو عايز التقييمات تبقى من حسابات موثّقة بس.",
     "review_login_required_msg": "لازم تسجّل دخولك بحساب مشترِي في هذا المتجر الأول عشان تضيف تقييم.",
@@ -2161,6 +2192,17 @@
     "dash_share_store_btn": "Share my store link",
     "dash_share_store_copied": "Your store link was copied! Paste it and send it to your customers.",
     "dash_share_store_copy_manual": "Copy your store link manually:",
+    "buyer_chats_dashboard_banner": "💬 Your store's customer messages",
+    "review_section_title": "Ratings & previous reviews 💬",
+    "add_review_section_title": "Add your rating and review:",
+    "review_comment_ph": "Write your comment here...",
+    "submit_review_btn": "🌟 Submit review",
+    "product_details_title": "Product details",
+    "member_offer_badge": "Member offer 15% 🎁",
+    "google_continue_as_label": "Continue as",
+    "buyer_new_account_btn": "New account",
+    "buyer_phone_email_label": "Phone number or email:",
+    "buyer_password_label": "Password:",
     "set_reviews_require_login_label": "🔒 Require buyer login to add a review",
     "set_reviews_require_login_note": "By default (recommended), any visitor can add a review under their name without an account. Enable this if you want reviews limited to verified accounts only.",
     "review_login_required_msg": "You need to log in with a buyer account in this store first to add a review.",
@@ -3019,6 +3061,17 @@
     "dash_share_store_btn": "分享我的店铺链接",
     "dash_share_store_copied": "店铺链接已复制！粘贴并发送给您的客户。",
     "dash_share_store_copy_manual": "手动复制您的店铺链接：",
+    "buyer_chats_dashboard_banner": "💬 您店铺的客户消息",
+    "review_section_title": "评分和以往评价 💬",
+    "add_review_section_title": "添加您的评分和评价：",
+    "review_comment_ph": "在此输入您的评论……",
+    "submit_review_btn": "🌟 提交评价",
+    "product_details_title": "产品详情",
+    "member_offer_badge": "会员优惠 15% 🎁",
+    "google_continue_as_label": "以此身份继续",
+    "buyer_new_account_btn": "新账户",
+    "buyer_phone_email_label": "电话号码或电子邮件：",
+    "buyer_password_label": "密码：",
     "set_reviews_require_login_label": "🔒 需要买家登录才能添加评价",
     "set_reviews_require_login_note": "默认情况下（推荐），任何访客都可以用自己的名字添加评价而无需账户。如果您希望评价仅限于已验证的账户，请启用此选项。",
     "review_login_required_msg": "您需要先使用该店铺的买家账户登录才能添加评价。",
@@ -3877,6 +3930,17 @@
     "dash_share_store_btn": "Поделиться ссылкой на магазин",
     "dash_share_store_copied": "Ссылка на магазин скопирована! Вставьте и отправьте её клиентам.",
     "dash_share_store_copy_manual": "Скопируйте ссылку на магазин вручную:",
+    "buyer_chats_dashboard_banner": "💬 Сообщения клиентов вашего магазина",
+    "review_section_title": "Оценки и предыдущие отзывы 💬",
+    "add_review_section_title": "Добавьте вашу оценку и отзыв:",
+    "review_comment_ph": "Напишите свой комментарий здесь...",
+    "submit_review_btn": "🌟 Отправить отзыв",
+    "product_details_title": "Детали товара",
+    "member_offer_badge": "Предложение для участников 15% 🎁",
+    "google_continue_as_label": "Продолжить как",
+    "buyer_new_account_btn": "Новый аккаунт",
+    "buyer_phone_email_label": "Номер телефона или email:",
+    "buyer_password_label": "Пароль:",
     "set_reviews_require_login_label": "🔒 Требовать вход покупателя для добавления отзыва",
     "set_reviews_require_login_note": "По умолчанию (рекомендуется) любой посетитель может оставить отзыв от своего имени без аккаунта. Включите это, если хотите, чтобы отзывы оставляли только подтверждённые аккаунты.",
     "review_login_required_msg": "Чтобы оставить отзыв, сначала войдите в аккаунт покупателя в этом магазине.",
@@ -4735,6 +4799,17 @@
     "dash_share_store_btn": "Partager le lien de ma boutique",
     "dash_share_store_copied": "Le lien de votre boutique a été copié ! Collez-le et envoyez-le à vos clients.",
     "dash_share_store_copy_manual": "Copiez manuellement le lien de votre boutique :",
+    "buyer_chats_dashboard_banner": "💬 Messages des clients de votre boutique",
+    "review_section_title": "Notes et avis précédents 💬",
+    "add_review_section_title": "Ajoutez votre note et votre avis :",
+    "review_comment_ph": "Écrivez votre commentaire ici...",
+    "submit_review_btn": "🌟 Envoyer l'avis",
+    "product_details_title": "Détails du produit",
+    "member_offer_badge": "Offre membre 15% 🎁",
+    "google_continue_as_label": "Continuer en tant que",
+    "buyer_new_account_btn": "Nouveau compte",
+    "buyer_phone_email_label": "Numéro de téléphone ou e-mail :",
+    "buyer_password_label": "Mot de passe :",
     "set_reviews_require_login_label": "🔒 Exiger une connexion acheteur pour ajouter un avis",
     "set_reviews_require_login_note": "Par défaut (recommandé), tout visiteur peut ajouter un avis sous son nom sans compte. Activez cette option si vous souhaitez limiter les avis aux comptes vérifiés.",
     "review_login_required_msg": "Vous devez d'abord vous connecter avec un compte acheteur dans cette boutique pour ajouter un avis.",
@@ -5593,6 +5668,17 @@
     "dash_share_store_btn": "Compartir el enlace de mi tienda",
     "dash_share_store_copied": "¡Se copió el enlace de tu tienda! Pégalo y envíalo a tus clientes.",
     "dash_share_store_copy_manual": "Copia manualmente el enlace de tu tienda:",
+    "buyer_chats_dashboard_banner": "💬 Mensajes de los clientes de tu tienda",
+    "review_section_title": "Calificaciones y reseñas anteriores 💬",
+    "add_review_section_title": "Añade tu calificación y reseña:",
+    "review_comment_ph": "Escribe tu comentario aquí...",
+    "submit_review_btn": "🌟 Enviar reseña",
+    "product_details_title": "Detalles del producto",
+    "member_offer_badge": "Oferta de miembros 15% 🎁",
+    "google_continue_as_label": "Continuar como",
+    "buyer_new_account_btn": "Cuenta nueva",
+    "buyer_phone_email_label": "Número de teléfono o correo electrónico:",
+    "buyer_password_label": "Contraseña:",
     "set_reviews_require_login_label": "🔒 Requerir inicio de sesión del comprador para dejar una reseña",
     "set_reviews_require_login_note": "De forma predeterminada (recomendado), cualquier visitante puede dejar una reseña con su nombre sin una cuenta. Activa esto si quieres que las reseñas sean solo de cuentas verificadas.",
     "review_login_required_msg": "Debes iniciar sesión con una cuenta de comprador en esta tienda primero para dejar una reseña.",
@@ -6451,6 +6537,17 @@
     "dash_share_store_btn": "Meinen Shop-Link teilen",
     "dash_share_store_copied": "Dein Shop-Link wurde kopiert! Füge ihn ein und sende ihn an deine Kunden.",
     "dash_share_store_copy_manual": "Kopiere deinen Shop-Link manuell:",
+    "buyer_chats_dashboard_banner": "💬 Kundennachrichten deines Shops",
+    "review_section_title": "Bewertungen und frühere Rezensionen 💬",
+    "add_review_section_title": "Füge deine Bewertung und Rezension hinzu:",
+    "review_comment_ph": "Schreibe hier deinen Kommentar...",
+    "submit_review_btn": "🌟 Bewertung senden",
+    "product_details_title": "Produktdetails",
+    "member_offer_badge": "Mitgliederangebot 15% 🎁",
+    "google_continue_as_label": "Fortfahren als",
+    "buyer_new_account_btn": "Neues Konto",
+    "buyer_phone_email_label": "Telefonnummer oder E-Mail:",
+    "buyer_password_label": "Passwort:",
     "set_reviews_require_login_label": "🔒 Käuferanmeldung für Bewertungen erforderlich",
     "set_reviews_require_login_note": "Standardmäßig (empfohlen) kann jeder Besucher ohne Konto eine Bewertung unter seinem Namen abgeben. Aktiviere dies, wenn Bewertungen nur von verifizierten Konten stammen sollen.",
     "review_login_required_msg": "Du musst dich zuerst mit einem Käuferkonto in diesem Shop anmelden, um eine Bewertung abzugeben.",
@@ -7309,6 +7406,17 @@
     "dash_share_store_btn": "Condividi il link del mio negozio",
     "dash_share_store_copied": "Il link del tuo negozio è stato copiato! Incollalo e inviarlo ai tuoi clienti.",
     "dash_share_store_copy_manual": "Copia manualmente il link del tuo negozio:",
+    "buyer_chats_dashboard_banner": "💬 Messaggi dei clienti del tuo negozio",
+    "review_section_title": "Valutazioni e recensioni precedenti 💬",
+    "add_review_section_title": "Aggiungi la tua valutazione e recensione:",
+    "review_comment_ph": "Scrivi qui il tuo commento...",
+    "submit_review_btn": "🌟 Invia recensione",
+    "product_details_title": "Dettagli del prodotto",
+    "member_offer_badge": "Offerta per i soci 15% 🎁",
+    "google_continue_as_label": "Continua come",
+    "buyer_new_account_btn": "Nuovo account",
+    "buyer_phone_email_label": "Numero di telefono o email:",
+    "buyer_password_label": "Password:",
     "set_reviews_require_login_label": "🔒 Richiedi accesso acquirente per aggiungere una recensione",
     "set_reviews_require_login_note": "Per impostazione predefinita (consigliato), qualsiasi visitatore può aggiungere una recensione con il proprio nome senza account. Attiva questa opzione se vuoi che le recensioni provengano solo da account verificati.",
     "review_login_required_msg": "Devi prima accedere con un account acquirente in questo negozio per aggiungere una recensione.",
@@ -8167,6 +8275,17 @@
     "dash_share_store_btn": "Compartilhar o link da minha loja",
     "dash_share_store_copied": "O link da sua loja foi copiado! Cole e envie para seus clientes.",
     "dash_share_store_copy_manual": "Copie manualmente o link da sua loja:",
+    "buyer_chats_dashboard_banner": "💬 Mensagens dos clientes da sua loja",
+    "review_section_title": "Avaliações e comentários anteriores 💬",
+    "add_review_section_title": "Adicione sua avaliação e comentário:",
+    "review_comment_ph": "Escreva seu comentário aqui...",
+    "submit_review_btn": "🌟 Enviar avaliação",
+    "product_details_title": "Detalhes do produto",
+    "member_offer_badge": "Oferta de membros 15% 🎁",
+    "google_continue_as_label": "Continuar como",
+    "buyer_new_account_btn": "Nova conta",
+    "buyer_phone_email_label": "Número de telefone ou e-mail:",
+    "buyer_password_label": "Senha:",
     "set_reviews_require_login_label": "🔒 Exigir login do comprador para adicionar avaliação",
     "set_reviews_require_login_note": "Por padrão (recomendado), qualquer visitante pode adicionar uma avaliação com seu nome sem uma conta. Ative isso se quiser que as avaliações sejam apenas de contas verificadas.",
     "review_login_required_msg": "Você precisa fazer login com uma conta de comprador nesta loja primeiro para adicionar uma avaliação.",
@@ -9025,6 +9144,17 @@
     "dash_share_store_btn": "Mağaza bağlantımı paylaş",
     "dash_share_store_copied": "Mağaza bağlantınız kopyalandı! Yapıştırıp müşterilerinize gönderin.",
     "dash_share_store_copy_manual": "Mağaza bağlantınızı manuel olarak kopyalayın:",
+    "buyer_chats_dashboard_banner": "💬 Mağazanızın müşteri mesajları",
+    "review_section_title": "Değerlendirmeler ve önceki yorumlar 💬",
+    "add_review_section_title": "Değerlendirmenizi ve yorumunuzu ekleyin:",
+    "review_comment_ph": "Yorumunuzu buraya yazın...",
+    "submit_review_btn": "🌟 Değerlendirmeyi gönder",
+    "product_details_title": "Ürün detayları",
+    "member_offer_badge": "Üye teklifi %15 🎁",
+    "google_continue_as_label": "Şu olarak devam et",
+    "buyer_new_account_btn": "Yeni hesap",
+    "buyer_phone_email_label": "Telefon numarası veya e-posta:",
+    "buyer_password_label": "Şifre:",
     "set_reviews_require_login_label": "🔒 Değerlendirme eklemek için alıcı girişi gereksin",
     "set_reviews_require_login_note": "Varsayılan olarak (önerilen) herhangi bir ziyaretçi hesap olmadan adıyla değerlendirme ekleyebilir. Değerlendirmelerin yalnızca doğrulanmış hesaplardan gelmesini istiyorsanız bunu etkinleştirin.",
     "review_login_required_msg": "Değerlendirme eklemek için önce bu mağazada bir alıcı hesabıyla giriş yapmalısınız.",

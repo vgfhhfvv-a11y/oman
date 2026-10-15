@@ -264,8 +264,16 @@
         }
         @media (min-width: 1000px) {
             .container { max-width: 940px; }
-            .products-grid { grid-template-columns: repeat(3, 1fr); }
-            .categories-grid { grid-template-columns: repeat(3, 1fr); }
+            /* 🖥️ auto-fit بدل عدد أعمدة ثابت (3): لو المتجر عنده أقسام/منتجات قليلة (2 أو 3 بس)،
+               عدد أعمدة ثابت كان بيسيب عمود فاضي يبان وكأن نص الصفحة فاضي وبعيد عن بعضه (ده
+               بالظبط اللي كان شكله "سيء" على شاشة الكمبيوتر رغم إنه نفسه كان شكله حلو على
+               الموبايل لإن الموبايل عمود واحد أصلاً فمفيش فراغ يبان). auto-fit بيخلي الكروت
+               الموجودة فعليًا تكبر وتملا المساحة بدل ما تسيب فراغ جنبها. */
+            .products-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); justify-content:center; }
+            .categories-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); justify-content:center; }
+            /* 🔒 حد أقصى لعرض الكارت نفسه، عشان لو فيه قسم أو منتج واحد بس، ميتمططش
+               يملا الصف كله بشكل غريب - يفضل بحجم طبيعي ومتمركز بدل ما "يتمدد". */
+            .cat-card, .product-card { max-width: 340px; width: 100%; justify-self: center; }
             .banner-slideshow { height: 320px; border-radius: 18px; }
             .cat-card img { height: 170px; }
             .cat-card h4 { font-size: 17px; margin: 14px 0; }
@@ -290,7 +298,9 @@
             /* auto-fill: بيوزّع الكروت بعدد أعمدة مرن حسب عرض الشاشة الفعلي (مش رقم ثابت)،
                كل كارت بعرض لا يقل عن 280px - كده الشبكة بتملا الفراغ بدل ما تفضل 4 أعمدة فاضية
                على الشاشات الأعرض من كده. */
-            .products-grid, .categories-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+            /* auto-fit مش auto-fill: لو عدد الكروت قليل، بتكبر وتملا الصف بدل ما تسيب أعمدة
+               فاضية بعرضها المحجوز (ده كان سبب رئيسي في شكل "الفراغ" على شاشات الكمبيوتر الكبيرة). */
+            .products-grid, .categories-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
             .banner-slideshow { height: 380px; }
         }
         @media (min-width: 1700px) {

@@ -901,6 +901,9 @@
                 let ppModal = document.getElementById('privacyPolicyModal');
                 if(ppModal && !ppModal.classList.contains('hidden')) openPrivacyPolicyModal();
             } catch(e) {}
+            // 🏷️ ليبل زرار الدخول/الحساب الموحّد تحت تتبنى ديناميكيًا بـ t()، فمحتاج
+            // يتحدّث هو كمان لما اللغة تتغيّر، زي باقي المحتوى الديناميكي فوق.
+            try { syncBuyerAccountIcon(); } catch(e) {}
 
             let merchant = localStorage.getItem('currentActiveMerchant');
             if(!merchant) return;
@@ -996,7 +999,9 @@
 
             setIconLabel('homeNavBtn', dict.nav_home);
             setLabel('cartNavLabel', dict.nav_cart);
-            setIconLabel('storeAboutNavBtn', dict.nav_about_store);
+            // storeAboutNavBtn بقى أيقونة في الهيدر من غير نص ظاهر (title بس عن طريق
+            // data-i18n-title) - شيلنا استدعاء setIconLabel ليها عشان كانت بتكسر الأيقونة
+            // نفسها (بتحط النص جوه الـ<i> بدل سبان نص منفصل، ومفيش سبان هنا خالص).
             setIconLabel('platformAboutNavBtn', dict.nav_about_platform);
             setIconLabel('trackOrderNavBtn', dict.nav_track_order);
             setIconLabel('cartTitleHeading', dict.cart_title);
@@ -7556,7 +7561,7 @@
 
             body.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h3 style="margin:0; color:var(--text-main); font-size:16px;">تفاصيل المنتج</h3>
+                    <h3 style="margin:0; color:var(--text-main); font-size:16px;">${t('product_details_title', 'تفاصيل المنتج')}</h3>
                     <div style="display:flex; align-items:center; gap:10px;">
                         ${editIconHtml}
                         <span class="modal-close-chip" onclick="closeProductModal()"><i class="fa fa-times"></i> <span data-i18n="close_label">إغلاق</span></span>
@@ -7585,11 +7590,11 @@
                 ${store.reviewsEnabled === false ? '' : `
                 <hr style="border-color:var(--border-color); margin:15px 0;">
 
-                <h4 style="color:var(--text-main); margin-bottom:8px; font-size:14px;">💬 التقييمات والمراجعات السابقة</h4>
+                <h4 style="color:var(--text-main); margin-bottom:8px; font-size:14px;">${t('review_section_title', 'التقييمات والمراجعات السابقة 💬')}</h4>
                 <div style="margin-bottom:12px; max-height:150px; overflow-y:auto;">${reviewsListHtml}</div>
 
                 <div class="box" style="background:var(--bg-body); padding: 12px;">
-                    <h5 style="margin:0 0 8px; color:var(--text-main); font-size:13px;">أضف تقييمك ومراجعتك:</h5>
+                    <h5 style="margin:0 0 8px; color:var(--text-main); font-size:13px;">${t('add_review_section_title', 'أضف تقييمك ومراجعتك:')}</h5>
                     ${(() => {
                         let __buyerSess = getBuyerSession(activeStore);
                         // 1) المتجر طالب تسجيل دخول إجباري، ومفيش جلسة شغالة؟ وقف هنا.
@@ -7626,8 +7631,8 @@
                             <span class="star selected" onclick="setRating(5)">★</span>
                         </div>
                     </div>
-                    <textarea id="prodReviewComment" placeholder="اكتب تعليقك هنا..." style="height:50px; font-size:12px;"></textarea>
-                    <button class="secondary" style="padding: 6px; font-size: 12px;" onclick="submitReview('${p.name}')">إرسال التقييم 🌟</button>
+                    <textarea id="prodReviewComment" placeholder="${t('review_comment_ph', 'اكتب تعليقك هنا...')}" style="height:50px; font-size:12px;"></textarea>
+                    <button class="secondary" style="padding: 6px; font-size: 12px;" onclick="submitReview('${p.name}')">${t('submit_review_btn', '🌟 إرسال التقييم')}</button>
                     `}
                 </div>
                 `}
@@ -8128,6 +8133,9 @@
             let btn = document.getElementById('unifiedEntryBtn');
             let icon = document.getElementById('unifiedEntryIcon');
             if(!btn || !icon) return;
+            // 🏷️ الليبل الصغير تحت الأيقونة في الشريط السفلي - بيتحدّث مع الأيقونة بنفس
+            // المنطق، عشان التاجر/المشتري يلاقي كلام واضح تحت الأيقونة مش بس تلميح title.
+            let label = document.getElementById('unifiedEntryLabel');
             let viewMode = localStorage.getItem('viewMode');
             let loggedMerchant = localStorage.getItem('currentActiveMerchant');
             let loggedAdmin = localStorage.getItem('isAdminLoggedIn') === 'true';
@@ -8136,6 +8144,7 @@
                 if(sess) {
                     icon.className = 'fa fa-circle-user';
                     btn.title = sess.name || t('my_account_label', 'حسابي');
+                    if(label) label.textContent = t('my_account_label', 'حسابي');
                     try { ensureBuyerChatBadgeWatch(); } catch(e) {}
                     return;
                 }
@@ -8143,9 +8152,12 @@
             if(loggedMerchant || loggedAdmin) {
                 icon.className = 'fa fa-store';
                 btn.title = t('my_store_dashboard_label', 'لوحة إدارة متجري');
+                if(label) label.textContent = t('my_store_dashboard_label', 'لوحة إدارة متجري');
             } else {
                 icon.className = 'fa fa-right-to-bracket';
-                btn.title = (viewMode === 'store') ? t('unified_entry_title', 'تسجيل الدخول / حسابي') : t('header_merchant_login_title', 'تسجيل الدخول للمتجر');
+                let txt = (viewMode === 'store') ? t('unified_entry_title', 'تسجيل الدخول / حسابي') : t('header_merchant_login_title', 'تسجيل الدخول للمتجر');
+                btn.title = txt;
+                if(label) label.textContent = txt;
             }
             try { stopBuyerChatWatch(); } catch(e) {}
         }
@@ -8638,6 +8650,9 @@
             let total = __buyerChatThreadsCache.reduce((a, th) => a + (th.unreadByMerchant || 0), 0);
             let badge = document.getElementById('buyerChatsTotalBadge');
             if(badge) { badge.textContent = total; badge.classList.toggle('hidden', total === 0); }
+            // 🆕 نفس العدد على الزرار البارز الجديد فوق لوحة التاجر (شات العملاء)
+            let badgeTop = document.getElementById('buyerChatsTotalBadgeTop');
+            if(badgeTop) { badgeTop.textContent = total; badgeTop.classList.toggle('hidden', total === 0); }
             // 🔴 نفس فكرة النقطة الحمرا بتاعة العميل، لكن هنا على زرار "دخول التجار/لوحة
             // إدارة المتجر" في الشريط السفلي، عشان التاجر يلاحظ فورًا من غير ما يفتح الإعدادات أصلًا.
             let dot = document.getElementById('unifiedEntryDot');
