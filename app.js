@@ -1058,6 +1058,34 @@
         // تجار، ولا أي حاجة تدل إن ده جزء من منصة أكبر) — تمامًا زي متجر مستقل قائم بذاته.
         // رابط المنصة الرئيسي (من غير ?store=) هو فقط دليل المتاجر + تسجيل/دخول التجار.
         // =====================================================================
+        // ============================================================
+        // 🌐 الدومين الخاص: التعرّف على المتجر من اسم الدومين نفسه (بدون ?store=)
+        // ============================================================
+        const PLATFORM_HOST_RE = /(^localhost$|^127\.|^\[|\.web\.app$|\.firebaseapp\.com$|\.github\.io$|\.netlify\.app$|\.vercel\.app$|\.pages\.dev$|\.onrender\.com$|\.run\.app$)/;
+        function normalizeCustomDomain(raw) {
+            let d = String(raw || '').trim().toLowerCase();
+            d = d.replace(/^https?:\/\//, '').replace(/[\/?#].*$/, '').replace(/:\d+$/, '').replace(/^www\./, '');
+            return d;
+        }
+        function isValidCustomDomain(d) {
+            return /^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/.test(d);
+        }
+        function isPlatformHost(h) {
+            if(!h) return true;
+            if(PLATFORM_HOST_RE.test(h)) return true;
+            let ph = normalizeCustomDomain(localStorage.getItem('platformHostname') || '');
+            return !!ph && h === ph;
+        }
+        function findStoreKeyByCustomDomain(host) {
+            let h = normalizeCustomDomain(host);
+            if(!h) return null;
+            let stores = JSON.parse(localStorage.getItem('allStores')) || {};
+            return Object.keys(stores).find(k => {
+                let s = stores[k];
+                return s && s.customDomain && s.customDomainAllowed === true && s.customDomainEnabled !== false && normalizeCustomDomain(s.customDomain) === h;
+            }) || null;
+        }
+
         function getStoreParamFromUrl() {
             try { return new URLSearchParams(window.location.search).get('store'); }
             catch(e) { return null; }
@@ -1116,6 +1144,19 @@
         // بناءً على رابط الصفحة الحالي فعليًا، مش بس بناءً على آخر حالة متخزنة عشوائيًا
         function routeFromUrl() {
             let storeParam = getStoreParamFromUrl();
+            // 🌐 دخول بدومين خاص: لو الزائر كتب دومين متجر (مش دومين المنصة) نعرض المتجر ده فورًا
+            if(!storeParam) {
+                let __host = normalizeCustomDomain(window.location.hostname);
+                if(!isPlatformHost(__host)) {
+                    storeParam = window.__customDomainStoreKey || findStoreKeyByCustomDomain(__host);
+                    if(!storeParam && window.resolveCustomDomain && !window.__customDomainTried) {
+                        window.__customDomainTried = true;
+                        window.resolveCustomDomain(__host).then(function(k) {
+                            if(k) { window.__customDomainStoreKey = k; routeFromUrl(); }
+                        }).catch(function() {});
+                    }
+                }
+            }
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             if(storeParam && stores[storeParam] && stores[storeParam].status !== 'stopped') {
                 activeStore = storeParam;
@@ -1211,7 +1252,7 @@
         const DASH_GROUPS = {
             dashboardSection: [
                 { id: 'sales', key: 'dash_group_sales', fb: '📊 المبيعات والتقارير', items: ['dash_orders_title', 'dash_bestsellers_title', 'dash_revenue_title', 'dash_profit_title'] },
-                { id: 'store', key: 'dash_group_store', fb: '⚙️ المتجر والاشتراك', items: ['dash_settings_title', 'dash_subscription_title'] },
+                { id: 'store', key: 'dash_group_store', fb: '⚙️ المتجر والاشتراك', items: ['dash_settings_title', 'dash_subscription_title', 'dash_domain_title'] },
                 { id: 'marketing', key: 'dash_group_marketing', fb: '🎨 الواجهة والتسويق', items: ['dash_shortcuts_title', 'dash_banners_title'] },
                 { id: 'team', key: 'dash_group_team', fb: '👥 الفريق', items: ['dash_staff_title'] }
             ],
@@ -1237,25 +1278,13 @@
             let bar = sec.querySelector('.dash-groups-bar');
             if(bar) bar.querySelectorAll('button').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-group') === (groupId || 'all')); });
         }
+        // ❌ شرائح التصنيف العلوية اتشالت (كل بند ظاهر في مكانه، والبنود الكبيرة اتقسّمت لأقسام فرعية)
         function initDashGroups(sectionId) {
             let sec = document.getElementById(sectionId);
             if(!sec) return;
-            let groups = DASH_GROUPS[sectionId] || [];
             let bar = sec.querySelector('.dash-groups-bar');
-            if(!bar) {
-                bar = document.createElement('div');
-                bar.className = 'dash-groups-bar';
-                let searchBox = sec.querySelector('input[id$="SearchInput"]');
-                let anchor = searchBox && searchBox.parentElement ? searchBox.parentElement : null;
-                if(anchor && anchor.parentElement === sec) anchor.insertAdjacentElement('afterend', bar);
-                else sec.insertBefore(bar, sec.firstChild);
-                if(searchBox) searchBox.addEventListener('input', function() { if(this.value.trim()) selectDashGroup(sectionId, null); else selectDashGroup(sectionId, groups[0] && groups[0].id); });
-            }
-            bar.innerHTML = groups.map(g => `<button type="button" data-group="${g.id}" onclick="selectDashGroup('${sectionId}', '${g.id}')">${t(g.key, g.fb)}</button>`).join('')
-                + `<button type="button" data-group="all" onclick="selectDashGroup('${sectionId}', null)">${t('dash_group_all', '📂 الكل')}</button>`;
-            let current = bar.getAttribute('data-current') || (groups[0] && groups[0].id);
-            bar.setAttribute('data-current', current);
-            selectDashGroup(sectionId, current === 'all' ? null : current);
+            if(bar) bar.remove();
+            sec.querySelectorAll('.dash-group-hidden').forEach(function(d) { d.classList.remove('dash-group-hidden'); });
         }
 
         function switchTab(tab, btn) {
@@ -1264,6 +1293,8 @@
                 let el = document.getElementById(id);
                 if(el) el.classList.add('hidden');
             });
+            try { closeBuyerProfileModal(); } catch(e) {}
+            try { document.getElementById('buyerAuthModal').classList.add('hidden'); document.getElementById('trackOrderModal').classList.add('hidden'); } catch(e) {}
 
             document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
             if(btn) btn.classList.add('active');
@@ -1944,25 +1975,22 @@
             return result;
         }
 
-        function sendVerificationEmail(email, code, storeName) {
+        function sendVerificationEmail(email, code, storeName, manual) {
+            // 🤫 فشل الإرسال (EmailJS مش شغال أو الباقة خلصت) ماينفعش يزعج المستخدم بأي نافذة؛ التسجيل
+            // بيكمل عادي والحساب "غير موثّق مؤقتًا" والتاجر يقدر يطلب "إعادة إرسال الكود" من الإعدادات.
+            const softFail = function() { if(manual) showToast(t('email_send_failed_soft', 'تعذر إرسال الكود الآن، حاول مرة أخرى لاحقًا.')); };
             if(window.emailjs && EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY) {
-                emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-                    to_email: email,
-                    code: code,
-                    store_name: storeName
-                }).then(() => {
-                    showToast(`📧 تم إرسال كود التفعيل إلى بريدك (${email})`);
-                }).catch((err) => {
-                    console.error('EmailJS error:', err);
-                    alert(`⚠️ تعذر إرسال الإيميل فعليًا (تأكد إن قالب EmailJS فيه المتغيرات to_email و code و store_name، وإن خانة "To Email" في إعدادات القالب متظبطة على {{to_email}}).\n\nكود التفعيل احتياطيًا: ${code}`);
-                });
+                try {
+                    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { to_email: email, code: code, store_name: storeName })
+                        .then(function() { showToast('📧 ' + t('email_code_sent_toast', 'تم إرسال كود التفعيل إلى بريدك') + ' (' + email + ')'); })
+                        .catch(function(err) { console.warn('EmailJS error (silent):', err); softFail(); });
+                } catch(e) { console.warn('EmailJS exception (silent):', e); softFail(); }
             } else {
-                // وضع تجريبي احتياطي لو مكتبة EmailJS مش متاحة لأي سبب (مثلاً لا يوجد اتصال إنترنت)
-                alert(`📧 (وضع تجريبي - تعذر الاتصال بخدمة الإرسال)\nكود التفعيل لبريد "${email}" الخاص بمتجر "${storeName}" هو: ${code}`);
+                softFail();
             }
         }
 
-        function startEmailVerification(storeName, email) {
+        function startEmailVerification(storeName, email, manual) {
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             if(!stores[storeName]) return;
             let code = generateVerificationCode();
@@ -1970,7 +1998,7 @@
             stores[storeName].emailVerified = false;
             stores[storeName].emailVerificationCode = code;
             if(!saveAllStores(stores)) return;
-            sendVerificationEmail(email, code, storeName);
+            sendVerificationEmail(email, code, storeName, manual);
         }
 
         function registerStoreSubmit() {
@@ -2497,6 +2525,124 @@
         }
 
         // --- لوحة التاجر وتعديل اسم المتجر واللوجو ---
+        // 🌐 قسم الدومين الخاص في لوحة التاجر: بيظهر بس لو باقته مفعّل فيها الميزة
+        function renderCustomDomainSection() {
+            let acc = document.getElementById('customDomainAccordion');
+            if(!acc) return;
+            let merchant = localStorage.getItem('currentActiveMerchant');
+            let stores = JSON.parse(localStorage.getItem('allStores')) || {};
+            let store = stores[merchant];
+            if(!store) return;
+            let allowed = store.customDomainAllowed === true || getPlanForStore(store).allowCustomDomain === true;
+            acc.style.display = allowed ? '' : 'none';
+            if(!allowed) return;
+            let input = document.getElementById('customDomainInput');
+            if(input) input.value = store.customDomain || '';
+            let status = document.getElementById('customDomainStatus');
+            let cfOn = !!window.CUSTOM_DOMAIN_API_URL;
+            if(status) {
+                let line = store.customDomain ? ('🌐 ' + t('domain_status_active', 'الدومين المربوط حاليًا:') + ' ' + store.customDomain) : t('domain_status_none', 'لم تربط دومينًا بعد.');
+                if(store.customDomain && cfOn) {
+                    let st = store.customDomainStatus;
+                    line += '\n' + (st === 'active' ? t('domain_cf_active', '✅ الدومين يعمل وشهادة SSL مفعّلة.') : st === 'error' ? t('domain_cf_error', '⚠️ تعذر الاتصال بخدمة التفعيل التلقائي، حاول لاحقًا.') : t('domain_cf_pending', '⏳ جارٍ التفعيل وإصدار شهادة SSL... قد يستغرق بضع دقائق.'));
+                }
+                status.style.whiteSpace = 'pre-line';
+                status.textContent = line;
+            }
+            let chk = document.getElementById('customDomainCheckBtn');
+            if(chk) chk.classList.toggle('hidden', !(store.customDomain && cfOn));
+            let manual = document.getElementById('customDomainManualNote');
+            if(manual) manual.classList.toggle('hidden', cfOn);
+            let rm = document.getElementById('customDomainRemoveBtn');
+            if(rm) rm.classList.toggle('hidden', !store.customDomain);
+            let steps = document.getElementById('customDomainDnsSteps');
+            if(steps && cfOn) {
+                steps.textContent = t('domain_cf_dns_steps', '1) من لوحة مزوّد الدومين أضف سجل CNAME للمضيف www (أو @) يشير إلى: {cname}\n2) إن طُلب منك سجل تحقق، أضف TXT باسم {txt_name} وقيمته {txt_value}\n3) نفعّل الدومين وشهادة SSL تلقائيًا؛ اضغط «فحص الحالة» بعد دقائق.')
+                    .replace('{cname}', store.customDomainCname || '—').replace('{txt_name}', store.customDomainOwnerName || '—').replace('{txt_value}', store.customDomainOwnerValue || '—');
+            } else if(steps) steps.textContent = t('domain_dns_steps', '1) من لوحة مزوّد الدومين أضف سجل CNAME للمضيف www (أو @) يشير إلى: {host}\n2) انتظر من دقائق حتى 24 ساعة لانتشار الـDNS.\n3) اكتب الدومين في الحقل أعلاه واضغط «ربط الدومين».').replace('{host}', window.location.hostname);
+        }
+
+        // ☁️ التفعيل التلقائي عبر Cloudflare for SaaS (عبر Worker وسيط - راجع CLOUDFLARE-SETUP.md)
+        function applyCustomDomainApiResult(merchant, res) {
+            let stores = JSON.parse(localStorage.getItem('allStores')) || {};
+            let store = stores[merchant];
+            if(!store) return;
+            if(res && res.ok) {
+                store.customDomainStatus = res.active ? 'active' : 'pending';
+                store.customDomainCname = res.cnameTarget || store.customDomainCname || '';
+                store.customDomainOwnerName = (res.ownership && res.ownership.name) || '';
+                store.customDomainOwnerValue = (res.ownership && res.ownership.value) || '';
+            } else {
+                store.customDomainStatus = 'error';
+            }
+            saveAllStores(stores);
+            renderCustomDomainSection();
+        }
+        async function provisionCustomDomain(d, merchant) {
+            if(!window.customDomainApi || !window.CUSTOM_DOMAIN_API_URL) return;
+            let res = await window.customDomainApi('POST', '/domains', { domain: d, storeKey: merchant });
+            applyCustomDomainApiResult(merchant, res);
+        }
+        async function checkCustomDomainStatus() {
+            let merchant = localStorage.getItem('currentActiveMerchant');
+            let stores = JSON.parse(localStorage.getItem('allStores')) || {};
+            let store = stores[merchant];
+            if(!store || !store.customDomain || !window.customDomainApi) return;
+            let btn = document.getElementById('customDomainCheckBtn');
+            if(btn) btn.disabled = true;
+            try {
+                let res = await window.customDomainApi('GET', '/domains/status?domain=' + encodeURIComponent(normalizeCustomDomain(store.customDomain)) + '&storeKey=' + encodeURIComponent(merchant));
+                applyCustomDomainApiResult(merchant, res);
+            } finally { if(btn) btn.disabled = false; }
+        }
+
+        async function saveCustomDomain() {
+            let merchant = localStorage.getItem('currentActiveMerchant');
+            let stores = JSON.parse(localStorage.getItem('allStores')) || {};
+            let store = stores[merchant];
+            if(!store) return;
+            if(!(store.customDomainAllowed === true || getPlanForStore(store).allowCustomDomain === true)) { alert(t('domain_not_allowed', '⛔ باقتك الحالية لا تتيح الدومين الخاص. ترقّى لباقة تدعمه.')); return; }
+            let d = normalizeCustomDomain(document.getElementById('customDomainInput').value);
+            if(!isValidCustomDomain(d)) { alert(t('domain_invalid', 'اكتب دومينًا صحيحًا مثل: mystore.com')); return; }
+            if(isPlatformHost(d)) { alert(t('domain_invalid', 'اكتب دومينًا صحيحًا مثل: mystore.com')); return; }
+            let takenLocal = Object.keys(stores).some(k => k !== merchant && stores[k].customDomain && normalizeCustomDomain(stores[k].customDomain) === d);
+            if(takenLocal) { alert(t('domain_taken', '⛔ هذا الدومين مربوط بمتجر آخر.')); return; }
+            let btn = document.getElementById('customDomainSaveBtn');
+            if(btn) btn.disabled = true;
+            try {
+                if(window.claimCustomDomain) {
+                    let res = await window.claimCustomDomain(d, merchant);
+                    if(!res.ok && res.error === 'taken') { alert(t('domain_taken', '⛔ هذا الدومين مربوط بمتجر آخر.')); return; }
+                }
+                let oldDomain = store.customDomain;
+                store.customDomain = d;
+                store.customDomainEnabled = true;
+                store.customDomainStatus = 'pending';
+                if(!saveAllStores(stores)) return;
+                provisionCustomDomain(d, merchant);
+                if(oldDomain && normalizeCustomDomain(oldDomain) !== d && window.releaseCustomDomain) window.releaseCustomDomain(normalizeCustomDomain(oldDomain), merchant);
+                renderCustomDomainSection();
+                showToast('✅ ' + t('domain_saved_toast', 'تم ربط الدومين وتفعيله على متجرك.'));
+            } finally {
+                if(btn) btn.disabled = false;
+            }
+        }
+
+        function removeCustomDomain() {
+            let merchant = localStorage.getItem('currentActiveMerchant');
+            let stores = JSON.parse(localStorage.getItem('allStores')) || {};
+            let store = stores[merchant];
+            if(!store || !store.customDomain) return;
+            let old = normalizeCustomDomain(store.customDomain);
+            store.customDomain = '';
+            store.customDomainStatus = '';
+            if(window.customDomainApi && window.CUSTOM_DOMAIN_API_URL) window.customDomainApi('DELETE', '/domains', { domain: old, storeKey: merchant });
+            if(!saveAllStores(stores)) return;
+            if(window.releaseCustomDomain) window.releaseCustomDomain(old, merchant);
+            renderCustomDomainSection();
+            showToast('✅ ' + t('domain_removed_toast', 'تم فصل الدومين عن متجرك.'));
+        }
+
         function loadDashboard() {
             // ⚠️ الدالة دي ضخمة وبتلمس عشرات العناصر في نفس الوقت (فورم المنتج، الأقسام،
             // الإعدادات، الاشتراك...)، فأي خطأ بسيط في جزء واحد منها (زي عنصر مش موجود) كان
@@ -2521,6 +2667,7 @@
                 // لشكل "لوحة إدارة المتجر" بدل أيقونة الدخول العادية.
                 try { syncBuyerAccountIcon(); } catch(e) {}
                 try { renderDashQuickStats(merchant); } catch(e) {}
+                try { renderCustomDomainSection(); } catch(e) {}
             } catch(e) {
                 console.error('loadDashboardInner: خطأ في عنوان اللوحة/الأيقونة (الباقي هيكمل عادي):', e);
             }
@@ -3209,7 +3356,7 @@
             let merchant = localStorage.getItem('currentActiveMerchant');
             let email = document.getElementById('merchantEmailInput').value.trim();
             if(!email) { alert(t('alert_enter_email_first', 'اكتب بريدك الإلكتروني الأول!')); return; }
-            startEmailVerification(merchant, email);
+            startEmailVerification(merchant, email, true);
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             renderEmailSecurityBox(stores[merchant]);
         }
@@ -3219,7 +3366,7 @@
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             let store = stores[merchant];
             if(!store || !store.email) return;
-            startEmailVerification(merchant, store.email);
+            startEmailVerification(merchant, store.email, true);
         }
 
         function confirmMerchantEmailCode() {
@@ -3375,6 +3522,7 @@
                     <div style="display:flex; gap:14px; margin-top:8px; font-size:11.5px;">
                         <label style="margin:0; display:flex; align-items:center; gap:4px;"><input type="checkbox" style="width:auto; margin:0;" ${p.allowColors ? 'checked' : ''} onchange="updateSubscriptionPlanField(${i}, 'allowColors', this.checked)"> 🎨 ألوان مخصصة</label>
                         <label style="margin:0; display:flex; align-items:center; gap:4px;"><input type="checkbox" style="width:auto; margin:0;" ${p.allowBanners ? 'checked' : ''} onchange="updateSubscriptionPlanField(${i}, 'allowBanners', this.checked)"> 🖼️ لافتات إعلانية</label>
+                        <label style="margin:0; display:flex; align-items:center; gap:4px;"><input type="checkbox" style="width:auto; margin:0;" ${p.allowCustomDomain ? 'checked' : ''} onchange="updateSubscriptionPlanField(${i}, 'allowCustomDomain', this.checked)"> ${t('plan_ed_custom_domain', '🌐 تفعيل ميزة الدومين الخاص')}</label>
                     </div>
                 </div>
             `).join('');
@@ -3385,7 +3533,7 @@
             if(!plans[index]) return;
             plans[index][field] = value;
             saveSubscriptionPlans(plans);
-            if(['buyerLimit','buyerLimitMessage'].indexOf(field) !== -1) stampAllStoresPlanLimits();
+            if(['buyerLimit','buyerLimitMessage','allowCustomDomain'].indexOf(field) !== -1) stampAllStoresPlanLimits();
             showToast('✅ تم تحديث الباقة');
         }
 
@@ -3410,6 +3558,30 @@
             saveSubscriptionPlans(plans);
             renderSubscriptionPlansList();
             showToast('🗑️ تم حذف الباقة');
+        }
+
+        // 📋 تفاصيل كاملة لكل باقة (كل حد وكل ميزة بسطر واضح)
+        function planDetailRowsHtml(p) {
+            let U = t('unlimited_label', 'بلا حدود');
+            let num = v => (v === undefined || v === null || v === '' || v === -1) ? U : v;
+            let yes = t('available_label', 'متاحة ✅'), no = t('unavailable_label', 'غير متاحة');
+            let productsVal = (p.monthlyProductQuota > 0)
+                ? `${p.monthlyProductQuota} ${t('plan_per_month', '/ شهر')} (${p.quotaAccumulate ? t('plan_quota_accum_yes', 'تتراكم شهريًا') : t('plan_quota_accum_no', 'ثابتة')})`
+                : num(p.productLimit);
+            let rows = [
+                ['📦', t('plan_products_label', 'المنتجات'), productsVal],
+                ['🗂️', t('plan_cats_label', 'الأقسام'), num(p.categoryLimit)],
+                ['👥', t('plan_staff_label', 'المساعدين'), num(p.staffLimit)],
+                ['🤝', t('plan_coowners_label', 'مشاركة المشرفين'), num(p.coOwnerLimit)],
+                ['👤', t('plan_buyers_label', 'المشترون المسجلون'), num(p.buyerLimit)],
+                ['💾', t('plan_storage_label', 'مساحة التخزين'), (p.storageMB || 0) + ' MB'],
+                ['🎨', t('plan_colors_label', 'ألوان مخصصة'), p.allowColors ? yes : no],
+                ['🖼️', t('plan_banners_label', 'لافتات إعلانية'), p.allowBanners ? yes : no],
+                ['🌐', t('plan_custom_domain_label', 'دومين خاص'), p.allowCustomDomain ? yes : no],
+                ['🏷️', t('plan_whitelabel_label', 'إزالة اسم المنصة'), p.allowWhiteLabel ? yes : no]
+            ];
+            return `<div style="margin-top:8px; display:flex; flex-direction:column; gap:4px; font-size:11.5px;">` +
+                rows.map(r => `<div style="display:flex; justify-content:space-between; gap:8px; border-bottom:1px dashed var(--border-color); padding:2px 0;"><span>${r[0]} ${r[1]}</span><strong>${r[2]}</strong></div>`).join('') + `</div>`;
         }
 
         function renderSubscriptionStatusBox(store) {
@@ -3443,6 +3615,7 @@
                         <span>👥 ${t('plan_staff_label', 'المساعدين')}: ${staffCount} / ${plan.staffLimit === -1 ? unlimitedLabel : plan.staffLimit}</span>
                         <span>🗂️ ${t('plan_cats_label', 'الأقسام')}: ${(store.categories || []).length} / ${(plan.categoryLimit === undefined || plan.categoryLimit === -1) ? unlimitedLabel : plan.categoryLimit}</span>
                         ${planQuotaHtml}
+                        <span>🌐 ${t('plan_custom_domain_label', 'دومين خاص')}: ${plan.allowCustomDomain ? t('available_label', 'متاحة ✅') : t('unavailable_label', 'غير متاحة')}</span>
                         <span>🎨 ${t('plan_colors_label', 'ألوان مخصصة')}: ${plan.allowColors ? t('available_label', 'متاحة ✅') : t('unavailable_label', 'غير متاحة')}</span>
                         <span>🖼️ ${t('plan_banners_label', 'لافتات إعلانية')}: ${plan.allowBanners ? t('available_label', 'متاحة ✅') : t('unavailable_label', 'غير متاحة')}</span>
                     </div>
@@ -3455,6 +3628,7 @@
             // بيوصله مباشرة بفريق الدعم/الإدارة (واتساب/فيسبوك/تيليجرام) برسالة
             // جاهزة، والأدمن هو اللي يفعّل الباقة يدويًا بعد ما يتأكد من الدفع.
             // ============================================================
+            let __chooserWasOpen = !!(document.getElementById('planChooserDetails') || {}).open;
             let allPlans = getSubscriptionPlans();
             let planCardsHtml = allPlans.map(p => {
                 let isCurrent = p.id === (store.planId || 'free');
@@ -3464,14 +3638,7 @@
                             <strong style="font-size:13px;">${planDisplayName(p)}</strong>
                             <span style="font-size:12px; color:var(--primary-color); font-weight:bold;">${p.price ? p.price : t('free_label', 'مجانية')}</span>
                         </div>
-                        <div style="font-size:10.5px; color:var(--text-muted); margin-top:4px;">
-                            ${[
-                                (p.productLimit !== undefined && p.productLimit !== null && p.productLimit !== '') ? `📦 ${p.productLimit === -1 ? unlimitedLabel : p.productLimit}` : '',
-                                (p.staffLimit !== undefined && p.staffLimit !== null && p.staffLimit !== '') ? `👥 ${p.staffLimit === -1 ? unlimitedLabel : p.staffLimit}` : '',
-                                (p.allowColors !== undefined && p.allowColors !== null) ? `🎨 ${p.allowColors ? '✅' : '✖️'}` : '',
-                                (p.allowBanners !== undefined && p.allowBanners !== null) ? `🖼️ ${p.allowBanners ? '✅' : '✖️'}` : ''
-                            ].filter(Boolean).join(' · ')}
-                        </div>
+                        ${planDetailRowsHtml(p)}
                         ${isCurrent
                             ? `<div style="margin-top:6px; font-size:11px; color:#6d28d9; font-weight:bold;">✔️ ${t('your_current_plan', 'باقتك الحالية')}</div>`
                             : `<button class="secondary" style="width:100%; margin:6px 0 0; font-size:11.5px; padding:6px;" onclick="requestPlanActivation('${p.id}')"><i class="fa fa-arrow-up"></i> ${t('request_this_plan', 'اطلب هذه الباقة')}</button>
@@ -3481,7 +3648,7 @@
                 `;
             }).join('');
             let planChooserHtml = `
-                <details style="margin-top:12px;" id="planChooserDetails">
+                <details style="margin-top:12px;" id="planChooserDetails" ${__chooserWasOpen ? 'open' : ''}>
                     <summary style="cursor:pointer; list-style:none; display:block;">
                         <div style="background: linear-gradient(135deg, #f59e0b, #ea580c); border-radius:14px; padding:14px 16px; display:flex; align-items:center; gap:12px; box-shadow:0 4px 14px rgba(234,88,12,0.35); animation: pulseGlow 2.2s ease-in-out infinite;">
                             <span style="font-size:26px;">🚀</span>
@@ -5917,6 +6084,7 @@
                     let low = txt.toLowerCase();
                     if(txt && txt.length < 250 && low.includes(query)) {
                         el.classList.add('settings-search-match');
+                        try { let __sub = el.closest('details.dash-sub'); if(__sub) __sub.open = true; } catch(e) {}
                         accHasMatch = true;
                         totalMatches++;
                         if(!firstMatchEl) firstMatchEl = el;
@@ -8363,6 +8531,7 @@
             __buyerAuthPendingMsg = msg || '';
             switchBuyerAuthTab(tab || 'login');
             document.getElementById('buyerAuthModal').classList.remove('hidden');
+            layoutPageModal('buyerAuthModal');
             // 🔵 تسجيل الدخول بجوجل (لو المنصة فعّلت GOOGLE_CLIENT_ID حقيقي) - نفس الآلية
             // المستخدمة فعلاً مع تقييمات المنتجات وتسجيل التجار.
             if(GOOGLE_SIGNIN_ENABLED && window.google && google.accounts && google.accounts.id) {
@@ -8541,6 +8710,7 @@
             document.getElementById('buyerProfileNewPasswordInput').value = '';
             document.getElementById('buyerProfileOrdersList').innerHTML = '<p style="text-align:center; color:var(--text-muted); font-size:12px;">⏳ ' + t('loading_label', 'جاري التحميل...') + '</p>';
             document.getElementById('buyerProfileModal').classList.remove('hidden');
+            layoutBuyerProfilePage();
             if(window.fetchBuyerOrders) {
                 let orders = await window.fetchBuyerOrders(activeStore, sess.buyerId);
                 renderBuyerOrdersList(orders);
@@ -8551,6 +8721,26 @@
             renderBuyerChatMessages();
             if(window.markBuyerChatThreadRead) window.markBuyerChatThreadRead(activeStore, sess.buyerId, 'buyer');
         }
+        // 📄 "حسابي" كصفحة كاملة: بتاخد المساحة بين الهيدر والشريط السفلي (زي السلة والرئيسية)
+        function layoutBuyerProfilePage() { layoutPageModal('buyerProfileModal'); }
+        function layoutPageModal(id) {
+            let m = document.getElementById(id);
+            if(!m) return;
+            try { window.scrollTo(0, 0); } catch(e) {}
+            m.classList.add('page-like');
+            let hdr = document.querySelector('header');
+            let nav = document.querySelector('.bottom-nav');
+            m.style.top = (hdr ? hdr.getBoundingClientRect().bottom : 0) + 'px';
+            m.style.bottom = (nav ? nav.offsetHeight : 0) + 'px';
+            m.style.height = 'auto';
+            try { m.style.setProperty('--page-bg', getComputedStyle(document.body).backgroundColor); } catch(e) {}
+        }
+        window.addEventListener('resize', function() {
+            ['buyerProfileModal', 'buyerAuthModal', 'trackOrderModal'].forEach(function(id) {
+                let m = document.getElementById(id);
+                if(m && !m.classList.contains('hidden')) layoutPageModal(id);
+            });
+        });
         function closeBuyerProfileModal() {
             document.getElementById('buyerProfileModal').classList.add('hidden');
         }
@@ -9071,6 +9261,7 @@
             document.getElementById('trackOrderResultBox').innerHTML = '';
             document.getElementById('trackOrderCodeInput').value = '';
             document.getElementById('trackOrderModal').classList.remove('hidden');
+            layoutPageModal('trackOrderModal');
         }
         function closeTrackOrderModal() {
             document.getElementById('trackOrderModal').classList.add('hidden');
@@ -10637,7 +10828,7 @@
                 { id: 'free',    name: 'مجانية',  price: 0,   productLimit: 10,  storageMB: 10,   staffLimit: 0, allowColors: false, allowBanners: false, allowWhiteLabel: false, monthlyProductQuota: 5, quotaAccumulate: false, buyerLimit: 20, categoryLimit: 3, coOwnerLimit: 0 },
                 { id: 'basic',   name: 'أساسي',   price: 100, productLimit: 50,  storageMB: 50,   staffLimit: 1, allowColors: false, allowBanners: true,  allowWhiteLabel: false, monthlyProductQuota: 5, quotaAccumulate: true, buyerLimit: 100, categoryLimit: 10, coOwnerLimit: 1 },
                 { id: 'pro',     name: 'متقدم',   price: 250, productLimit: 300, storageMB: 200,  staffLimit: 5, allowColors: true,  allowBanners: true,  allowWhiteLabel: false },
-                { id: 'premium', name: 'بريميوم', price: 500, productLimit: -1,  storageMB: 1000, staffLimit: -1, allowColors: true, allowBanners: true, allowWhiteLabel: true  },
+                { id: 'premium', name: 'بريميوم', price: 500, productLimit: -1,  storageMB: 1000, staffLimit: -1, allowColors: true, allowBanners: true, allowWhiteLabel: true, allowCustomDomain: true, buyerLimit: -1, categoryLimit: -1, coOwnerLimit: -1 },
             ];
             localStorage.setItem('subscriptionPlans', JSON.stringify(defaults));
             return defaults;
@@ -10690,6 +10881,7 @@
                 let p = getPlanForStore(store);
                 store.buyerLimit = (p.buyerLimit === undefined || p.buyerLimit === null || p.buyerLimit === '') ? -1 : p.buyerLimit;
                 store.buyerLimitMessage = p.buyerLimitMessage || '';
+                store.customDomainAllowed = p.allowCustomDomain === true;
             } catch(e) {}
         }
         function stampAllStoresPlanLimits() {
@@ -12123,3 +12315,199 @@
             makeLazy('renderBroadcastTargets', 'broadcastTargetsChecklist');
             makeLazy('renderSubscriptionPlansList', 'subscriptionPlansList');
         })();
+
+        // ============================================================
+        // 📊 استيراد/تصدير المنتجات (Excel) - التصدير بدون قيود، والاستيراد بحد الباقة، وعلى دفعات
+        // (25 منتج في الدفعة) مع شريط تقدم عشان الواجهة والتخزين مايتجهدوش.
+        // ملحوظة: منتجات المتجر مخزّنة جوه مستند المتجر نفسه، فالدفعات بتتحفظ تدريجيًا فيه
+        // (نفس فكرة WriteBatch من غير ما نكتب ٥٠٠ مستند منفصل).
+        // ============================================================
+        let __xlsxPromise = null;
+        function loadXlsxLib() {
+            if(window.XLSX) return Promise.resolve();
+            if(__xlsxPromise) return __xlsxPromise;
+            __xlsxPromise = new Promise(function(resolve, reject) {
+                let s = document.createElement('script');
+                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                s.onload = resolve;
+                s.onerror = function() { __xlsxPromise = null; reject(new Error('xlsx-load')); };
+                document.head.appendChild(s);
+            });
+            return __xlsxPromise;
+        }
+        const PRODUCT_XLSX_COLS = ['category', 'name', 'price', 'description', 'image_url', 'stock', 'discount', 'cost_price'];
+        const PRODUCT_XLSX_ALIASES = {
+            name: ['name', 'product', 'اسم المنتج', 'الاسم', 'المنتج'],
+            price: ['price', 'السعر'],
+            category: ['category', 'القسم', 'التصنيف'],
+            description: ['description', 'desc', 'الوصف'],
+            image_url: ['image_url', 'image', 'imageurl', 'الصورة', 'رابط الصورة'],
+            stock: ['stock', 'quantity', 'qty', 'المخزون', 'الكمية'],
+            discount: ['discount', 'الخصم'],
+            cost_price: ['cost_price', 'costprice', 'cost', 'سعر التكلفة', 'التكلفة']
+        };
+
+        function __currentMerchantStore() {
+            let merchant = localStorage.getItem('currentActiveMerchant');
+            let stores = JSON.parse(localStorage.getItem('allStores')) || {};
+            return { merchant: merchant, stores: stores, store: stores[merchant] };
+        }
+
+        async function exportProductsToExcel() {
+            let ctx = __currentMerchantStore();
+            if(!ctx.store) return;
+            try { await loadXlsxLib(); } catch(e) { alert(t('import_lib_fail', 'تعذر تحميل مكتبة Excel، تأكد من اتصال الإنترنت.')); return; }
+            let rows = (ctx.store.products || []).map(function(p) {
+                return {
+                    category: p.category || '',
+                    name: p.name || '',
+                    price: p.price,
+                    description: stripHtmlTags(p.desc || '').trim(),
+                    image_url: (p.image && /^https?:/i.test(p.image)) ? p.image : '',
+                    stock: (p.stock === null || p.stock === undefined) ? '' : p.stock,
+                    discount: p.discount || 0,
+                    cost_price: (p.costPrice === null || p.costPrice === undefined) ? '' : p.costPrice
+                };
+            });
+            if(rows.length === 0) showToast(t('export_none_toast', 'لا توجد منتجات بعد، سنحمّل لك ملفًا فارغًا بالأعمدة.'));
+            let ws = XLSX.utils.json_to_sheet(rows, { header: PRODUCT_XLSX_COLS });
+            let wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'products');
+            XLSX.writeFile(wb, 'products-' + ctx.merchant + '-' + new Date().toISOString().slice(0, 10) + '.xlsx');
+        }
+
+        async function downloadProductsTemplate() {
+            try { await loadXlsxLib(); } catch(e) { alert(t('import_lib_fail', 'تعذر تحميل مكتبة Excel، تأكد من اتصال الإنترنت.')); return; }
+            let ws = XLSX.utils.json_to_sheet([{ category: 'عام', name: 'Product 1', price: 100, description: '', image_url: '', stock: 10, discount: 0, cost_price: 60 }], { header: PRODUCT_XLSX_COLS });
+            let wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'products');
+            XLSX.writeFile(wb, 'products-template.xlsx');
+        }
+
+        let __importRunning = false;
+        function __setImportProgress(show, label, pct) {
+            let box = document.getElementById('productsImportProgress');
+            if(!box) return;
+            box.classList.toggle('hidden', !show);
+            let l = document.getElementById('productsImportProgressLabel');
+            let f = document.getElementById('productsImportProgressFill');
+            if(l) l.textContent = label || '';
+            if(f) f.style.width = (pct || 0) + '%';
+        }
+        function __pickCell(row, field) {
+            let keys = Object.keys(row);
+            let aliases = PRODUCT_XLSX_ALIASES[field];
+            for(let k of keys) {
+                if(aliases.indexOf(String(k).trim().toLowerCase()) !== -1) return row[k];
+            }
+            return '';
+        }
+
+        async function importProductsFromExcel(input) {
+            let file = input && input.files && input.files[0];
+            if(input) input.value = '';
+            if(!file) return;
+            if(__importRunning) { showToast(t('import_busy', 'الاستيراد شغال بالفعل، انتظر لحظة.')); return; }
+            let ctx = __currentMerchantStore();
+            if(!ctx.store) return;
+            __importRunning = true;
+            try {
+                __setImportProgress(true, t('import_reading', '⏳ جارٍ قراءة الملف...'), 3);
+                try { await loadXlsxLib(); } catch(e) { alert(t('import_lib_fail', 'تعذر تحميل مكتبة Excel، تأكد من اتصال الإنترنت.')); return; }
+                let rows;
+                try {
+                    let wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+                    rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+                } catch(e) { alert(t('import_bad_file', 'الملف غير صالح، استخدم ملف Excel أو CSV بالأعمدة المطلوبة.')); return; }
+
+                let store = ctx.store;
+                store.products = store.products || [];
+                store.categories = store.categories || [];
+                let seen = {};
+                store.products.forEach(function(p) { seen[String(p.name).trim().toLowerCase()] = true; });
+                let valid = [], skipped = 0;
+                rows.forEach(function(r) {
+                    let name = String(__pickCell(r, 'name') || '').trim();
+                    let price = parseFloat(String(__pickCell(r, 'price')).replace(',', '.'));
+                    if(!name || !(price > 0) || seen[name.toLowerCase()]) { skipped++; return; }
+                    seen[name.toLowerCase()] = true;
+                    valid.push({ r: r, name: name, price: price });
+                });
+                if(valid.length === 0) { alert(t('import_empty', 'لم يتم العثور على منتجات صالحة للاستيراد في الملف.')); return; }
+
+                // 🏷️ حد الباقة (يشمل الحصة الشهرية التراكمية)
+                let plan = getPlanForStore(store);
+                let allow = getProductAllowance(store, plan);
+                let remaining = allow.allowed === -1 ? Infinity : Math.max(0, allow.allowed - store.products.length);
+                let toImport = valid.slice(0, remaining === Infinity ? valid.length : remaining);
+                let limited = toImport.length < valid.length;
+                if(toImport.length === 0) {
+                    alert(t('import_limit_msg', 'تم استيراد {x} منتج فقط للوصول للحد الأقصى لباقتك ({y} منتج). لترقية الباقة واستيراد المزيد يرجى التواصل مع الإدارة.').replace('{x}', 0).replace('{y}', allow.allowed));
+                    return;
+                }
+
+                const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="#e5e7eb"/><text x="200" y="210" font-size="42" text-anchor="middle" fill="#9ca3af">📦</text></svg>');
+                let catNames = store.categories.map(function(c) { return c.name; });
+                let catLimit = (plan.categoryLimit === undefined || plan.categoryLimit === null) ? -1 : plan.categoryLimit;
+                function resolveCategory(raw) {
+                    raw = String(raw || '').trim();
+                    if(raw && catNames.indexOf(raw) !== -1) return raw;
+                    if(raw && (catLimit === -1 || store.categories.length < catLimit)) {
+                        store.categories.push({ name: raw, image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400' });
+                        catNames.push(raw);
+                        return raw;
+                    }
+                    return catNames[0] || 'عام';
+                }
+
+                const BATCH = 25;
+                let done = 0;
+                for(let i = 0; i < toImport.length; i += BATCH) {
+                    let chunk = toImport.slice(i, i + BATCH);
+                    chunk.forEach(function(it) {
+                        let r = it.r;
+                        let stockRaw = String(__pickCell(r, 'stock')).trim();
+                        let costRaw = String(__pickCell(r, 'cost_price')).trim();
+                        let disc = parseFloat(__pickCell(r, 'discount'));
+                        let img = String(__pickCell(r, 'image_url') || '').trim();
+                        let descTxt = String(__pickCell(r, 'description') || '').trim();
+                        store.products.push({
+                            category: resolveCategory(__pickCell(r, 'category')),
+                            name: it.name,
+                            price: String(it.price),
+                            image: /^https?:/i.test(img) ? img : PLACEHOLDER_IMG,
+                            desc: descTxt ? escapeHtml(descTxt) : '',
+                            gallery: [],
+                            discount: isNaN(disc) ? 0 : Math.max(0, Math.min(95, disc)),
+                            discountColor: '#dc2626',
+                            memberDiscount: 0,
+                            returnDays: 0,
+                            stock: stockRaw === '' ? null : Math.max(0, parseInt(stockRaw) || 0),
+                            stockUnitLabel: '',
+                            stockAlertEnabled: false,
+                            stockAlertThreshold: 5,
+                            showStockToCustomer: false,
+                            costPrice: costRaw === '' ? null : Math.max(0, parseFloat(costRaw) || 0),
+                            countdownEnabled: false, countdownEnd: null, countdownLabel: '', countdownColor: '#dc2626',
+                            reviews: []
+                        });
+                    });
+                    done += chunk.length;
+                    if(!saveAllStores(ctx.stores)) { return; }
+                    __setImportProgress(true, t('import_progress', '⏳ جارٍ الاستيراد {done} / {total}').replace('{done}', done).replace('{total}', toImport.length), Math.round(done / toImport.length * 100));
+                    await new Promise(function(r) { setTimeout(r, 30); });   // نتنفّس بين الدفعات
+                }
+                try { loadDashboard(); } catch(e) {}
+                if(limited) {
+                    alert(t('import_limit_msg', 'تم استيراد {x} منتج فقط للوصول للحد الأقصى لباقتك ({y} منتج). لترقية الباقة واستيراد المزيد يرجى التواصل مع الإدارة.').replace('{x}', toImport.length).replace('{y}', allow.allowed));
+                } else {
+                    showToast(t('import_done', '✅ اكتمل الاستيراد: {x} منتج، وتم تخطي {s} (مكرر أو غير صالح).').replace('{x}', toImport.length).replace('{s}', skipped));
+                }
+            } catch(e) {
+                console.error('importProductsFromExcel error:', e);
+                alert(t('import_bad_file', 'الملف غير صالح، استخدم ملف Excel أو CSV بالأعمدة المطلوبة.'));
+            } finally {
+                __importRunning = false;
+                setTimeout(function() { __setImportProgress(false); }, 1500);
+            }
+        }

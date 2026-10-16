@@ -1243,3 +1243,63 @@ function fetchBuyerReviewsBlocked(storeKey, buyerId) {
         .catch(() => false);
 }
 window.fetchBuyerReviewsBlocked = fetchBuyerReviewsBlocked;
+
+// 🌐 الدومين الخاص: مستند domains/{الدومين} => { storeKey } للتعرّف على المتجر من أي جهاز،
+// وضمان إن الدومين الواحد مايتربطش بمتجرين. (محتاج قاعدة: match /domains/{d} { allow read, write: if true; })
+async function claimCustomDomain(domain, storeKey) {
+    if (!__cloudEnabled || !__cloudDb) return { ok: true, offline: true };
+    try {
+        let ref = __cloudDb.collection('domains').doc(domain);
+        let snap = await ref.get();
+        if (snap.exists && snap.data().storeKey && snap.data().storeKey !== storeKey) return { ok: false, error: 'taken' };
+        await ref.set({ storeKey: storeKey, updatedAt: Date.now() });
+        return { ok: true };
+    } catch (err) {
+        console.warn('⚠️ تعذر تسجيل الدومين سحابيًا (راجع قواعد domains):', err && err.message);
+        return { ok: true, offline: true };
+    }
+}
+window.claimCustomDomain = claimCustomDomain;
+
+async function releaseCustomDomain(domain, storeKey) {
+    if (!__cloudEnabled || !__cloudDb || !domain) return false;
+    try {
+        let ref = __cloudDb.collection('domains').doc(domain);
+        let snap = await ref.get();
+        if (snap.exists && snap.data().storeKey === storeKey) await ref.delete();
+        return true;
+    } catch (err) { return false; }
+}
+window.releaseCustomDomain = releaseCustomDomain;
+
+async function resolveCustomDomain(host) {
+    if (!__cloudEnabled || !__cloudDb || !host) return null;
+    try {
+        let snap = await __withFirestoreTimeout(__cloudDb.collection('domains').doc(host).get(), 8000);
+        return snap.exists ? (snap.data().storeKey || null) : null;
+    } catch (err) { return null; }
+}
+window.resolveCustomDomain = resolveCustomDomain;
+
+// ☁️ التفعيل التلقائي للدومينات عبر Cloudflare for SaaS: ضع هنا رابط الـWorker (راجع CLOUDFLARE-SETUP.md)
+// مثال: 'https://saas.yourplatform.com/api'. اتركه فارغًا لو لسه ماجهزتش Cloudflare (يشتغل بالوضع اليدوي).
+window.CUSTOM_DOMAIN_API_URL = '';
+
+async function customDomainApi(method, path, body) {
+    if (!window.CUSTOM_DOMAIN_API_URL) return { ok: false, error: 'not_configured' };
+    try {
+        let user = window.firebaseAuth && window.firebaseAuth.currentUser;
+        if (!user) return { ok: false, error: 'no_auth' };
+        let token = await user.getIdToken();
+        let res = await fetch(window.CUSTOM_DOMAIN_API_URL.replace(/\/$/, '') + path, {
+            method: method,
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: body ? JSON.stringify(body) : undefined
+        });
+        let data = await res.json().catch(function() { return {}; });
+        return Object.assign({ ok: res.ok }, data);
+    } catch (err) {
+        return { ok: false, error: 'network' };
+    }
+}
+window.customDomainApi = customDomainApi;

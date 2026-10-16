@@ -255,7 +255,7 @@
             /* 🖥️ شاشات الكمبيوتر / وضع "سطح المكتب": الصفحة تملا العرض بدل عمود ضيق في النص،
                والأقسام والمنتجات 3 جنب بعض (أو أكتر على الشاشات الأعرض) بدل 2 */
             .container { max-width: 1200px; padding: 20px 24px; }
-            #authSection, #cartSection { max-width: 720px; margin-inline: auto; }
+            #authSection { max-width: 720px; margin-inline: auto; }
             #dashboardSection, #adminSection { max-width: 980px; margin-inline: auto; }
             .banner-slideshow { height: 300px; border-radius: 18px; }
             .categories-grid { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
@@ -322,3 +322,27 @@
         .dash-groups-bar::-webkit-scrollbar { display: none; }
         .dash-groups-bar button { width: auto; margin: 0; flex-shrink: 0; padding: 8px 14px; font-size: 12.5px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 20px; white-space: nowrap; }
         .dash-groups-bar button.active { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+
+/* 🗂️ أقسام فرعية داخل بنود اللوحة الكبيرة (إعدادات المتجر): كل موضوع في بند مستقل */
+details.dash-sub { border: 1px solid var(--border-color); border-radius: 12px; margin: 8px 0; background: #fff; }
+details.dash-sub > summary { cursor: pointer; padding: 12px 14px; font-weight: bold; font-size: 13.5px; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+details.dash-sub > summary::-webkit-details-marker { display: none; }
+details.dash-sub > summary::after { content: '▾'; color: var(--text-muted); transition: transform .2s; }
+details.dash-sub[open] > summary::after { transform: rotate(180deg); }
+details.dash-sub[open] > summary { border-bottom: 1px solid var(--border-color); }
+.dash-sub-body { padding: 12px 14px; }
+/* 👤 صفحة "حسابي" للمشتري: صفحة كاملة بين الهيدر والشريط السفلي بدل نافذة عائمة */
+#buyerProfileModal.page-like { align-items: flex-start; justify-content: center; padding: 0; backdrop-filter: none; overflow-y: auto; z-index: 90; background: var(--page-bg, #f5f1eb); }
+#buyerProfileModal.page-like .modal-content { max-width: 1200px; width: 100%; max-height: none; border-radius: 0; box-shadow: none; background: transparent; padding: 15px 15px 30px; }
+@media (min-width: 700px) { #buyerProfileModal.page-like .modal-content { padding: 20px 24px 40px; } }
+
+/* 📄 تسجيل الدخول وتتبع الطلب: صفحات كاملة (مش نوافذ عائمة) بين الهيدر والشريط السفلي */
+#buyerAuthModal.page-like, #trackOrderModal.page-like { align-items: flex-start; justify-content: center; padding: 0; backdrop-filter: none; overflow-y: auto; z-index: 90; background: var(--page-bg, #f5f1eb); }
+#buyerAuthModal.page-like .modal-content, #trackOrderModal.page-like .modal-content { max-width: 720px; width: calc(100% - 30px); max-height: none; border-radius: 16px; margin: 16px auto 30px; box-shadow: 0 4px 18px rgba(0,0,0,.07); }
+.track-steps { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 14px 0; }
+@media (min-width: 700px) { .track-steps { grid-template-columns: repeat(3, 1fr); } }
+.track-step { background: var(--bg-body, #f9f6f1); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; text-align: center; }
+.track-step b { display: block; font-size: 13px; margin-bottom: 4px; }
+.track-step span { font-size: 11.5px; color: var(--text-muted); line-height: 1.7; }
+.xl-progress-bg { background: #e5e7eb; border-radius: 8px; height: 12px; overflow: hidden; margin-top: 6px; }
+.xl-progress-fill { background: var(--primary-color); height: 100%; width: 0; transition: width .2s; }

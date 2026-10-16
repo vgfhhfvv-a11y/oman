@@ -301,6 +301,19 @@
                 <p data-i18n-html="prod_fields_done_note" style="font-size:11px; color:var(--text-muted); text-align:center; margin:14px 0;"><i class="fa fa-arrow-up"></i> خلصت كل الحقول؟ زرار "نشر المنتج" / "حفظ التعديل" موجود فوق الفورم مباشرة.</p>
 
                 <h4 style="margin-top: 20px;" data-i18n="prod_current_h">المنتجات الحالية</h4>
+                <div id="productsExcelBox" style="background:#f9fafb; border:1px solid var(--border-color); border-radius:12px; padding:12px; margin:10px 0 14px;">
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button type="button" class="secondary" style="width:auto; margin:0; padding:8px 12px; font-size:12px;" onclick="exportProductsToExcel()" data-i18n="products_export_btn">📤 تصدير المنتجات (Excel)</button>
+                        <button type="button" class="secondary" style="width:auto; margin:0; padding:8px 12px; font-size:12px;" onclick="document.getElementById('productsImportFile').click()" data-i18n="products_import_btn">📥 استيراد من Excel</button>
+                        <button type="button" class="secondary" style="width:auto; margin:0; padding:8px 12px; font-size:12px;" onclick="downloadProductsTemplate()" data-i18n="products_template_btn">📄 تحميل نموذج</button>
+                        <input type="file" id="productsImportFile" accept=".xlsx,.xls,.csv" style="display:none;" onchange="importProductsFromExcel(this)">
+                    </div>
+                    <p data-i18n="products_import_hint" style="font-size:10.5px; color:var(--text-muted); margin:8px 0 0;">الأعمدة: category, name, price, description, image_url, stock, discount, cost_price. الاستيراد يلتزم بحد باقتك.</p>
+                    <div id="productsImportProgress" class="hidden" style="margin-top:10px;">
+                        <div id="productsImportProgressLabel" style="font-size:12px; font-weight:bold;"></div>
+                        <div class="xl-progress-bg"><div class="xl-progress-fill" id="productsImportProgressFill"></div></div>
+                    </div>
+                </div>
                 <div id="merchantProductsList"></div>
 
                 <!-- الدعم الفني الموزع آلياً -->
@@ -351,13 +364,33 @@
             </div>
             </div>
 
+            <details class="dash-accordion" id="customDomainAccordion" style="display:none;">
+            <summary><span><i class="fa fa-globe"></i> <span data-i18n="dash_domain_title">🌐 الدومين الخاص</span></span></summary>
+            <div class="box">
+                <p data-i18n="domain_intro" style="font-size:12px; color:var(--text-muted); margin-top:0;">اربط دومينك الخاص بمتجرك، وسيفتح متجرك مباشرة عندما يكتبه الزائر في المتصفح.</p>
+                <label data-i18n="domain_input_label" style="font-size:12px; font-weight:bold;">دومينك الخاص:</label>
+                <input type="text" id="customDomainInput" dir="ltr" data-i18n-ph="domain_input_ph" placeholder="mystore.com">
+                <div id="customDomainStatus" style="font-size:12px; margin:6px 0;"></div>
+                <div style="display:flex; gap:8px;">
+                    <button id="customDomainSaveBtn" onclick="saveCustomDomain()" data-i18n="domain_save_btn">🔗 ربط الدومين</button>
+                    <button id="customDomainCheckBtn" class="secondary hidden" onclick="checkCustomDomainStatus()" data-i18n="domain_check_status_btn">🔄 فحص الحالة</button>
+                    <button id="customDomainRemoveBtn" class="danger hidden" onclick="removeCustomDomain()" data-i18n="domain_remove_btn">فصل الدومين</button>
+                </div>
+                <h4 data-i18n="domain_dns_title" style="margin-top:14px;">📋 خطوات إعداد الـDNS</h4>
+                <pre id="customDomainDnsSteps" dir="auto" style="white-space:pre-wrap; font-family:inherit; font-size:11.5px; background:#f9fafb; border:1px solid var(--border-color); border-radius:8px; padding:10px;"></pre>
+                <p id="customDomainManualNote" data-i18n="domain_dns_note" style="font-size:10.5px; color:var(--text-muted);">ملاحظة: يجب أن تضيف إدارة المنصة الدومين على الاستضافة (شهادة SSL) ليعمل بالكامل.</p>
+            </div>
+            </details>
+
             <details class="dash-accordion">
             <summary><span><i class="fa fa-store"></i> <span data-i18n="dash_settings_title">إدارة المتجر والإعدادات</span></span></summary>
             <div class="box">
                 <h3 id="dashStoreTitle" data-i18n="set_title_main" style="color: var(--primary-color); margin-top:0;">إدارة المتجر</h3>
                 <hr style="border-color: var(--border-color); margin: 10px 0;">
                 
-                <h4 data-i18n="set_identity_h">⚙️ هوية المتجر وبيانات التواصل</h4>
+                <details class="dash-sub">
+                <summary><span data-i18n="set_identity_h">⚙️ هوية المتجر وبيانات التواصل</span></summary>
+                <div class="dash-sub-body">
                 
                 <label data-i18n="set_store_name_label" style="font-size: 12px; font-weight: bold;">اسم المتجر (اللي يشوفه العملاء):</label>
                 <input type="text" id="storeNameInput" data-i18n-ph="set_store_name_ph" placeholder="أدخل اسم متجرك">
@@ -441,14 +474,20 @@
                 <p data-i18n="set_currency_note" style="font-size:10.5px; color:var(--text-muted); margin-top:-6px;">تقدر كمان تغيّرها بسرعة من نفس مكان إضافة المنتج مباشرة.</p>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
-                <h4 data-i18n="set_change_pass_h" style="margin-bottom:6px;">🔑 تغيير كلمة المرور</h4>
+                </div></details>
+                <details class="dash-sub">
+                <summary><span data-i18n="set_change_pass_h">🔑 تغيير كلمة المرور</span></summary>
+                <div class="dash-sub-body">
                 <input type="password" id="currentPassInput" data-i18n-ph="set_current_pass_ph" placeholder="كلمة المرور الحالية">
                 <input type="password" id="newPassInput" data-i18n-ph="set_new_pass_ph" placeholder="كلمة المرور الجديدة">
                 <input type="password" id="confirmNewPassInput" data-i18n-ph="set_confirm_pass_ph" placeholder="تأكيد كلمة المرور الجديدة">
                 <button class="secondary" data-i18n-html="set_change_pass_btn" onclick="changeMyPassword()"><i class="fa fa-key"></i> تغيير كلمة المرور</button>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
-                <h4 data-i18n="set_delivery_h" style="margin-bottom:6px;">🚚 إعدادات التوصيل (اختياري)</h4>
+                </div></details>
+                <details class="dash-sub">
+                <summary><span data-i18n="set_delivery_h">🚚 إعدادات التوصيل (اختياري)</span></summary>
+                <div class="dash-sub-body">
                 <label data-i18n="set_delivery_fee_label" style="font-size: 12px;">سعر التوصيل (اتركه فارغاً إذا كنت لا توفر خدمة توصيل - العميل هيستلم من المتجر فقط):</label>
                 <input type="number" id="storeDeliveryFeeInput" data-i18n-ph="set_delivery_fee_ph" placeholder="مثال: 20">
                 <label data-i18n="set_free_delivery_label" style="font-size: 12px;">التوصيل مجاني للطلبات الأعلى من (اختياري):</label>
@@ -459,7 +498,10 @@
                 <p data-i18n="set_delivery_note" style="font-size:11px; color:var(--text-muted); margin-top:-6px;">هذه الأرقام تُحسب فعلياً داخل السلة تلقائياً عند اختيار العميل "توصيل"، وليست شكلية فقط.</p>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
-                <h4 data-i18n="set_phone_field_h" style="margin-bottom:6px;">📞 طلب رقم هاتف العميل عند الشراء</h4>
+                </div></details>
+                <details class="dash-sub">
+                <summary><span data-i18n="set_phone_field_h">📞 طلب رقم هاتف العميل عند الشراء</span></summary>
+                <div class="dash-sub-body">
                 <p data-i18n="set_phone_field_desc" style="font-size:11px; color:var(--text-muted); margin-top:-4px;">كتير من العملاء بيحبوا الطلب السريع وميحبوش يكتبوا رقمهم. اختار الوضع اللي يناسب متجرك.</p>
                 <select id="storePhoneFieldModeSelect">
                     <option value="optional" data-i18n="set_phone_opt_optional">اختياري (موصى به) — الخانة ظاهرة برسالة واضحة إنها مش إجبارية</option>
@@ -469,7 +511,10 @@
                 <p data-i18n="set_phone_field_note" style="font-size:10.5px; color:var(--text-muted); margin-top:-6px;">لو طلب العميل عبر واتساب، هتقدر تشوف رقمه في الشات نفسه أوتوماتيك حتى لو سابه فاضي هنا.</p>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
-                <h4 data-i18n="set_buyers_h" style="margin-bottom:6px;">👤 المشترون والتعليقات</h4>
+                </div></details>
+                <details class="dash-sub">
+                <summary><span data-i18n="set_buyers_h">👤 المشترون والتعليقات</span></summary>
+                <div class="dash-sub-body">
                 <label style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;"><span data-i18n="set_guest_checkout_label">🛒 السماح بالشراء بدون تسجيل حساب (الوضع الافتراضي الموصى به)</span>
                     <input type="checkbox" id="storeGuestCheckoutToggle" style="width:auto; margin:0;" checked>
                 </label>
@@ -521,7 +566,10 @@
                 </div>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
-                <h4 data-i18n="set_social_h" style="margin-bottom:6px;">🔗 روابط التواصل الاجتماعي (اختياري)</h4>
+                </div></details>
+                <details class="dash-sub">
+                <summary><span data-i18n="set_social_h">🔗 روابط التواصل الاجتماعي (اختياري)</span></summary>
+                <div class="dash-sub-body">
                 <label style="font-size: 12px;"><i class="fab fa-facebook" style="color:#1877f2;"></i> <span data-i18n="set_facebook_label">رابط صفحة الفيسبوك:</span></label>
                 <input type="text" id="storeFacebookInput" placeholder="https://facebook.com/yourpage">
                 <label style="font-size: 12px;"><i class="fab fa-instagram" style="color:#e1306c;"></i> <span data-i18n="set_instagram_label">رابط الانستقرام:</span></label>
@@ -536,17 +584,26 @@
                 <input type="text" id="storeCallPhoneInput" data-i18n-ph="set_call_phone_ph" placeholder="مثال: 201012345678">
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
-                <h4 data-i18n="set_email_security_h" style="margin-bottom:6px;">🔒 تأمين الحساب بالبريد الإلكتروني (اختياري)</h4>
+                </div></details>
+                <details class="dash-sub">
+                <summary><span data-i18n="set_email_security_h">🔒 تأمين الحساب بالبريد الإلكتروني (اختياري)</span></summary>
+                <div class="dash-sub-body">
                 <p data-i18n="set_email_security_note" style="font-size:11px; color:var(--text-muted); margin-top:-4px;">لو ضفت بريدك وأكدته بالكود، هيبقى عندك طريقة إضافية لإثبات ملكية الحساب. الخطوة دي مش إجبارية.</p>
                 <div id="emailSecurityBox"></div>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
-                <h4 data-i18n="set_design_h" style="margin-bottom:6px;">🎨 تصميم وألوان متجرك</h4>
+                </div></details>
+                <details class="dash-sub">
+                <summary><span data-i18n="set_design_h">🎨 تصميم وألوان متجرك</span></summary>
+                <div class="dash-sub-body">
                 <p data-i18n="set_design_desc" style="font-size:11px; color:var(--text-muted); margin-top:-4px;">اختار تشكيلة ألوان جاهزة لمتجرك، أو لوّنه بنفسك بالكامل — يتغيّر شكل المتجر فورًا للعميل.</p>
                 <div id="merchantColorsGateBox"></div>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
-                <h4 data-i18n="set_copyright_h" style="margin-bottom:6px;">©️ سطر حقوق النشر أسفل متجرك</h4>
+                </div></details>
+                <details class="dash-sub">
+                <summary><span data-i18n="set_copyright_h">©️ سطر حقوق النشر أسفل متجرك</span></summary>
+                <div class="dash-sub-body">
                 <p data-i18n="set_copyright_desc" style="font-size:11px; color:var(--text-muted); margin-top:-4px;">اختر هل يظهر اسم المنصة مع متجرك أسفل الصفحة، أو اسم متجرك بس (ميزة للباقات الاحترافية).</p>
                 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                     <select id="merchantCopyrightModeSelect" onchange="onMerchantCopyrightModeChange(this)" style="width:auto; margin:0;">
@@ -557,12 +614,18 @@
                 </div>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
-                <h4 data-i18n="set_paylink_h" style="margin-bottom:6px;">💳 رابط الدفع الأونلاين (اختياري)</h4>
+                </div></details>
+                <details class="dash-sub">
+                <summary><span data-i18n="set_paylink_h">💳 رابط الدفع الأونلاين (اختياري)</span></summary>
+                <div class="dash-sub-body">
                 <p data-i18n="set_paylink_desc" style="font-size:11px; color:var(--text-muted); margin-top:-4px;">لو عندك رابط دفع جاهز (Instapay، فودافون كاش، فوري، أو أي رابط دفع تاني)، حطه هنا وهيظهر للعميل كزرار دفع مباشر وقت تأكيد الطلب، غير طريقة "الدفع عند الاستلام" العادية.</p>
                 <input type="text" id="storePaymentLinkInput" data-i18n-ph="set_paylink_ph" placeholder="https://ipn.eg/S/yourname/instapay/xxxxx">
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
-                <h4 data-i18n="set_push_h" style="margin-bottom:6px;">🔔 إشعارات الطلبات الجديدة</h4>
+                </div></details>
+                <details class="dash-sub">
+                <summary><span data-i18n="set_push_h">🔔 إشعارات الطلبات الجديدة</span></summary>
+                <div class="dash-sub-body">
                 <p data-i18n="set_push_desc" style="font-size:11px; color:var(--text-muted); margin-top:-4px;">لما تكون مفعّلة، هتوصلك إشعارات فورية لما يجيلك طلب جديد، حتى لو مش فاتح المتجر دلوقتي.</p>
                 <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
                     <label class="toggle-switch">
@@ -574,7 +637,10 @@
                 <span id="pushNotifStatus" style="font-size:11px; color:var(--text-muted);"></span>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
-                <h4 data-i18n="set_about_h" style="margin-bottom:6px;">ℹ️ من نحن (يظهر للمشتري عند الضغط على أيقونة "من نحن" داخل متجرك فقط)</h4>
+                </div></details>
+                <details class="dash-sub">
+                <summary><span data-i18n="set_about_h">ℹ️ من نحن (يظهر للمشتري عند الضغط على أيقونة "من نحن" داخل متجرك فقط)</span></summary>
+                <div class="dash-sub-body">
                 <p data-i18n="set_about_note" style="font-size:11px; color:var(--text-muted); margin-top:-6px;">هذا المحتوى خاص بمتجرك أنت فقط، ولا يظهر في أي متجر آخر.</p>
 
                 <!-- ============================================================
@@ -613,12 +679,18 @@
                 </div>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
-                <h4 data-i18n="how_to_shop_h" style="margin-bottom:6px;">🛒 إزاي يشتري العميل من متجرك؟ (اختياري)</h4>
+                </div></details>
+                <details class="dash-sub">
+                <summary><span data-i18n="how_to_shop_h">🛒 إزاي يشتري العميل من متجرك؟ (اختياري)</span></summary>
+                <div class="dash-sub-body">
                 <p data-i18n="how_to_shop_note" style="font-size:11px; color:var(--text-muted); margin-top:-6px;">اشرح للعميل خطوات الشراء ومتابعة الطلب بأسلوبك الخاص. لو سيبته فاضي، هيظهر نص افتراضي جاهز يشرح الخطوات الأساسية بما فيها تتبع الطلب.</p>
                 <textarea id="storeHowToShopInput" rows="5" data-i18n-ph="how_to_shop_ph" placeholder="سيبها فاضية لاستخدام النص الافتراضي الجاهز"></textarea>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
-                <h4 data-i18n="set_return_policy_h" style="margin-bottom:6px;">↩️ سياسة الإرجاع (اختياري)</h4>
+                </div></details>
+                <details class="dash-sub">
+                <summary><span data-i18n="set_return_policy_h">↩️ سياسة الإرجاع (اختياري)</span></summary>
+                <div class="dash-sub-body">
                 <p data-i18n="set_return_policy_note" style="font-size:11px; color:var(--text-muted); margin-top:-6px;">اكتب هنا شروط الإرجاع الخاصة بمتجرك (مثلاً: حالة المنتج، مين بيدفع مصاريف الشحن، خلال كام يوم...). النص ده هيظهر للمشتري لما يضغط على "سياسة الإرجاع" في صفحة أي منتج.</p>
                 <textarea id="storeReturnPolicyInput" data-i18n-ph="set_return_policy_ph" placeholder="مثال: يمكن إرجاع المنتج خلال 3 أيام من الاستلام بشرط أن يكون بحالته الأصلية وبكرتونته، ويتحمل العميل مصاريف الشحن الخاصة بالإرجاع..."></textarea>
 
@@ -635,7 +707,9 @@
                 </div>
                 <button id="merchantUndoImportBtn" class="hidden secondary" onclick="merchantUndoLastImport()" style="margin-top:8px; border-color:#f59e0b; color:#b45309;"><i class="fa fa-rotate-left"></i> <span data-i18n="merchant_undo_import_btn">تراجع عن آخر استيراد</span></button>
 
-                <div id="storageQuotaBox" style="margin-top:10px; font-size:12px;"></div></div>
+                <div id="storageQuotaBox" style="margin-top:10px; font-size:12px;"></div>
+                </div></details>
+            </div>
             </details>
 
             <!-- ============================================================
