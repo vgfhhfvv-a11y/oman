@@ -84,6 +84,7 @@
                 </summary>
                 <div style="padding:0 14px 14px; font-size:11.5px; color:#166534; line-height:1.8;">
                     <p style="margin:0 0 8px;" data-i18n="activate_banner_body">اسم الدخول ممكن تنساه أو حد يلعب بيه ويوقفك تستنى دقايق قبل ما تحاول تاني. لو وثّقت بريدك وخليت الدخول بيه بس، تدخل فورًا من غير أي انتظار ومحدش هيقدر يعطلك. تقدر تفعّلها بنفسك في أي وقت من "🏪 إدارة المتجر والإعدادات ← تأمين الحساب بالبريد الإلكتروني" تحت.</p>
+                <button type="button" style="margin:0; background:#16a34a;" onclick="goToEmailSecuritySection()"><i class="fa fa-shield-alt"></i> <span data-i18n="activate_now_btn">فعّل الآن</span></button>
                 </div>
             </details>
 
@@ -474,6 +475,7 @@
                 <p data-i18n="set_currency_note" style="font-size:10.5px; color:var(--text-muted); margin-top:-6px;">تقدر كمان تغيّرها بسرعة من نفس مكان إضافة المنتج مباشرة.</p>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <button type="button" class="sub-save-btn" data-i18n-html="sub_save_btn" onclick="saveMerchantSettings()"><i class="fa fa-save"></i> حفظ التغييرات</button>
                 </div></details>
                 <details class="dash-sub">
                 <summary><span data-i18n="set_change_pass_h">🔑 تغيير كلمة المرور</span></summary>
@@ -484,6 +486,7 @@
                 <button class="secondary" data-i18n-html="set_change_pass_btn" onclick="changeMyPassword()"><i class="fa fa-key"></i> تغيير كلمة المرور</button>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <button type="button" class="sub-save-btn" data-i18n-html="sub_save_btn" onclick="saveMerchantSettings()"><i class="fa fa-save"></i> حفظ التغييرات</button>
                 </div></details>
                 <details class="dash-sub">
                 <summary><span data-i18n="set_delivery_h">🚚 إعدادات التوصيل (اختياري)</span></summary>
@@ -498,6 +501,7 @@
                 <p data-i18n="set_delivery_note" style="font-size:11px; color:var(--text-muted); margin-top:-6px;">هذه الأرقام تُحسب فعلياً داخل السلة تلقائياً عند اختيار العميل "توصيل"، وليست شكلية فقط.</p>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <button type="button" class="sub-save-btn" data-i18n-html="sub_save_btn" onclick="saveMerchantSettings()"><i class="fa fa-save"></i> حفظ التغييرات</button>
                 </div></details>
                 <details class="dash-sub">
                 <summary><span data-i18n="set_phone_field_h">📞 طلب رقم هاتف العميل عند الشراء</span></summary>
@@ -511,6 +515,7 @@
                 <p data-i18n="set_phone_field_note" style="font-size:10.5px; color:var(--text-muted); margin-top:-6px;">لو طلب العميل عبر واتساب، هتقدر تشوف رقمه في الشات نفسه أوتوماتيك حتى لو سابه فاضي هنا.</p>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <button type="button" class="sub-save-btn" data-i18n-html="sub_save_btn" onclick="saveMerchantSettings()"><i class="fa fa-save"></i> حفظ التغييرات</button>
                 </div></details>
                 <details class="dash-sub">
                 <summary><span data-i18n="set_buyers_h">👤 المشترون والتعليقات</span></summary>
@@ -584,6 +589,7 @@
                 <input type="text" id="storeCallPhoneInput" data-i18n-ph="set_call_phone_ph" placeholder="مثال: 201012345678">
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <button type="button" class="sub-save-btn" data-i18n-html="sub_save_btn" onclick="saveMerchantSettings()"><i class="fa fa-save"></i> حفظ التغييرات</button>
                 </div></details>
                 <details class="dash-sub">
                 <summary><span data-i18n="set_email_security_h">🔒 تأمين الحساب بالبريد الإلكتروني (اختياري)</span></summary>
@@ -592,6 +598,7 @@
                 <div id="emailSecurityBox"></div>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <button type="button" class="sub-save-btn" data-i18n-html="sub_save_btn" onclick="saveMerchantSettings()"><i class="fa fa-save"></i> حفظ التغييرات</button>
                 </div></details>
                 <details class="dash-sub">
                 <summary><span data-i18n="set_design_h">🎨 تصميم وألوان متجرك</span></summary>
@@ -600,6 +607,7 @@
                 <div id="merchantColorsGateBox"></div>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <button type="button" class="sub-save-btn" data-i18n-html="sub_save_btn" onclick="saveMerchantSettings()"><i class="fa fa-save"></i> حفظ التغييرات</button>
                 </div></details>
                 <details class="dash-sub">
                 <summary><span data-i18n="set_copyright_h">©️ سطر حقوق النشر أسفل متجرك</span></summary>
@@ -614,6 +622,7 @@
                 </div>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <button type="button" class="sub-save-btn" data-i18n-html="sub_save_btn" onclick="saveMerchantSettings()"><i class="fa fa-save"></i> حفظ التغييرات</button>
                 </div></details>
                 <details class="dash-sub">
                 <summary><span data-i18n="set_paylink_h">💳 رابط الدفع الأونلاين (اختياري)</span></summary>
@@ -622,6 +631,7 @@
                 <input type="text" id="storePaymentLinkInput" data-i18n-ph="set_paylink_ph" placeholder="https://ipn.eg/S/yourname/instapay/xxxxx">
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <button type="button" class="sub-save-btn" data-i18n-html="sub_save_btn" onclick="saveMerchantSettings()"><i class="fa fa-save"></i> حفظ التغييرات</button>
                 </div></details>
                 <details class="dash-sub">
                 <summary><span data-i18n="set_push_h">🔔 إشعارات الطلبات الجديدة</span></summary>
@@ -637,6 +647,7 @@
                 <span id="pushNotifStatus" style="font-size:11px; color:var(--text-muted);"></span>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <button type="button" class="sub-save-btn" data-i18n-html="sub_save_btn" onclick="saveMerchantSettings()"><i class="fa fa-save"></i> حفظ التغييرات</button>
                 </div></details>
                 <details class="dash-sub">
                 <summary><span data-i18n="set_about_h">ℹ️ من نحن (يظهر للمشتري عند الضغط على أيقونة "من نحن" داخل متجرك فقط)</span></summary>
@@ -679,6 +690,7 @@
                 </div>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <button type="button" class="sub-save-btn" data-i18n-html="sub_save_btn" onclick="saveMerchantSettings()"><i class="fa fa-save"></i> حفظ التغييرات</button>
                 </div></details>
                 <details class="dash-sub">
                 <summary><span data-i18n="how_to_shop_h">🛒 إزاي يشتري العميل من متجرك؟ (اختياري)</span></summary>
@@ -687,6 +699,7 @@
                 <textarea id="storeHowToShopInput" rows="5" data-i18n-ph="how_to_shop_ph" placeholder="سيبها فاضية لاستخدام النص الافتراضي الجاهز"></textarea>
 
                 <hr style="border-color: var(--border-color); margin: 15px 0;">
+                <button type="button" class="sub-save-btn" data-i18n-html="sub_save_btn" onclick="saveMerchantSettings()"><i class="fa fa-save"></i> حفظ التغييرات</button>
                 </div></details>
                 <details class="dash-sub">
                 <summary><span data-i18n="set_return_policy_h">↩️ سياسة الإرجاع (اختياري)</span></summary>

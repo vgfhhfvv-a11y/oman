@@ -227,7 +227,7 @@
             stores[merchant].currency = value;
             if(!saveAllStores(stores)) return;
             syncCurrencyDropdowns(value);
-            showToast('✅ اتغيّرت عملة متجرك لـ ' + value);
+            showToast(t('m001', '✅ اتغيّرت عملة متجرك لـ ') + value);
         }
 
         // يخلي كل قوائم العملة المفتوحة في اللوحة (الإعدادات + فورم المنتج) متزامنة مع بعض دايمًا
@@ -285,10 +285,20 @@
             }
         }
 
+        // 🔀 جوجل بيقبل initialize مرة واحدة بس فعليًا (آخر نداء بيتجاهَل) - فكل مكان بيسجّل
+        // "معالج" خاص بيه، والـ callback الوحيد بيوزّع على آخر معالج مسجَّل. ده بيمنع إن دخول
+        // مشترٍ بجوجل يروح لمعالج التاجر (أو العكس).
+        function gisInitWith(handler) {
+            window.__gisHandler = handler;
+            if(!window.__gisInited) {
+                google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: function(r) { try { window.__gisHandler && window.__gisHandler(r); } catch(e) { console.error(e); } } });
+                window.__gisInited = true;
+            }
+        }
         function initMerchantGoogleSignIn() {
             if(!GOOGLE_SIGNIN_ENABLED || !window.google || !google.accounts || !google.accounts.id) return;
             try {
-                google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleMerchantCredential });
+                gisInitWith(handleGoogleMerchantCredential);
                 google.accounts.id.renderButton(document.getElementById('merchantGoogleSignInBtn'), { theme: 'outline', size: 'medium', text: 'signup_with' });
             } catch(e) { /* لو حدث خطأ في الإعداد، تجاهله بأمان دون كسر الصفحة */ }
         }
@@ -428,7 +438,7 @@
                     return true;
                 } catch(e2) {
                     console.error('فشل حفظ بيانات المتجر:', e2);
-                    alert('⚠️ مساحة التخزين في المتصفح ممتلئة ولم يتم الحفظ.\n\nالحل السريع: افتح الكود وسجّل دخول بحساب الأدمن ثم اضغط "تصدير نسخة احتياطية"، ثم امسح بيانات الموقع من إعدادات المتصفح وارجع استورد البيانات.\n\nأو اضغط "تنظيف طارئ" في صفحة تسجيل الدخول.');
+                    alert(t('m002', '⚠️ مساحة التخزين في المتصفح ممتلئة ولم يتم الحفظ.\n\nالحل السريع: افتح الكود وسجّل دخول بحساب الأدمن ثم اضغط "تصدير نسخة احتياطية"، ثم امسح بيانات الموقع من إعدادات المتصفح وارجع استورد البيانات.\n\nأو اضغط "تنظيف طارئ" في صفحة تسجيل الدخول.'));
                     return false;
                 }
             }
@@ -599,7 +609,7 @@
             });
         }
         function triggerInstallPrompt() {
-            if(!deferredInstallPrompt) { showToast('📱 التثبيت متاح بالفعل أو غير مدعوم على هذا المتصفح'); return; }
+            if(!deferredInstallPrompt) { showToast(t('m003', '📱 التثبيت متاح بالفعل أو غير مدعوم على هذا المتصفح')); return; }
             deferredInstallPrompt.prompt();
             deferredInstallPrompt.userChoice.finally(() => {
                 deferredInstallPrompt = null;
@@ -761,7 +771,7 @@
         function savePlatformLanguageSettings() {
             localStorage.setItem('platformDefaultLang', document.getElementById('platformDefaultLangSelect').value);
             localStorage.setItem('platformAutoDetectLang', document.getElementById('platformAutoDetectLangCheckbox').checked ? 'true' : 'false');
-            showToast('✅ اتحفظت إعدادات اللغة');
+            showToast(t('m004', '✅ اتحفظت إعدادات اللغة'));
         }
 
         // 🌍 اسم المنصة بلغة مختلفة لكل لغة (اختياري) - بتملأ خانة نص صغيرة لكل لغة مدعومة،
@@ -791,7 +801,7 @@
 
         function saveShowGuideInAboutStore() {
             localStorage.setItem('showGuideInAboutStore', document.getElementById('showGuideInAboutStoreCheckbox').checked ? 'true' : 'false');
-            showToast('✅ اتحفظ الإعداد');
+            showToast(t('m005', '✅ اتحفظ الإعداد'));
         }
 
         function populateFooterCopyrightSettings() {
@@ -807,7 +817,7 @@
             localStorage.setItem('footerCopyrightEnabled', document.getElementById('footerCopyrightEnabledCheckbox').checked ? 'true' : 'false');
             localStorage.setItem('footerCopyrightCustomText', document.getElementById('footerCopyrightTextInput').value.trim());
             localStorage.setItem('footerCopyrightScope', document.getElementById('footerCopyrightScopeSelect').value);
-            showToast('✅ اتحفظت إعدادات سطر الحقوق');
+            showToast(t('m006', '✅ اتحفظت إعدادات سطر الحقوق'));
         }
         // 🌍 سياسة الخصوصية بقت منفصلة لكل لغة - كل لغة ليها نصها الخاص جوه
         // privacyPolicyTextByLang (object بمفتاح كود اللغة)، عشان الزائر يشوف السياسة
@@ -1180,7 +1190,7 @@
                             url.search = '';
                             window.history.replaceState({}, '', url.toString());
                         } catch(e) {}
-                        setTimeout(() => showToast('⚠️ هذا المتجر غير متاح حاليًا.'), 200);
+                        setTimeout(() => showToast(t('m007', '⚠️ هذا المتجر غير متاح حاليًا.')), 200);
                     }
                 }
             }
@@ -1240,7 +1250,7 @@
                 callback();
             }).catch(function(err) {
                 console.error('فشل تحميل ملف لوحة التحكم (dashboard.html):', err);
-                alert('⚠️ حصل خطأ في تحميل لوحة التحكم. تأكد إن ملف dashboard.html موجود في نفس مجلد الاستضافة بجانب index.html، وحاول تحدّث الصفحة.');
+                alert(t('m008', '⚠️ حصل خطأ في تحميل لوحة التحكم. تأكد إن ملف dashboard.html موجود في نفس مجلد الاستضافة بجانب index.html، وحاول تحدّث الصفحة.'));
             });
         }
 
@@ -1295,6 +1305,8 @@
             });
             try { closeBuyerProfileModal(); } catch(e) {}
             try { document.getElementById('buyerAuthModal').classList.add('hidden'); document.getElementById('trackOrderModal').classList.add('hidden'); } catch(e) {}
+            try { closeUnifiedEntryChoiceModal(); } catch(e) {}
+            try { if(document.getElementById('buyerChatThreadModal')) closeBuyerChatThreadModal(); if(document.getElementById('buyerChatThreadsModal')) closeBuyerChatThreadsModal(); } catch(e) {}
 
             document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
             if(btn) btn.classList.add('active');
@@ -1529,7 +1541,7 @@
                     previewEl.style.objectFit = 'contain';
                     previewEl.onerror = function() {
                         previewEl.style.display = 'none';
-                        showToast('⚠️ تعذر عرض هذه الصورة، جرب صورة تانية.');
+                        showToast(t('m009', '⚠️ تعذر عرض هذه الصورة، جرب صورة تانية.'));
                     };
                     previewEl.src = e.target.result;
                     previewEl.style.display = 'block';
@@ -1559,7 +1571,7 @@
                 input.value = '';
             };
             reader.onerror = function() {
-                showToast('⚠️ تعذر قراءة الصورة، جرب تختارها تاني أو جرب صورة تانية.');
+                showToast(t('m010', '⚠️ تعذر قراءة الصورة، جرب تختارها تاني أو جرب صورة تانية.'));
                 input.value = '';
             };
             reader.readAsDataURL(file);
@@ -1629,7 +1641,7 @@
         function unifiedLoginSubmit() {
             let name = document.getElementById('loginStoreUserName').value.trim();
             let pass = document.getElementById('loginStorePass').value.trim();
-            if(!name) { alert('برجاء إدخال اسم المستخدم!'); return; }
+            if(!name) { alert(t('m011', 'برجاء إدخال اسم المستخدم!')); return; }
 
             let lockedMins = checkLoginLock(name);
             if(lockedMins) {
@@ -1720,7 +1732,7 @@
             if(coOwnerMatch) {
                 clearLoginAttempts(name);
                 if(stores[coOwnerStoreKey].status === 'stopped') {
-                    alert('هذا المتجر موقوف حالياً.');
+                    alert(t('m012', 'هذا المتجر موقوف حالياً.'));
                     return;
                 }
                 localStorage.removeItem('currentStaffUsername');
@@ -1831,7 +1843,7 @@
                     let list = stores2[key][listKey] || [];
                     if(list.find(x => x.authUid === uid)) { resolveStaffOrPartnerAfterAuth(uid, kind, name, pass); return; }
                 }
-                showAppModal(t('login_error_title', 'تعذّر تسجيل الدخول'), '⏳', 'تم التحقق من حسابك بنجاح، لكن بيانات المتجر لسه بتتزامن. حدّث الصفحة وجرب تاني بعد لحظات.');
+                showAppModal(t('login_error_title', 'تعذّر تسجيل الدخول'), '⏳',  t('m142', 'تم التحقق من حسابك بنجاح، لكن بيانات المتجر لسه بتتزامن. حدّث الصفحة وجرب تاني بعد لحظات.'));
             }, 1500);
         }
 
@@ -1870,7 +1882,7 @@
                     let stores2 = JSON.parse(localStorage.getItem('allStores')) || {};
                     let retryKey = Object.keys(stores2).find(k => stores2[k].authUid === uid);
                     if(retryKey) { completeMerchantLogin(retryKey, stores2, attemptedName); }
-                    else { showAppModal(t('login_error_title', 'تعذّر تسجيل الدخول'), '⏳', 'تم التحقق من حسابك بنجاح، لكن بيانات متجرك لسه بتتزامن. حدّث الصفحة وجرب تاني بعد لحظات.'); }
+                    else { showAppModal(t('login_error_title', 'تعذّر تسجيل الدخول'), '⏳',  t('m143', 'تم التحقق من حسابك بنجاح، لكن بيانات متجرك لسه بتتزامن. حدّث الصفحة وجرب تاني بعد لحظات.')); }
                 }, 1500);
                 return;
             }
@@ -1911,7 +1923,7 @@
         function completeMerchantLogin(matchedKey, stores, attemptedName) {
             clearLoginAttempts(attemptedName);
             if(stores[matchedKey].status === 'stopped') {
-                alert('هذا المتجر موقوف حالياً.');
+                alert(t('m012', 'هذا المتجر موقوف حالياً.'));
                 return;
             }
             localStorage.removeItem('currentStaffUsername');
@@ -1924,6 +1936,75 @@
             updateHeaderBrand();
             switchTab('auth');
         }
+
+
+        // ============================================================
+        // 🔵 دخول/تسجيل التاجر بحساب جوجل (Firebase Auth Google popup). لو الحساب ليه متجر
+        // بيدخل عليه فورًا، لو أول مرة بيتعمله متجر جديد بنفس بنية أي متجر عادي (بيظهر
+        // عند الأدمن والدعم زي بقية المتاجر). يتطلب تفعيل Google في Firebase > Authentication.
+        // ============================================================
+        async function merchantGoogleSignIn() {
+            let pausedUntil = parseInt(localStorage.getItem('registrationPausedUntil'));
+            if(!window.firebaseAuth || !window.firebase || !firebase.auth) { alert(t('alert_no_internet', 'لا يوجد اتصال بالإنترنت حاليًا، حاول مرة أخرى.')); return; }
+            try {
+                closeUnifiedEntryChoiceModal();
+                let provider = new firebase.auth.GoogleAuthProvider();
+                provider.setCustomParameters({ prompt: 'select_account' });
+                let res;
+                try { res = await window.firebaseAuth.signInWithPopup(provider); }
+                catch(e) {
+                    if(e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')) {
+                        sessionStorage.setItem('merchantGoogleRedirect', '1');
+                        await window.firebaseAuth.signInWithRedirect(provider);
+                        return;
+                    }
+                    if(e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request')) return;
+                    throw e;
+                }
+                await merchantGoogleAfterAuth(res, pausedUntil);
+            } catch(e) {
+                console.error('merchantGoogleSignIn error:', e);
+                let msg = (e && e.code === 'auth/operation-not-allowed') ? t('merchant_google_not_enabled', 'تسجيل الدخول بجوجل غير مفعّل بعد في إعدادات المنصة (Firebase Authentication).')
+                    : (e && e.code === 'auth/unauthorized-domain') ? t('merchant_google_bad_domain', 'هذا الدومين غير مصرّح له بتسجيل الدخول بجوجل (أضِفه في Firebase > Authentication > Authorized domains).')
+                    : t('buyer_generic_error', 'حصل خطأ، حاول مرة أخرى.');
+                showAppModal(t('login_error_title', 'تعذّر تسجيل الدخول'), '❌', msg);
+            }
+        }
+        async function merchantGoogleAfterAuth(res, pausedUntil) {
+            let user = res && res.user;
+            if(!user) return;
+            let uid = user.uid;
+            let email = user.email || '';
+            let stores = JSON.parse(localStorage.getItem('allStores')) || {};
+            let existing = Object.keys(stores).find(function(k) { return stores[k].authUid === uid || (stores[k].authorizedUids || []).indexOf(uid) !== -1; });
+            if(existing) { completeMerchantLogin(existing, stores, email); return; }
+            let isNew = !(res.additionalUserInfo && res.additionalUserInfo.isNewUser === false);
+            if(!isNew) { resolveMerchantAfterAuth(uid, email); return; }
+            pausedUntil = parseInt(localStorage.getItem('registrationPausedUntil'));
+            if(pausedUntil && pausedUntil > Date.now()) {
+                showAppModal('التسجيل موقوف مؤقتًا', '⏸️',  t('m144', 'تسجيل متاجر جديدة موقوف مؤقتًا من إدارة المنصة. حاول لاحقًا.'));
+                return;
+            }
+            let adminAccounts = JSON.parse(localStorage.getItem('adminAccounts')) || [];
+            let base = String(user.displayName || email.split('@')[0] || 'store').trim().replace(/\s+/g, '-').slice(0, 30) || 'store';
+            let key = base;
+            while(stores[key] || adminAccounts.some(function(a) { return a.username.toLowerCase() === key.toLowerCase(); })) {
+                key = base + '-' + (Math.floor(Math.random() * 9000) + 1000);
+            }
+            let obj = buildNewStoreObject(key, user.displayName || key, uid, email, email);
+            obj.emailVerified = !!email;
+            obj.loginMethod = 'google';
+            obj.registeredVia = 'google';
+            completeRegistrationAndLogin(key, obj, null);
+        }
+        window.addEventListener('load', function() {
+            try {
+                if(sessionStorage.getItem('merchantGoogleRedirect') === '1' && window.firebaseAuth) {
+                    sessionStorage.removeItem('merchantGoogleRedirect');
+                    window.firebaseAuth.getRedirectResult().then(function(r) { if(r && r.user) merchantGoogleAfterAuth(r); }).catch(function(e) { console.error(e); });
+                }
+            } catch(e) {}
+        });
 
         function showRegisterStore() {
             let form = document.getElementById('merchantRegisterForm');
@@ -2014,8 +2095,8 @@
             let pass = document.getElementById('regStorePass').value.trim();
             let passConfirm = document.getElementById('regStorePassConfirm').value.trim();
             if(!name || !displayName || !pass) { alert(t('alert_fill_all_fields', 'برجاء ملء جميع البيانات!')); return; }
-            if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { alert('البريد الإلكتروني اللي كتبته مش صحيح، تأكد منه أو سيبه فاضي.'); return; }
-            if(pass.length < 6) { alert('كلمة المرور لازم تكون 6 حروف/أرقام على الأقل.'); return; }
+            if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { alert(t('m013', 'البريد الإلكتروني اللي كتبته مش صحيح، تأكد منه أو سيبه فاضي.')); return; }
+            if(pass.length < 6) { alert(t('m014', 'كلمة المرور لازم تكون 6 حروف/أرقام على الأقل.')); return; }
             if(pass !== passConfirm) { alert(t('alert_passwords_dont_match', 'كلمة المرور وتأكيدها مش متطابقين، اكتبهم تاني.')); return; }
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             let adminAccounts = JSON.parse(localStorage.getItem('adminAccounts')) || [];
@@ -2103,11 +2184,11 @@
             }).catch(function(err) {
                 console.error('فشل إنشاء حساب Firebase وقت التسجيل، هنكمل بالنظام المحلي بدل ما نوقف التسجيل:', err);
                 if(err && err.code === 'auth/email-already-in-use') {
-                    showAppModal(t('generic_error_title', 'حصل خطأ'), '⚠️', 'اسم الدخول ده مستخدم بالفعل من تاجر آخر. اختار اسم دخول مختلف.');
+                    showAppModal(t('generic_error_title', 'حصل خطأ'), '⚠️',  t('m145', 'اسم الدخول ده مستخدم بالفعل من تاجر آخر. اختار اسم دخول مختلف.'));
                     return;
                 }
                 if(err && err.code === 'auth/weak-password') {
-                    showAppModal(t('generic_error_title', 'حصل خطأ'), '⚠️', 'كلمة المرور ضعيفة جدًا، اختار كلمة سر أقوى (6 حروف/أرقام على الأقل).');
+                    showAppModal(t('generic_error_title', 'حصل خطأ'), '⚠️',  t('m146', 'كلمة المرور ضعيفة جدًا، اختار كلمة سر أقوى (6 حروف/أرقام على الأقل).'));
                     return;
                 }
                 // أي سبب تاني (مشكلة نت، إعدادات المشروع...) - منوقفش التسجيل، نكمله محليًا
@@ -2133,11 +2214,11 @@
             document.getElementById('regStorePass').value = '';
             document.getElementById('regStorePassConfirm').value = '';
             document.getElementById('regStoreEmail').value = '';
-            showToast('🎉 تم إنشاء متجرك بنجاح! جاري نقلك للوحة التحكم...');
+            showToast(t('m015', '🎉 تم إنشاء متجرك بنجاح! جاري نقلك للوحة التحكم...'));
             // 📧 لو التاجر كتب بريده وقت التسجيل، نبعتله كود التأكيد الحقيقي فورًا (نفس
             // آلية EmailJS المستخدمة في إعدادات "تأمين الحساب بالبريد") - قبل كده كان البريد
             // بيتسجل "موثّق" من غير أي إرسال فعلي، فده بيصلّح المشكلة من جذرها.
-            if(storeObj.email) {
+            if(storeObj.email && !storeObj.emailVerified) {
                 try { startEmailVerification(name, storeObj.email); } catch(e) { console.error('startEmailVerification error:', e); }
             }
             switchTab('auth');
@@ -2473,12 +2554,12 @@
                 return;
             }
             window.requestPushPermissionAndSaveToken(merchant).then(function() {
-                if(statusEl) statusEl.textContent = '✅ الإشعارات مفعّلة على هذا الجهاز';
-                if(!silent) showToast('🔔 تم تفعيل الإشعارات بنجاح');
+                if(statusEl) statusEl.textContent = t('notif_on_status', '✅ الإشعارات مفعّلة على هذا الجهاز');
+                if(!silent) showToast(t('m016', '🔔 تم تفعيل الإشعارات بنجاح'));
             }).catch(function(err) {
                 if(!silent) {
                     if(statusEl) statusEl.textContent = '❌ ' + (err.message || 'فشل التفعيل');
-                    showToast('⚠️ تعذر تفعيل الإشعارات: ' + (err.message || 'جرب تاني'));
+                    showToast(t('m017', '⚠️ تعذر تفعيل الإشعارات: ') + (err.message || 'جرب تاني'));
                 } else if(statusEl) {
                     // في الوضع الصامت (فتح اللوحة عادي)، لو الإذن لسه ما اتطلبش خالص، منوريش
                     // خطأ - بنقول بس إن التفعيل محتاج ضغطة من التاجر نفسه (متطلب من المتصفح)
@@ -2508,7 +2589,7 @@
                 enablePushNotifications(true);
             } else {
                 if(statusEl) statusEl.textContent = '🔕 الإشعارات متوقفة لهذا المتجر';
-                showToast('🔕 تم إيقاف إشعارات الطلبات');
+                showToast(t('m018', '🔕 تم إيقاف إشعارات الطلبات'));
             }
         }
 
@@ -2981,7 +3062,7 @@
             let img = box.querySelector('img');
             let fileName = document.getElementById('storeQrModal').getAttribute('data-download-name') || 'qr-code';
             let dataUrl = canvas ? canvas.toDataURL('image/png') : (img ? img.src : null);
-            if(!dataUrl) { showToast('⚠️ لسه الكود مش جاهز، جرب تاني بعد لحظة'); return; }
+            if(!dataUrl) { showToast(t('m019', '⚠️ لسه الكود مش جاهز، جرب تاني بعد لحظة')); return; }
             let a = document.createElement('a');
             a.href = dataUrl;
             a.download = fileName + '.png';
@@ -3005,7 +3086,7 @@
                 try { ok = document.execCommand('copy'); } catch(e) { ok = false; }
                 document.body.removeChild(temp);
                 if(ok) showToast(successMessage);
-                else showToast('⚠️ تعذر النسخ تلقائيًا، انسخ النص يدويًا من الصندوق.');
+                else showToast(t('m020', '⚠️ تعذر النسخ تلقائيًا، انسخ النص يدويًا من الصندوق.'));
             }
             if(navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(text).then(() => {
@@ -3117,7 +3198,7 @@
                 if(!saveAllStores(stores)) return;
                 cancelEditStaff();
                 renderStoreStaffList(store.staff);
-                showToast('✅ تم حفظ بيانات المساعد بنجاح');
+                showToast(t('m021', '✅ تم حفظ بيانات المساعد بنجاح'));
             }
 
             let needsNewAuthAccount = editIndex < 0 || !store.staff[editIndex] || !store.staff[editIndex].authUid || store.staff[editIndex].password !== password;
@@ -3212,7 +3293,7 @@
                 document.getElementById('newCoOwnerPassword').value = '';
                 renderStoreCoOwnersList(name);
                 renderAdminStores();
-                showToast('✅ تم إضافة الشريك بنجاح');
+                showToast(t('m022', '✅ تم إضافة الشريك بنجاح'));
             }
 
             if(window.createAuxAuthAccount) {
@@ -3232,7 +3313,7 @@
         }
 
         function removeStoreCoOwner(name, index) {
-            if(!confirm('تأكيد حذف هذا الشريك؟ لن يستطيع الدخول لإدارة المتجر بعد كده.')) return;
+            if(!confirm(t('m023', 'تأكيد حذف هذا الشريك؟ لن يستطيع الدخول لإدارة المتجر بعد كده.'))) return;
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             if(!stores[name] || !stores[name].coOwners) return;
             stores[name].coOwners.splice(index, 1);
@@ -3240,7 +3321,7 @@
             if(!saveAllStores(stores)) return;
             renderStoreCoOwnersList(name);
             renderAdminStores();
-            showToast('🗑️ تم حذف الشريك');
+            showToast(t('m024', '🗑️ تم حذف الشريك'));
         }
 
         function editStoreStaff(index) {
@@ -3276,7 +3357,7 @@
             recomputeAuthorizedUids(stores[merchant]);
             if(!saveAllStores(stores)) return;
             renderStoreStaffList(stores[merchant].staff);
-            showToast('🗑️ تم حذف المساعد');
+            showToast(t('m025', '🗑️ تم حذف المساعد'));
         }
 
         // --- بيحسب عدد المنتجات "نفذت" أو "مخزونها منخفض" وبيظهرها كشارة تنبيه فوق قسم "المنتجات" ---
@@ -3296,12 +3377,17 @@
             if(!stores[merchant]) return;
             stores[merchant].loginMethod = document.getElementById('merchantLoginMethodSelect').value;
             localStorage.setItem('allStores', JSON.stringify(stores));
-            showToast('✅ اتحفظت طريقة الدخول');
+            showToast(t('m026', '✅ اتحفظت طريقة الدخول'));
         }
 
         // --- صندوق تأمين الحساب بالبريد الإلكتروني داخل لوحة التاجر ---
         // --- بانر "فعّل حسابك بالبريد": يظهر بس لو التاجر لسه ماوثقش بريده، ويختفي أوتوماتيك
         // بمجرد ما يوثّقه (مفيش داعي يفضل يشغل مساحة في اللوحة بعد كده). ---
+        // 🔴 أيقونة معلومات حمراء قابلة للطي جنب أرقام التحويل: بتوضّح إن التحقق من التحويل يدوي حاليًا.
+        function transferInfoHtml() {
+            return '<span class="xfer-info"><button type="button" class="xfer-info-btn" onclick="event.stopPropagation(); this.parentElement.classList.toggle(\'open\')" aria-label="info">!</button><span class="xfer-info-text">' + t('transfer_manual_note', 'التحقق من التحويل يتم يدويًا حاليًا من صاحب المتجر. التحقق الإلكتروني التلقائي من التحويلات سيتوفر قريبًا.') + '</span></span>';
+        }
+
         function renderActivateAccountBanner() {
             let banner = document.getElementById('activateAccountBanner');
             if(!banner) return;
@@ -3309,7 +3395,19 @@
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             let store = stores[merchant];
             if(!store) return;
-            banner.classList.toggle('hidden', !!store.emailVerified);
+            banner.classList.toggle('hidden', !!(store.email && store.emailVerified));
+            if(!(store.email && store.emailVerified) === false) banner.removeAttribute('open');
+        }
+        // 🎯 زرار "فعّل الآن" في البانر: يفتح قسم تأمين الحساب في الإعدادات ويوصّل له مباشرة.
+        function goToEmailSecuritySection() {
+            let box = document.getElementById('emailSecurityBox');
+            if(!box) return;
+            let el = box;
+            while(el && el.parentElement) {
+                el = el.parentElement;
+                if(el.tagName === 'DETAILS') el.open = true;
+            }
+            setTimeout(function() { box.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 120);
         }
 
         function renderEmailSecurityBox(store) {
@@ -3342,10 +3440,12 @@
                             <button style="margin:0; background:#10b981;" onclick="confirmMerchantEmailCode()">${t('email_confirm_code_btn', 'تأكيد الكود')}</button>
                             <button class="secondary" style="margin:0;" onclick="resendMerchantEmailCode()">${t('email_resend_code_btn', 'إعادة إرسال الكود')}</button>
                         </div>
+                        <button class="secondary" style="margin:8px 0 0; width:100%; font-size:12px;" onclick="changeMerchantEmail()"><i class="fa fa-pen"></i> ${t('email_change_pending_btn', 'تغيير البريد / استخدام بريد آخر')}</button>
                     </div>
                 `;
             } else {
-                box.innerHTML = `
+                let __prev = store.previousEmail ? `<button class="secondary" style="margin:0 0 8px; width:100%; font-size:12px;" onclick="useMerchantPreviousEmail()"><i class="fa fa-rotate-left"></i> ${t('email_use_previous_btn', 'استخدام البريد السابق')}: <strong>${escapeHtml(store.previousEmail)}</strong></button>` : '';
+                box.innerHTML = __prev + `
                     <input type="email" id="merchantEmailInput" placeholder="${t('email_ph', 'بريدك الإلكتروني')}">
                     <button style="margin:0; background:#10b981;" onclick="requestMerchantEmailVerification()"><i class="fa fa-shield-alt"></i> ${t('email_send_code_btn', 'إرسال كود التفعيل')}</button>
                 `;
@@ -3393,11 +3493,22 @@
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             let store = stores[merchant];
             if(!store) return;
+            if(store.email) store.previousEmail = store.email;
             store.email = '';
             store.emailVerified = false;
             store.emailVerificationCode = '';
             if(!saveAllStores(stores)) return;
             renderEmailSecurityBox(store);
+            try { renderActivateAccountBanner(); } catch(e) {}
+        }
+        function useMerchantPreviousEmail() {
+            let merchant = localStorage.getItem('currentActiveMerchant');
+            let stores = JSON.parse(localStorage.getItem('allStores')) || {};
+            let store = stores[merchant];
+            if(!store || !store.previousEmail) return;
+            startEmailVerification(merchant, store.previousEmail, true);
+            let s2 = JSON.parse(localStorage.getItem('allStores')) || {};
+            renderEmailSecurityBox(s2[merchant]);
         }
 
         // --- صندوق رسائل الأدمن للتاجر (يظهر بس لو فيه رسائل) ---
@@ -3534,7 +3645,7 @@
             plans[index][field] = value;
             saveSubscriptionPlans(plans);
             if(['buyerLimit','buyerLimitMessage','allowCustomDomain'].indexOf(field) !== -1) stampAllStoresPlanLimits();
-            showToast('✅ تم تحديث الباقة');
+            showToast(t('m027', '✅ تم تحديث الباقة'));
         }
 
         function addNewSubscriptionPlan() {
@@ -3549,7 +3660,7 @@
             let plans = getSubscriptionPlans();
             let plan = plans[index];
             if(!plan) return;
-            if(plan.id === 'free') { alert('⚠️ مينفعش تمسح الباقة المجانية لأنها الافتراضية لأي متجر جديد أو متجر قديم من غير باقة.'); return; }
+            if(plan.id === 'free') { alert(t('m028', '⚠️ مينفعش تمسح الباقة المجانية لأنها الافتراضية لأي متجر جديد أو متجر قديم من غير باقة.')); return; }
             if(!confirm(`تأكيد حذف باقة "${plan.name}"؟ أي متجر عليها هيترحّل تلقائيًا للباقة المجانية.`)) return;
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             Object.keys(stores).forEach(k => { if(stores[k].planId === plan.id) stores[k].planId = 'free'; });
@@ -3557,7 +3668,7 @@
             plans.splice(index, 1);
             saveSubscriptionPlans(plans);
             renderSubscriptionPlansList();
-            showToast('🗑️ تم حذف الباقة');
+            showToast(t('m029', '🗑️ تم حذف الباقة'));
         }
 
         // 📋 تفاصيل كاملة لكل باقة (كل حد وكل ميزة بسطر واضح)
@@ -3682,7 +3793,7 @@
             let payCards = Object.entries(pm).filter(([k,v])=>v).map(([k,v])=>`
                 <div style="background:#fff;border:1px solid var(--border-color);border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                     <span style="font-size:13px;">${methodIcons[k]} ${methodLabels[k]}</span>
-                    <strong style="font-size:14px;color:var(--primary-color);">${v}</strong>
+                    <strong style="font-size:14px;color:var(--primary-color);">${v} ${transferInfoHtml()}</strong>
                 </div>
             `).join('');
 
@@ -3729,7 +3840,7 @@
             let merchant = localStorage.getItem('currentActiveMerchant');
             let method = document.getElementById('renewalReportMethod').value;
             let senderInfo = document.getElementById('renewalReportSender').value.trim();
-            if(!senderInfo) { alert('اكتب رقم المحفظة أو الحساب اللي حوّلت منه، أو رقم العملية.'); return; }
+            if(!senderInfo) { alert(t('m030', 'اكتب رقم المحفظة أو الحساب اللي حوّلت منه، أو رقم العملية.')); return; }
 
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             let store = stores[merchant];
@@ -3737,7 +3848,7 @@
             store.pendingRenewalRequest = { method, senderInfo, requestedAt: Date.now() };
             if(!saveAllStores(stores)) return;
             renderSubscriptionStatusBox(store);
-            showToast('✅ تم إرسال البلاغ، هيتراجع ويتجدد اشتراكك بأسرع وقت.');
+            showToast(t('m031', '✅ تم إرسال البلاغ، هيتراجع ويتجدد اشتراكك بأسرع وقت.'));
         }
 
         // --- تسجيل زيارة للمتجر مرة واحدة يومياً لكل جلسة متصفح (لتجنب تضخيم العداد عند كل تحديث للصفحة) ---
@@ -3918,7 +4029,7 @@
                         <div style="margin:4px 0; color:var(--text-muted);">${itemsTxt}</div>
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <span>${o.deliveryMode === 'delivery' ? orderCardStrings.delivery : orderCardStrings.pickup} — ${o.payment === 'COD' ? orderCardStrings.cod : `${orderCardStrings.cashTransfer}${o.paymentWalletNumber ? ` (${orderCardStrings.onNumber}: ${o.paymentWalletNumber})` : ''}`}</span>
-                            ${o.cashSenderInfo ? `<br><span style="font-size:11px; color:#92400e;"><i class="fa fa-mobile-alt"></i> ${orderCardStrings.buyerTransferredFrom}: ${o.cashSenderInfo}</span>` : ''}
+                            ${o.cashSenderInfo ? `<br><span style="font-size:11px; color:#92400e;"><i class="fa fa-mobile-alt"></i> ${orderCardStrings.buyerTransferredFrom}: ${o.cashSenderInfo}</span> ${transferInfoHtml()}` : ''}
                             ${amountHtml}
                         </div>
                         ${hasAdjustment ? `<div style="margin-top:2px; font-size:10.5px; color:#b45309;"><i class="fa fa-rotate-left" style="cursor:pointer;" onclick="adjustOrderAmount(${idx}, null)"></i> المبلغ اتعدّل يدويًا (يمكن بسبب إرجاع جزئي) - اضغط لاسترجاع المبلغ الأصلي</div>` : ''}
@@ -4005,7 +4116,7 @@
                     ${o.address ? `<p style="margin:4px 0;"><i class="fa fa-location-dot" style="color:var(--primary-color);"></i> ${escapeHtml(o.address)}</p>` : ''}
                     ${o.buyerPhone ? `<p style="margin:4px 0;">📞 ${escapeHtml(String(o.buyerPhone))}</p>` : ''}
                     <p style="margin:4px 0;">${o.payment === 'COD' ? t('ord_cod','دفع عند الاستلام') : t('ord_cash_transfer','تحويل كاش') + (o.paymentWalletNumber ? ` (${t('ord_on_number','على رقم')}: ${o.paymentWalletNumber})` : '')}</p>
-                    ${o.cashSenderInfo ? `<p style="margin:4px 0; color:#92400e;"><i class="fa fa-mobile-alt"></i> ${t('ord_buyer_transferred_from','حوّل المشتري من')}: ${escapeHtml(o.cashSenderInfo)}</p>` : ''}
+                    ${o.cashSenderInfo ? `<p style="margin:4px 0; color:#92400e;"><i class="fa fa-mobile-alt"></i> ${t('ord_buyer_transferred_from','حوّل المشتري من')}: ${escapeHtml(o.cashSenderInfo)} ${transferInfoHtml()}</p>` : ''}
                     <hr style="border-color:var(--border-color); margin:10px 0;">
                     <p style="margin:0; font-size:16px; text-align:center;">${hasAdjustment ? `<span style="text-decoration:line-through; color:var(--text-muted); font-size:12px;">${o.total} ${store.currency}</span> ` : ''}<strong style="color:var(--primary-color);">${displayedAmount} ${store.currency}</strong></p>
                     <hr style="border-color:var(--border-color); margin:10px 0;">
@@ -4030,12 +4141,12 @@
 
         // --- حذف طلب واحد نهائيًا من سجل الطلبات (لصاحب المتجر، أو لمساعد معاه صلاحية "حذف الطلبات") ---
         function deleteOrder(index) {
-            if(!currentStaffHasPermission('deleteOrders')) { alert('ليس لديك صلاحية حذف الطلبات.'); return; }
+            if(!currentStaffHasPermission('deleteOrders')) { alert(t('m032', 'ليس لديك صلاحية حذف الطلبات.')); return; }
             let merchant = localStorage.getItem('currentActiveMerchant');
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             let store = stores[merchant];
             if(!store || !store.orderHistory || !store.orderHistory[index]) return;
-            if(!confirm('تأكيد حذف هذا الطلب نهائيًا من السجل؟ الإجراء ده لا يمكن التراجع عنه.')) return;
+            if(!confirm(t('m033', 'تأكيد حذف هذا الطلب نهائيًا من السجل؟ الإجراء ده لا يمكن التراجع عنه.'))) return;
             let deletedOrder = store.orderHistory[index];
             store.orderHistory.splice(index, 1);
             if(!saveAllStores(stores)) return;
@@ -4046,7 +4157,7 @@
             }
             logStaffActivity('حذف طلب من السجل', `طلب رقم #${index + 1}`);
             renderOrderHistory(store);
-            showToast('🗑️ تم حذف الطلب');
+            showToast(t('m034', '🗑️ تم حذف الطلب'));
         }
 
         // --- بيسمح للتاجر يعدّل المبلغ المحسوب فعليًا من طلب "تم تسليمه" في تقرير الأرباح -
@@ -4063,7 +4174,7 @@
                 let entered = prompt(`المبلغ الحالي المحسوب من هذا الطلب: ${(typeof order.countedAmount === 'number' ? order.countedAmount : order.total)} ${store.currency}\nاكتب المبلغ الصحيح بعد أي إرجاع (اكتب 0 لو اترجع بالكامل):`, (typeof order.countedAmount === 'number' ? order.countedAmount : order.total));
                 if(entered === null) return; // إلغاء
                 let parsed = parseFloat(entered);
-                if(isNaN(parsed) || parsed < 0) { alert('المبلغ غير صحيح.'); return; }
+                if(isNaN(parsed) || parsed < 0) { alert(t('m035', 'المبلغ غير صحيح.')); return; }
                 newAmount = parsed;
             }
 
@@ -4076,7 +4187,7 @@
             if(!saveAllStores(stores)) return;
             renderOrderHistory(store);
             renderRevenueReport(store);
-            showToast('✅ اتحدث المبلغ، وتقرير الأرباح اتحدث معاه تلقائيًا.');
+            showToast(t('m036', '✅ اتحدث المبلغ، وتقرير الأرباح اتحدث معاه تلقائيًا.'));
         }
 
         // بيولّد نفس شكل فاتورة الطلب الاحترافية لكن من الأرقام الرسمية المسجلة عندك، مش من أي محادثة خارجية
@@ -4086,7 +4197,7 @@
             let store = stores[merchant];
             let order = store && store.orderHistory && store.orderHistory[idx];
             if(!order) return;
-            showToast('⏳ جاري تجهيز صورة الفاتورة...');
+            showToast(t('m037', '⏳ جاري تجهيز صورة الفاتورة...'));
             let blob = await generateOrderReceiptImage(store, getStoreDisplayName(merchant, store), order.orderNo || String(idx + 1).padStart(4, '0'), order.items, order.subtotal, order.deliveryFee, order.total, order.address, order.buyerPhone, order.deliveryZone);
             let link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
@@ -4233,7 +4344,7 @@
             let confirmPass = document.getElementById('confirmNewPassInput').value;
 
             if(!newPass || newPass.length < 6) {
-                alert('كلمة المرور الجديدة لازم تكون 6 حروف/أرقام على الأقل.');
+                alert(t('m038', 'كلمة المرور الجديدة لازم تكون 6 حروف/أرقام على الأقل.'));
                 return;
             }
             if(newPass !== confirmPass) {
@@ -4255,10 +4366,10 @@
                     document.getElementById('currentPassInput').value = '';
                     document.getElementById('newPassInput').value = '';
                     document.getElementById('confirmNewPassInput').value = '';
-                    showToast('✅ تم تغيير كلمة المرور بنجاح');
+                    showToast(t('m039', '✅ تم تغيير كلمة المرور بنجاح'));
                 }).catch(function(err) {
                     if(err.code === 'auth/wrong-password') alert(t('alert_wrong_current_pass'));
-                    else alert('حصل خطأ أثناء تغيير كلمة المرور: ' + (err.message || 'جرب تاني.'));
+                    else alert(t('m040', 'حصل خطأ أثناء تغيير كلمة المرور: ') + (err.message || 'جرب تاني.'));
                 });
                 return;
             }
@@ -4273,7 +4384,7 @@
             document.getElementById('currentPassInput').value = '';
             document.getElementById('newPassInput').value = '';
             document.getElementById('confirmNewPassInput').value = '';
-            showToast('✅ تم تغيير كلمة المرور بنجاح');
+            showToast(t('m039', '✅ تم تغيير كلمة المرور بنجاح'));
         }
 
         // --- تغيير اسم الدخول (المفتاح الفريد) منفصل تمامًا عن اسم المتجر الظاهر للعملاء،
@@ -4285,7 +4396,7 @@
             let oldName = localStorage.getItem('currentActiveMerchant');
             let newName = document.getElementById('storeLoginNameInput').value.trim();
             if(!newName) { alert(t('alert_new_login_required')); return; }
-            if(newName === oldName) { showToast('لم يتغير شيء.'); return; }
+            if(newName === oldName) { showToast(t('m041', 'لم يتغير شيء.')); return; }
 
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             let currentStoreData = stores[oldName] || {};
@@ -4331,7 +4442,7 @@
             let preview = document.getElementById('storeCategoriesIconImagePreview');
             preview.style.display = 'none';
             preview.removeAttribute('src');
-            showToast('✅ تم الرجوع للأيقونة الجاهزة.');
+            showToast(t('m042', '✅ تم الرجوع للأيقونة الجاهزة.'));
         }
 
         // ============================================================
@@ -4391,11 +4502,11 @@
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             let store = stores[merchant];
             if(!store) return;
-            if(!confirm('تأكيد مسح سجل نشاط المساعدين بالكامل؟')) return;
+            if(!confirm(t('m043', 'تأكيد مسح سجل نشاط المساعدين بالكامل؟'))) return;
             store.staffActivityLog = [];
             if(!saveAllStores(stores)) return;
             renderStaffActivityLog(store);
-            showToast('🗑️ تم مسح سجل نشاط المساعدين');
+            showToast(t('m044', '🗑️ تم مسح سجل نشاط المساعدين'));
         }
 
         function renderStaffActivityLog(store) {
@@ -4543,7 +4654,7 @@
                 // طريق safeVal/safeChecked اللي بترجع قيمة افتراضية بدل ما تكسر لو العنصر
                 // مش موجود) هيظهر برسالة واضحة بدل الصمت.
                 console.error('saveMerchantSettings error:', e);
-                alert('⚠️ حصل خطأ ولم يتم حفظ التغييرات. الخطأ: ' + (e && e.message ? e.message : e));
+                alert(t('m045', '⚠️ حصل خطأ ولم يتم حفظ التغييرات. الخطأ: ') + (e && e.message ? e.message : e));
             }
         }
 
@@ -4682,7 +4793,7 @@
         }
 
         function deleteCategory(index) {
-            if(!confirm('تأكيد حذف القسم؟')) return;
+            if(!confirm(t('m046', 'تأكيد حذف القسم؟'))) return;
             let merchant = localStorage.getItem('currentActiveMerchant');
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             stores[merchant].categories.splice(index, 1);
@@ -4735,7 +4846,7 @@
 
         // --- تصفير عداد المبيعات لكل المنتجات والبدء من جديد (لا يمكن التراجع، لذلك في تأكيد قبلها) ---
         function resetBestSellers() {
-            if(!confirm('⚠️ هل توافق؟ سيتم إزالة جميع ترتيبات "الأكثر مبيعاً" الحالية وبدء العد من جديد لكل المنتجات، ولا يمكن التراجع عن هذا الإجراء.')) return;
+            if(!confirm(t('m047', '⚠️ هل توافق؟ سيتم إزالة جميع ترتيبات "الأكثر مبيعاً" الحالية وبدء العد من جديد لكل المنتجات، ولا يمكن التراجع عن هذا الإجراء.'))) return;
             let merchant = localStorage.getItem('currentActiveMerchant');
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             let store = stores[merchant];
@@ -4743,7 +4854,7 @@
             (store.products || []).forEach(p => { p.salesCount = 0; });
             if(!saveAllStores(stores)) return;
             renderBestSellers(store.products);
-            showToast('🔄 تم تصفير ترتيب الأكثر مبيعاً، العد بدأ من جديد.');
+            showToast(t('m048', '🔄 تم تصفير ترتيب الأكثر مبيعاً، العد بدأ من جديد.'));
         }
 
         // --- بترجع وحدة العد بعد الرقم (مثلاً " قطعة" أو " كرتونة") لو التاجر حددها، أو فاضي لو لأ ---
@@ -4955,7 +5066,7 @@
                 bold: document.getElementById('storeAboutBold').checked,
                 underline: document.getElementById('storeAboutUnderline').checked
             };
-            if(!about.trim()) { box.innerHTML = '<span style="color:var(--text-muted); font-size:11px;">هيظهر شكل النبذة هنا وانت بتكتب...</span>'; return; }
+            if(!about.trim()) { box.innerHTML = '<span style="color:var(--text-muted); font-size:11px;">' + t('about_preview_ph', 'هيظهر شكل النبذة هنا وانت بتكتب...') + '</span>'; return; }
             box.innerHTML = `<p style="margin:0; ${getAboutStyleAttr(style)}">${escapeHtml(about)}</p>`;
         }
 
@@ -5024,11 +5135,11 @@
             let total = parseFloat(document.getElementById('bulkTotalCost').value) || 0;
             let units = parseFloat(document.getElementById('bulkUnitsCount').value) || 0;
             let extra = parseFloat(document.getElementById('bulkExtraCost').value) || 0;
-            if(units <= 0) { showToast('⚠️ اكتب عدد القطع في الدفعة الأول'); return; }
+            if(units <= 0) { showToast(t('m049', '⚠️ اكتب عدد القطع في الدفعة الأول')); return; }
             let unitCost = (total + extra) / units;
             document.getElementById('prodCostPrice').value = Math.round(unitCost * 100) / 100;
             updateProductProfitPreview();
-            showToast('✅ اتحط سعر التكلفة تلقائيًا، تقدر تعدله يدوي لو حابب');
+            showToast(t('m050', '✅ اتحط سعر التكلفة تلقائيًا، تقدر تعدله يدوي لو حابب'));
         }
 
         // --- معاينة فورية لربح القطعة الواحدة (وهامش الربح %) وانت لسه بتكتب السعر وسعر التكلفة، قبل حتى ما تحفظ المنتج ---
@@ -5191,7 +5302,7 @@
                     });
                 };
                 reader.onerror = function() {
-                    showToast('⚠️ تعذر تحميل إحدى الصور، جرب تاني.');
+                    showToast(t('m051', '⚠️ تعذر تحميل إحدى الصور، جرب تاني.'));
                 };
                 reader.readAsDataURL(file);
             });
@@ -5263,7 +5374,7 @@
             // ⏳ لو لسه فيه صور بترفع على ImgBB في الخلفية، منستناش تفشل العملية، لكن نبلّغ
             // التاجر بلطف إنه ينتظر ثانية بس عشان الصورة تتحفظ بالجودة النهائية الصحيحة.
             if(__pendingImageUploads > 0) {
-                showToast('⏳ لسه بيرفع الصورة... استنى ثانية واحدة وجرب تاني');
+                showToast(t('m052', '⏳ لسه بيرفع الصورة... استنى ثانية واحدة وجرب تاني'));
                 return;
             }
             try {
@@ -5476,7 +5587,7 @@
             preview.style.display = 'block';
             preview.onerror = function() {
                 preview.style.display = 'none';
-                showToast('⚠️ تعذر عرض هذه الصورة، جرب صورة تانية.');
+                showToast(t('m009', '⚠️ تعذر عرض هذه الصورة، جرب صورة تانية.'));
             };
 
             let label = stores[merchant].productsLabel || t('default_product_word', 'منتج');
@@ -5556,7 +5667,7 @@
         }
 
         function deleteProduct(index) {
-            if(!confirm('حذف هذا المنتج؟')) return;
+            if(!confirm(t('m053', 'حذف هذا المنتج؟'))) return;
             let merchant = localStorage.getItem('currentActiveMerchant');
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             let prodName = (stores[merchant].products[index] || {}).name || '';
@@ -5639,7 +5750,7 @@
         }
 
         function deleteShortcut(index) {
-            if(!confirm('تأكيد حذف هذا الاختصار؟')) return;
+            if(!confirm(t('m054', 'تأكيد حذف هذا الاختصار؟'))) return;
             let merchant = localStorage.getItem('currentActiveMerchant');
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             stores[merchant].shortcuts.splice(index, 1);
@@ -5724,7 +5835,7 @@
         }
 
         function deleteBanner(index) {
-            if(!confirm('تأكيد حذف هذه اللافتة؟')) return;
+            if(!confirm(t('m055', 'تأكيد حذف هذه اللافتة؟'))) return;
             let merchant = localStorage.getItem('currentActiveMerchant');
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             stores[merchant].banners.splice(index, 1);
@@ -6449,7 +6560,7 @@
 
         function addPlatformFeature() {
             let title = document.getElementById('newFeatureTitle').value.trim();
-            if(!title) { alert('اكتب عنوان الميزة!'); return; }
+            if(!title) { alert(t('m056', 'اكتب عنوان الميزة!')); return; }
             let icon = document.getElementById('newFeatureIcon').value;
             let text = document.getElementById('newFeatureText').value.trim();
             let editIndex = document.getElementById('editFeatureIndex').value;
@@ -6485,7 +6596,7 @@
         }
 
         function deletePlatformFeature(index) {
-            if(!confirm('تأكيد حذف الميزة دي؟')) return;
+            if(!confirm(t('m057', 'تأكيد حذف الميزة دي؟'))) return;
             let list = getPlatformFeatures();
             list.splice(index, 1);
             savePlatformFeatures(list);
@@ -6515,7 +6626,7 @@
 
         function addPlatformStep() {
             let title = document.getElementById('newStepTitle').value.trim();
-            if(!title) { alert('اكتب عنوان الخطوة!'); return; }
+            if(!title) { alert(t('m058', 'اكتب عنوان الخطوة!')); return; }
             let text = document.getElementById('newStepText').value.trim();
             let editIndex = document.getElementById('editStepIndex').value;
             let list = getPlatformSteps();
@@ -6548,7 +6659,7 @@
         }
 
         function deletePlatformStep(index) {
-            if(!confirm('تأكيد حذف الخطوة دي؟')) return;
+            if(!confirm(t('m059', 'تأكيد حذف الخطوة دي؟'))) return;
             let list = getPlatformSteps();
             list.splice(index, 1);
             savePlatformSteps(list);
@@ -6571,7 +6682,7 @@
             let logoData = document.getElementById('platformLogoFile').getAttribute('data-base64');
             if(logoData) localStorage.setItem('platformLogo', logoData);
 
-            showToast('✅ تم حفظ معلومات المنصة بنجاح');
+            showToast(t('m060', '✅ تم حفظ معلومات المنصة بنجاح'));
             renderPlatformFooterSocial();
         }
 
@@ -6699,7 +6810,7 @@
         // مسح البنود بعد كده قصدًا.
         // ============================================================
         function seedDefaultUsageGuide() {
-            if(localStorage.getItem('platformGuideItems') !== null) return; // اتعمل قبل كده، سيبه زي ما الأدمن سايبه
+            if(localStorage.getItem('platformGuideItems') !== null) { migrateGuideItemsV2(); return; } // اتعمل قبل كده، سيبه زي ما الأدمن سايبه
 
             let items = [
                 {
@@ -6805,6 +6916,24 @@
             ];
 
             localStorage.setItem('platformGuideItems', JSON.stringify(items));
+            migrateGuideItemsV2();
+        }
+
+        // 📚 ترحيل: بنود الدليل الجديدة (Excel، دومين، عملاء، حصة شهرية، جوجل، تتبع) تتضاف لأي متجر/منصة عندها دليل قديم.
+        function migrateGuideItemsV2() {
+            try {
+                if(localStorage.getItem('guideSeedV2') === '1') return;
+                let raw = localStorage.getItem('platformGuideItems');
+                if(raw === null) return; // لسه هيتعمل seed كامل
+                let items = JSON.parse(raw) || [];
+                ['g_excel','g_domain','g_buyers','g_quota','g_google','g_track'].forEach(function(id) {
+                    if(!items.some(function(i) { return i.id === id; })) {
+                        items.push({ id: id, title: t('guide_' + id + '_title', id), content: t('guide_' + id + '_content', ''), image: '' });
+                    }
+                });
+                localStorage.setItem('platformGuideItems', JSON.stringify(items));
+                localStorage.setItem('guideSeedV2', '1');
+            } catch(e) {}
         }
 
         function renderPlatformGuideItemsList() {
@@ -6834,14 +6963,14 @@
         function saveGuideItem() {
             let title = document.getElementById('guideItemTitleInput').value.trim();
             let content = document.getElementById('guideItemContentInput').value.trim();
-            if(!title || !content) { alert('اكتب عنوان البند ومحتواه.'); return; }
+            if(!title || !content) { alert(t('m061', 'اكتب عنوان البند ومحتواه.')); return; }
             let items = getPlatformGuideItems();
             let editId = document.getElementById('guideItemEditId').value;
             let imageData = document.getElementById('guideItemImageFile').getAttribute('data-base64');
             if(editId) {
                 let it = items.find(i => i.id === editId);
                 if(it) {
-                    it.title = title; it.content = content;
+                    it.title = title; it.content = content; it.custom = true;
                     if(imageData === '__REMOVE__') it.image = '';
                     else if(imageData) it.image = imageData;
                 }
@@ -6851,7 +6980,7 @@
             localStorage.setItem('platformGuideItems', JSON.stringify(items));
             renderPlatformGuideItemsList();
             cancelGuideItemEdit();
-            showToast('✅ تم حفظ البند.');
+            showToast(t('m062', '✅ تم حفظ البند.'));
         }
 
         function editGuideItem(id) {
@@ -6891,7 +7020,7 @@
         }
 
         function deleteGuideItem(id) {
-            if(!confirm('متأكد إنك عايز تحذف البند ده؟')) return;
+            if(!confirm(t('m063', 'متأكد إنك عايز تحذف البند ده؟'))) return;
             let items = getPlatformGuideItems().filter(i => i.id !== id);
             localStorage.setItem('platformGuideItems', JSON.stringify(items));
             renderPlatformGuideItemsList();
@@ -6911,8 +7040,8 @@
                     // عنوانه ومحتواه من نظام الترجمة حسب لغة الواجهة الحالية. لو الأدمن ضاف بند
                     // مخصص بنفسه (مفهوش id متعرف عليه)، بيفضل زي ما كتبه بالظبط أيًا كانت اللغة،
                     // لأنه محتوى مكتوب يدويًا مش نص جاهز في النظام.
-                    let titleKey = it.id ? `guide_${it.id}_title` : null;
-                    let contentKey = it.id ? `guide_${it.id}_content` : null;
+                    let titleKey = (it.id && !it.custom) ? `guide_${it.id}_title` : null;
+                    let contentKey = (it.id && !it.custom) ? `guide_${it.id}_content` : null;
                     let title = titleKey ? t(titleKey, it.title) : it.title;
                     let content = contentKey ? t(contentKey, it.content) : it.content;
                     return `
@@ -7107,9 +7236,9 @@
             let enabled = document.getElementById('platformSnippetEnabledInput').checked;
             let scope = document.getElementById('platformSnippetScopeSelect').value;
             let storesSel = Array.from(document.querySelectorAll('.snippetStoreCb:checked')).map(c => c.value);
-            if(scope === 'stores' && storesSel.length === 0) { alert('اختار متجر واحد على الأقل، أو غيّر النطاق.'); return; }
-            if(!name) { alert('اكتب اسم للكود عشان تفتكره بعدين!'); return; }
-            if(!content.trim()) { alert('محتوى الكود فاضي!'); return; }
+            if(scope === 'stores' && storesSel.length === 0) { alert(t('m064', 'اختار متجر واحد على الأقل، أو غيّر النطاق.')); return; }
+            if(!name) { alert(t('m065', 'اكتب اسم للكود عشان تفتكره بعدين!')); return; }
+            if(!content.trim()) { alert(t('m066', 'محتوى الكود فاضي!')); return; }
 
             let snippets = getPlatformSnippets();
             if(index === -1) {
@@ -7121,7 +7250,7 @@
             injectCustomCode();
             renderPlatformSnippets();
             closePlatformSnippetForm();
-            showToast('✅ تم حفظ الكود وتطبيقه.');
+            showToast(t('m067', '✅ تم حفظ الكود وتطبيقه.'));
         }
 
         function togglePlatformSnippet(index) {
@@ -7164,7 +7293,7 @@
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             let store = stores[name];
             if(!store) return;
-            if(!currentAdminHasPermission('customCode')) { alert('ليس لديك صلاحية إدارة الأكواد المخصصة للمتاجر.'); return; }
+            if(!currentAdminHasPermission('customCode')) { alert(t('m068', 'ليس لديك صلاحية إدارة الأكواد المخصصة للمتاجر.')); return; }
             storeSnippetModalTarget = name;
             document.getElementById('storeCustomCodeModalTarget').value = name;
             document.getElementById('storeCustomCodeModalName').textContent = name;
@@ -7250,8 +7379,8 @@
             let type = document.getElementById('storeSnippetTypeSelect').value;
             let content = document.getElementById('storeSnippetContentInput').value;
             let enabled = document.getElementById('storeSnippetEnabledInput').checked;
-            if(!name) { alert('اكتب اسم للكود عشان تفتكره بعدين!'); return; }
-            if(!content.trim()) { alert('محتوى الكود فاضي!'); return; }
+            if(!name) { alert(t('m065', 'اكتب اسم للكود عشان تفتكره بعدين!')); return; }
+            if(!content.trim()) { alert(t('m066', 'محتوى الكود فاضي!')); return; }
 
             let snippets = getStoreSnippets(storeSnippetModalTarget);
             if(index === -1) {
@@ -7310,7 +7439,7 @@
                 alert(`✅ تم التنظيف! تم تحرير حوالي ${Math.round(freed/1024)} كيلوبايت.\nجرّب التسجيل مجدداً.`);
                 checkStorageAndWarn();
             } catch(e) {
-                alert('⚠️ لم ينجح التنظيف. المساحة ممتلئة جداً. امسح بيانات الموقع يدوياً من إعدادات المتصفح ثم استورد النسخة الاحتياطية.');
+                alert(t('m069', '⚠️ لم ينجح التنظيف. المساحة ممتلئة جداً. امسح بيانات الموقع يدوياً من إعدادات المتصفح ثم استورد النسخة الاحتياطية.'));
             }
         }
 
@@ -7754,9 +7883,9 @@
         function cardChangeQty(name, price, delta, stock) {
             let idx = cart.findIndex(i => i.name === name && i.store === activeStore);
             if(idx === -1 && delta > 0) {
-                if(typeof stock === 'number' && stock <= 0) { showToast('❌ نفذت الكمية من المخزون.'); return; }
+                if(typeof stock === 'number' && stock <= 0) { showToast(t('m070', '❌ نفذت الكمية من المخزون.')); return; }
                 cart.push({ name, price: parseFloat(price), store: activeStore, qty: 1 });
-                showToast('تمت الإضافة للسلة 🛒');
+                showToast(t('m071', 'تمت الإضافة للسلة 🛒'));
             } else if(idx !== -1) {
                 if(delta > 0 && typeof stock === 'number' && cart[idx].qty >= stock) {
                     showToast(`⚠️ الكمية المتوفرة ${stock} فقط.`);
@@ -7969,7 +8098,7 @@
             if(GOOGLE_SIGNIN_ENABLED && window.google && google.accounts && google.accounts.id) {
                 currentReviewerGoogleUser = null;
                 try {
-                    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleReviewCredential });
+                    gisInitWith(handleGoogleReviewCredential);
                     google.accounts.id.renderButton(document.getElementById('googleSignInBtn'), { theme: 'outline', size: 'medium', text: 'signin_with' });
                 } catch(e) { /* لو حدث خطأ في الإعداد، تجاهله بأمان دون كسر الصفحة */ }
             }
@@ -8052,7 +8181,7 @@
 
             // منع حساب جوجل محظور من إضافة مراجعة جديدة في هذا المتجر تحديداً
             if(email && store.blockedReviewers && store.blockedReviewers.includes(email)) {
-                alert('عذراً، لا يمكنك إضافة مراجعات في هذا المتجر.');
+                alert(t('m072', 'عذراً، لا يمكنك إضافة مراجعات في هذا المتجر.'));
                 return;
             }
 
@@ -8071,7 +8200,7 @@
                 window.pushReviewDirectly(activeStore, prodName, newReview).catch(function() {});
             }
 
-            showToast('تم تسجيل مراجعتك وتقييمك بنجاح! 🌟');
+            showToast(t('m073', 'تم تسجيل مراجعتك وتقييمك بنجاح! 🌟'));
             // 📍 نفضل في نفس صفحة المنتج ونعيد رسمها في مكانها عشان العميل يشوف تقييمه
             // اللي لسه ضايفه فورًا قدامه - بدل ما يتقفل المودال ويرجع للرئيسية ويدوّر
             // على المنتج تاني بنفسه عشان يتأكد إن تقييمه فعلاً اتسجل.
@@ -8084,7 +8213,7 @@
             let store = stores[activeStore];
             let product = store.products.find(p => p.name === prodName);
             let existingReply = product.reviews[idx].reply || '';
-            let reply = prompt('اكتب ردك على هذه المراجعة:', existingReply);
+            let reply = prompt(t('m074', 'اكتب ردك على هذه المراجعة:'), existingReply);
             if(reply === null) return;
             product.reviews[idx].reply = reply.trim();
             if(!saveAllStores(stores)) return;
@@ -8097,18 +8226,18 @@
             let store = stores[activeStore];
             let product = store.products.find(p => p.name === prodName);
             let email = product.reviews[idx].email;
-            if(!email) { alert('هذه المراجعة غير مرتبطة بحساب جوجل، لا يمكن حظرها بهذه الطريقة (يمكنك حذفها فقط).'); return; }
+            if(!email) { alert(t('m075', 'هذه المراجعة غير مرتبطة بحساب جوجل، لا يمكن حظرها بهذه الطريقة (يمكنك حذفها فقط).')); return; }
             if(!confirm(`هل تريد حظر "${product.reviews[idx].author}" (${email}) من إضافة أي مراجعات جديدة في متجرك؟`)) return;
 
             if(!store.blockedReviewers) store.blockedReviewers = [];
             if(!store.blockedReviewers.includes(email)) store.blockedReviewers.push(email);
             if(!saveAllStores(stores)) return;
-            showToast('✅ تم حظر هذا الحساب من إضافة مراجعات جديدة في متجرك');
+            showToast(t('m076', '✅ تم حظر هذا الحساب من إضافة مراجعات جديدة في متجرك'));
         }
 
         // --- يسمح لصاحب المتجر بحذف أي مراجعة/تعليق غير لائق من متجره فقط ---
         function deleteReview(prodName, idx) {
-            if(!confirm('هل تريد حذف هذه المراجعة؟')) return;
+            if(!confirm(t('m077', 'هل تريد حذف هذه المراجعة؟'))) return;
             let stores = JSON.parse(localStorage.getItem('allStores'));
             let store = stores[activeStore];
             let product = store.products.find(p => p.name === prodName);
@@ -8127,7 +8256,7 @@
             }
             localStorage.setItem('appCart', JSON.stringify(cart));
             updateCartBadge();
-            showToast('تمت الإضافة للسلة 🛒');
+            showToast(t('m071', 'تمت الإضافة للسلة 🛒'));
 
             let cardArea = document.querySelector(`.product-card[data-pname="${name.replace(/"/g, '\\"')}"] .cart-btn-area`);
             if(cardArea) cardArea.innerHTML = renderCardCartControl(name, price);
@@ -8521,6 +8650,7 @@
         }
         function openUnifiedEntryChoiceModal() {
             document.getElementById('unifiedEntryChoiceModal').classList.remove('hidden');
+            layoutPageModal('unifiedEntryChoiceModal');
         }
         function closeUnifiedEntryChoiceModal() {
             document.getElementById('unifiedEntryChoiceModal').classList.add('hidden');
@@ -8536,7 +8666,7 @@
             // المستخدمة فعلاً مع تقييمات المنتجات وتسجيل التجار.
             if(GOOGLE_SIGNIN_ENABLED && window.google && google.accounts && google.accounts.id) {
                 try {
-                    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleBuyerCredential });
+                    gisInitWith(handleGoogleBuyerCredential);
                     let box = document.getElementById('buyerGoogleSignInBox');
                     if(box) { box.innerHTML = ''; google.accounts.id.renderButton(box, { theme: 'outline', size: 'large', text: 'continue_with', width: 260 }); box.classList.remove('hidden'); }
                 } catch(e) { /* تجاهل بأمان لو حصل أي خطأ في تهيئة جوجل */ }
@@ -8736,7 +8866,7 @@
             try { m.style.setProperty('--page-bg', getComputedStyle(document.body).backgroundColor); } catch(e) {}
         }
         window.addEventListener('resize', function() {
-            ['buyerProfileModal', 'buyerAuthModal', 'trackOrderModal'].forEach(function(id) {
+            ['buyerProfileModal', 'buyerAuthModal', 'trackOrderModal', 'buyerChatThreadsModal', 'buyerChatThreadModal', 'unifiedEntryChoiceModal'].forEach(function(id) {
                 let m = document.getElementById(id);
                 if(m && !m.classList.contains('hidden')) layoutPageModal(id);
             });
@@ -9024,7 +9154,14 @@
             if(dot) dot.classList.toggle('hidden', total === 0);
         }
         function openBuyerChatThreadsModal() {
+            // ⚡ لو شاشة لوحة التاجر لسه متحمّلتش (الأيقونة في الهيدر ظاهرة من أي صفحة) نحمّلها الأول
+            // وبعدين نفتح الصفحة - ده كان سبب إن الأيقونة تحتاج أكتر من ضغطة.
+            if(!document.getElementById('buyerChatThreadsModal')) {
+                ensureDashboardFragmentLoaded(function() { openBuyerChatThreadsModal(); });
+                return;
+            }
             document.getElementById('buyerChatThreadsModal').classList.remove('hidden');
+            layoutPageModal('buyerChatThreadsModal');
             renderBuyerChatThreadsList();
             // 🧹 تنظيف تلقائي خفيف كل ما التاجر يفتح صندوق محادثات العملاء، حسب مهلة الاحتفاظ
             // اللي حددها هو بنفسه في الإعدادات (افتراضيًا 30 يوم).
@@ -9073,6 +9210,7 @@
             __activeBuyerChatThreadBuyerId = buyerId;
             document.querySelector('#buyerChatThreadTitle span:last-child').textContent = buyerName || buyerId;
             document.getElementById('buyerChatThreadModal').classList.remove('hidden');
+            layoutPageModal('buyerChatThreadModal');
             if(__merchantBuyerChatUnsub) { try { __merchantBuyerChatUnsub(); } catch(e) {} __merchantBuyerChatUnsub = null; }
             if(window.watchBuyerChatMessages) {
                 __merchantBuyerChatUnsub = window.watchBuyerChatMessages(merchant, buyerId, function(msgs) {
@@ -9170,7 +9308,7 @@
                     if(err.code === 'auth/user-not-found') {
                         tryLegacyAdminPasswordReset(email);
                     } else {
-                        alert('حصل خطأ أثناء إرسال رابط الاستعادة: ' + (err.message || 'جرب تاني بعد لحظات.'));
+                        alert(t('m078', 'حصل خطأ أثناء إرسال رابط الاستعادة: ') + (err.message || 'جرب تاني بعد لحظات.'));
                     }
                 });
             } else {
@@ -10031,7 +10169,7 @@
             document.getElementById('adminCurrentPassInput').value = '';
             document.getElementById('adminNewPassInput').value = '';
             document.getElementById('adminConfirmNewPassInput').value = '';
-            showToast('✅ تم تغيير كلمة المرور بنجاح');
+            showToast(t('m039', '✅ تم تغيير كلمة المرور بنجاح'));
         }
 
         // --- تغيير اسم دخول الأدمن الحالي (اسمه المستخدم لتسجيل الدخول) ---
@@ -10053,7 +10191,7 @@
             localStorage.setItem('loggedAdminUsername', newUsername);
             document.getElementById('adminNewUsernameInput').value = '';
             renderAdminAccounts();
-            showToast('✅ اتغيّر اسم الدخول بنجاح، استخدم الاسم الجديد في مرات الدخول الجاية');
+            showToast(t('m079', '✅ اتغيّر اسم الدخول بنجاح، استخدم الاسم الجديد في مرات الدخول الجاية'));
         }
 
         // --- تأمين حساب الأدمن بالبريد الإلكتروني + اختيار طريقة الدخول (اسم/بريد/الاتنين) ---
@@ -10166,7 +10304,7 @@
             if(idx === -1) return;
             accounts[idx].loginMethod = document.getElementById('adminLoginMethodSelect').value;
             localStorage.setItem('adminAccounts', JSON.stringify(accounts));
-            showToast('✅ اتحفظت طريقة الدخول');
+            showToast(t('m026', '✅ اتحفظت طريقة الدخول'));
         }
 
         function renderAdminPanel() {
@@ -10440,12 +10578,12 @@
             let username = document.getElementById('newAdminUsername').value.trim();
             let password = document.getElementById('newAdminPassword').value.trim();
             let role = document.getElementById('newAdminRole').value;
-            if(!username || !password) { alert('يرجى إدخال اسم المستخدم وكلمة المرور!'); return; }
+            if(!username || !password) { alert(t('m080', 'يرجى إدخال اسم المستخدم وكلمة المرور!')); return; }
 
             let accounts = JSON.parse(localStorage.getItem('adminAccounts')) || [];
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             if(accounts.some(a => a.username.toLowerCase() === username.toLowerCase()) || stores[username]) {
-                alert('هذا الاسم مستخدم بالفعل!'); return;
+                alert(t('m081', 'هذا الاسم مستخدم بالفعل!')); return;
             }
 
             let allowedStores = [];
@@ -10462,15 +10600,15 @@
             document.getElementById('newAdminUsername').value = '';
             document.getElementById('newAdminPassword').value = '';
             renderAdminAccounts();
-            alert('تم إضافة الحساب بنجاح.');
+            alert(t('m082', 'تم إضافة الحساب بنجاح.'));
         }
 
         function deleteAdminAccount(index) {
             let accounts = JSON.parse(localStorage.getItem('adminAccounts')) || [];
             let currentUsername = localStorage.getItem('loggedAdminUsername');
-            if(accounts[index].username === currentUsername) { alert('لا يمكنك حذف حسابك الحالي وأنت مسجل دخول به!'); return; }
+            if(accounts[index].username === currentUsername) { alert(t('m083', 'لا يمكنك حذف حسابك الحالي وأنت مسجل دخول به!')); return; }
             let superCount = accounts.filter(a => a.role === 'super').length;
-            if(accounts[index].role === 'super' && superCount <= 1) { alert('لا يمكن حذف آخر حساب مدير عام في المنصة!'); return; }
+            if(accounts[index].role === 'super' && superCount <= 1) { alert(t('m084', 'لا يمكن حذف آخر حساب مدير عام في المنصة!')); return; }
             if(!confirm(`تأكيد حذف الحساب "${accounts[index].username}"؟`)) return;
             accounts.splice(index, 1);
             localStorage.setItem('adminAccounts', JSON.stringify(accounts));
@@ -10564,7 +10702,7 @@
             localStorage.setItem('adminAccounts', JSON.stringify(accounts));
             closeEditAdminPermsModal();
             renderAdminAccounts();
-            showToast('✅ تم تحديث صلاحيات الحساب بنجاح');
+            showToast(t('m085', '✅ تم تحديث صلاحيات الحساب بنجاح'));
         }
 
         // --- نسخ احتياطي واسترجاع لبيانات المنصة بالكامل ---
@@ -10583,7 +10721,7 @@
         function importBackup(input) {
             let file = input.files[0];
             if(!file) return;
-            if(!confirm('سيتم استبدال كل بيانات المنصة الحالية ببيانات الملف المستورد. هل أنت متأكد؟')) { input.value = ''; return; }
+            if(!confirm(t('m086', 'سيتم استبدال كل بيانات المنصة الحالية ببيانات الملف المستورد. هل أنت متأكد؟'))) { input.value = ''; return; }
 
             let reader = new FileReader();
             reader.onload = function(e) {
@@ -10592,10 +10730,10 @@
                     for(let key in backup) {
                         if(backup[key] !== null && backup[key] !== undefined) localStorage.setItem(key, backup[key]);
                     }
-                    alert('تم استرجاع النسخة الاحتياطية بنجاح! سيتم تحديث الصفحة الآن.');
+                    alert(t('m087', 'تم استرجاع النسخة الاحتياطية بنجاح! سيتم تحديث الصفحة الآن.'));
                     location.reload();
                 } catch(err) {
-                    alert('ملف النسخة الاحتياطية غير صالح!');
+                    alert(t('m088', 'ملف النسخة الاحتياطية غير صالح!'));
                 }
             };
             reader.readAsText(file);
@@ -10616,10 +10754,10 @@
             ]);
         }
         async function adminExportCloudBackup() {
-            if(!window.adminExportFullCloudBackup) { alert('⚠️ الاتصال بالسحابة غير متاح الآن.'); return; }
+            if(!window.adminExportFullCloudBackup) { alert(t('m089', '⚠️ الاتصال بالسحابة غير متاح الآن.')); return; }
             try {
-                showToast('⏳ جاري جمع بيانات كل المتاجر من السحابة...');
-                let slowNoticeTimerA = setTimeout(() => showToast('⏳ لسه بيجمع بيانات كل المتاجر... ممكن ياخد دقيقة أو اتنين لو فيه متاجر كتير.'), 15000);
+                showToast(t('m090', '⏳ جاري جمع بيانات كل المتاجر من السحابة...'));
+                let slowNoticeTimerA = setTimeout(() => showToast(t('m091', '⏳ لسه بيجمع بيانات كل المتاجر... ممكن ياخد دقيقة أو اتنين لو فيه متاجر كتير.')), 15000);
                 let data = await withTimeout(window.adminExportFullCloudBackup(), 180000, 'الاتصال بالسحابة بطيء جدًا أو غير متاح. تأكد إنك بتفتح المنصة من رابط حقيقي على الإنترنت (مش ملف محفوظ على الجهاز) وجرب تاني.');
                 clearTimeout(slowNoticeTimerA);
                 let blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -10627,27 +10765,27 @@
                 let a = document.createElement('a');
                 a.href = url; a.download = 'platform_full_backup.json'; a.click();
                 URL.revokeObjectURL(url);
-                showToast('✅ تم تحميل النسخة الشاملة (' + Object.keys(data).length + ' متجر)');
+                showToast(t('m092', '✅ تم تحميل النسخة الشاملة ({n} متجر)').replace('{n}', Object.keys(data).length));
             } catch(e) {
                 console.error('adminExportCloudBackup error:', e);
-                alert('⚠️ حصل خطأ أثناء التصدير: ' + (e && e.message ? e.message : e));
+                alert(t('m093', '⚠️ حصل خطأ أثناء التصدير: ') + (e && e.message ? e.message : e));
             }
         }
         function adminImportCloudBackup(input) {
             let file = input.files[0];
             if(!file) return;
-            if(!confirm('⚠️ تحذير مهم: هذا سيستبدل بيانات المتاجر الموجودة في الملف فوق السحابة فورًا (المتاجر اللي مذكورة في الملف بس، الباقي مش بيتأثر). متأكد؟')) { input.value = ''; return; }
+            if(!confirm(t('m094', '⚠️ تحذير مهم: هذا سيستبدل بيانات المتاجر الموجودة في الملف فوق السحابة فورًا (المتاجر اللي مذكورة في الملف بس، الباقي مش بيتأثر). متأكد؟'))) { input.value = ''; return; }
             let reader = new FileReader();
             reader.onload = async function(e) {
                 try {
                     let data = JSON.parse(e.target.result);
-                    if(!window.adminImportFullCloudBackup) { alert('⚠️ الاتصال بالسحابة غير متاح الآن.'); return; }
-                    showToast('⏳ جاري رفع النسخة الشاملة للسحابة...');
+                    if(!window.adminImportFullCloudBackup) { alert(t('m089', '⚠️ الاتصال بالسحابة غير متاح الآن.')); return; }
+                    showToast(t('m095', '⏳ جاري رفع النسخة الشاملة للسحابة...'));
                     let n = await withTimeout(window.adminImportFullCloudBackup(data), 25000, 'الاتصال بالسحابة بطيء جدًا أو غير متاح. تأكد إنك بتفتح المنصة من رابط حقيقي على الإنترنت وجرب تاني.');
-                    alert('✅ تم استرجاع ' + n + ' متجر بنجاح للسحابة.');
+                    alert(t('m096', '✅ تم استرجاع {n} متجر بنجاح للسحابة.').replace('{n}', n));
                 } catch(err) {
                     console.error('adminImportCloudBackup error:', err);
-                    alert('⚠️ ملف غير صالح أو حصل خطأ: ' + (err && err.message ? err.message : err));
+                    alert(t('m097', '⚠️ ملف غير صالح أو حصل خطأ: ') + (err && err.message ? err.message : err));
                 }
                 input.value = '';
             };
@@ -10656,11 +10794,11 @@
 
         async function merchantExportCloudBackup() {
             let merchant = localStorage.getItem('currentActiveMerchant');
-            if(!merchant) { alert('⚠️ لازم تكون داخل متجرك أولاً.'); return; }
-            if(!window.merchantExportStoreCloudBackup) { alert('⚠️ الاتصال بالسحابة غير متاح الآن.'); return; }
+            if(!merchant) { alert(t('m098', '⚠️ لازم تكون داخل متجرك أولاً.')); return; }
+            if(!window.merchantExportStoreCloudBackup) { alert(t('m089', '⚠️ الاتصال بالسحابة غير متاح الآن.')); return; }
             try {
-                showToast('⏳ جاري جمع بيانات متجرك من السحابة...');
-                let slowNoticeTimer = setTimeout(() => showToast('⏳ لسه بيجمع البيانات... ممكن ياخد وقت أطول لو المتجر فيه منتجات/طلبات كتير.'), 15000);
+                showToast(t('m099', '⏳ جاري جمع بيانات متجرك من السحابة...'));
+                let slowNoticeTimer = setTimeout(() => showToast(t('m100', '⏳ لسه بيجمع البيانات... ممكن ياخد وقت أطول لو المتجر فيه منتجات/طلبات كتير.')), 15000);
                 let data = await withTimeout(window.merchantExportStoreCloudBackup(merchant), 180000, 'الاتصال بالسحابة بطيء جدًا أو غير متاح. تأكد إنك بتفتح المتجر من رابط حقيقي على الإنترنت (مش ملف محفوظ على الجهاز) وجرب تاني.');
                 clearTimeout(slowNoticeTimer);
                 let blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -10668,24 +10806,24 @@
                 let a = document.createElement('a');
                 a.href = url; a.download = 'store_backup_' + merchant + '.json'; a.click();
                 URL.revokeObjectURL(url);
-                showToast('✅ تم تحميل نسخة متجرك');
+                showToast(t('m101', '✅ تم تحميل نسخة متجرك'));
             } catch(e) {
                 console.error('merchantExportCloudBackup error:', e);
-                alert('⚠️ حصل خطأ أثناء التصدير: ' + (e && e.message ? e.message : e));
+                alert(t('m093', '⚠️ حصل خطأ أثناء التصدير: ') + (e && e.message ? e.message : e));
             }
         }
         function merchantImportCloudBackup(input) {
             let file = input.files[0];
             if(!file) return;
             let merchant = localStorage.getItem('currentActiveMerchant');
-            if(!merchant) { alert('⚠️ لازم تكون داخل متجرك أولاً.'); input.value = ''; return; }
-            if(!confirm('⚠️ هذا سيستبدل منتجاتك وطلباتك الحالية على السحابة بمحتوى الملف. هنحتفظ بنسخة من حالتك الحالية تلقائيًا عشان تقدر "تتراجع" لو حصل خطأ. متأكد؟')) { input.value = ''; return; }
+            if(!merchant) { alert(t('m098', '⚠️ لازم تكون داخل متجرك أولاً.')); input.value = ''; return; }
+            if(!confirm(t('m102', '⚠️ هذا سيستبدل منتجاتك وطلباتك الحالية على السحابة بمحتوى الملف. هنحتفظ بنسخة من حالتك الحالية تلقائيًا عشان تقدر "تتراجع" لو حصل خطأ. متأكد؟'))) { input.value = ''; return; }
             let reader = new FileReader();
             reader.onload = async function(e) {
                 try {
                     let data = JSON.parse(e.target.result);
-                    if(!window.merchantExportStoreCloudBackup || !window.merchantImportStoreCloudBackup) { alert('⚠️ الاتصال بالسحابة غير متاح الآن.'); return; }
-                    showToast('⏳ جاري أخذ نسخة أمان من حالتك الحالية...');
+                    if(!window.merchantExportStoreCloudBackup || !window.merchantImportStoreCloudBackup) { alert(t('m089', '⚠️ الاتصال بالسحابة غير متاح الآن.')); return; }
+                    showToast(t('m103', '⏳ جاري أخذ نسخة أمان من حالتك الحالية...'));
                     // 🛟 "نقطة استعادة" تلقائية قبل أي استيراد: بنحفظ حالة متجرك الحالية فعليًا
                     // (من السحابة نفسها) قبل ما نكتب فوقها، عشان لو الملف المرفوع غلط أو
                     // بوّظ حاجة، تقدر تضغط "تراجع عن آخر استيراد" وترجع لحالتك قبل كده فورًا.
@@ -10694,18 +10832,18 @@
                         localStorage.setItem('preImportSnapshot_' + merchant, JSON.stringify(snapshot));
                         localStorage.setItem('preImportSnapshotTime_' + merchant, new Date().toLocaleString('ar-EG'));
                     } catch(snapErr) {
-                        if(!confirm('⚠️ تعذّر أخذ نسخة أمان تلقائية قبل الاستيراد (لن تقدر تتراجع لو حصل خطأ). تكمل الاستيراد عادي برضو؟')) return;
+                        if(!confirm(t('m104', '⚠️ تعذّر أخذ نسخة أمان تلقائية قبل الاستيراد (لن تقدر تتراجع لو حصل خطأ). تكمل الاستيراد عادي برضو؟'))) return;
                     }
-                    showToast('⏳ جاري استرجاع متجرك للسحابة...');
+                    showToast(t('m105', '⏳ جاري استرجاع متجرك للسحابة...'));
                     // 🔒 دايمًا بنستخدم "merchant" (متجرك الحالي في الجلسة) كمكان الكتابة، حتى لو
                     // الملف فيه __storeId مختلف - ده اللي يمنع استرجاع بيانات لمتجر غير متجرك.
                     await withTimeout(window.merchantImportStoreCloudBackup(merchant, data), 25000, 'الاتصال بالسحابة بطيء جدًا أو غير متاح. جرب تاني.');
-                    alert('✅ تم استرجاع نسخة متجرك بنجاح. لو حصل أي خطأ غير متوقع، في زرار "تراجع عن آخر استيراد" جنب أزرار النسخ الاحتياطي.');
+                    alert(t('m106', '✅ تم استرجاع نسخة متجرك بنجاح. لو حصل أي خطأ غير متوقع، في زرار "تراجع عن آخر استيراد" جنب أزرار النسخ الاحتياطي.'));
                     refreshMerchantUndoImportBtn();
                     loadDashboard();
                 } catch(err) {
                     console.error('merchantImportCloudBackup error:', err);
-                    alert('⚠️ ملف غير صالح أو حصل خطأ: ' + (err && err.message ? err.message : err));
+                    alert(t('m097', '⚠️ ملف غير صالح أو حصل خطأ: ') + (err && err.message ? err.message : err));
                 }
                 input.value = '';
             };
@@ -10716,19 +10854,19 @@
         async function merchantUndoLastImport() {
             let merchant = localStorage.getItem('currentActiveMerchant');
             let snap = merchant && localStorage.getItem('preImportSnapshot_' + merchant);
-            if(!merchant || !snap) { alert('⚠️ لا توجد نسخة أمان محفوظة للتراجع إليها.'); return; }
-            if(!confirm('هل تريد التراجع عن آخر استيراد والعودة لحالة متجرك قبله مباشرة؟')) return;
+            if(!merchant || !snap) { alert(t('m107', '⚠️ لا توجد نسخة أمان محفوظة للتراجع إليها.')); return; }
+            if(!confirm(t('m108', 'هل تريد التراجع عن آخر استيراد والعودة لحالة متجرك قبله مباشرة؟'))) return;
             try {
-                showToast('⏳ جاري التراجع...');
+                showToast(t('m109', '⏳ جاري التراجع...'));
                 await withTimeout(window.merchantImportStoreCloudBackup(merchant, JSON.parse(snap)), 25000, 'الاتصال بالسحابة بطيء جدًا أو غير متاح. جرب تاني.');
                 localStorage.removeItem('preImportSnapshot_' + merchant);
                 localStorage.removeItem('preImportSnapshotTime_' + merchant);
                 refreshMerchantUndoImportBtn();
-                alert('✅ تم التراجع بنجاح.');
+                alert(t('m110', '✅ تم التراجع بنجاح.'));
                 loadDashboard();
             } catch(e) {
                 console.error('merchantUndoLastImport error:', e);
-                alert('⚠️ حصل خطأ أثناء التراجع: ' + (e && e.message ? e.message : e));
+                alert(t('m111', '⚠️ حصل خطأ أثناء التراجع: ') + (e && e.message ? e.message : e));
             }
         }
         function refreshMerchantUndoImportBtn() {
@@ -10772,7 +10910,7 @@
             let image = fileInput.getAttribute('data-base64') || existing.image || '';
 
             localStorage.setItem('homeAdBanner', JSON.stringify({ type, text, image, link }));
-            alert('تم حفظ اللافتة الإعلانية، وستظهر الآن للزوار في الصفحة الرئيسية للمنصة فقط (قبل دخولهم أي متجر).');
+            alert(t('m112', 'تم حفظ اللافتة الإعلانية، وستظهر الآن للزوار في الصفحة الرئيسية للمنصة فقط (قبل دخولهم أي متجر).'));
         }
 
         function removeHomeAdBanner() {
@@ -10780,7 +10918,7 @@
             document.getElementById('adBannerTextInput').value = '';
             document.getElementById('adBannerLinkInput').value = '';
             document.getElementById('adBannerPreviewImg').style.display = 'none';
-            alert('تم إزالة اللافتة الإعلانية.');
+            alert(t('m113', 'تم إزالة اللافتة الإعلانية.'));
         }
 
         function saveSubscriptionPrice() {
@@ -10801,7 +10939,7 @@
             localStorage.setItem('renewalCycleDays', renewalCycle || '30');
             localStorage.setItem('subscriptionPayMethods', JSON.stringify(payMethods));
             localStorage.setItem('subscriptionReminderTemplate', template);
-            showToast('✅ تم حفظ إعدادات الاشتراك');
+            showToast(t('m114', '✅ تم حفظ إعدادات الاشتراك'));
         }
 
         // --- حساب حالة اشتراك المتجر (تجريبي أو دورة تجديد) بناءً على إعدادات الأدمن ---
@@ -10839,7 +10977,7 @@
                 localStorage.setItem('subscriptionPlans', JSON.stringify(plans));
                 return true;
             } catch(e) {
-                alert('⚠️ حدث خطأ أثناء حفظ الباقات، المساحة قد تكون ممتلئة.');
+                alert(t('m115', '⚠️ حدث خطأ أثناء حفظ الباقات، المساحة قد تكون ممتلئة.'));
                 return false;
             }
         }
@@ -10892,7 +11030,7 @@
 
         function setStorePlan(name, planId) {
             if(!currentAdminHasPermission('manageStorePlans') && !currentAdminHasPermission('renewSubscription')) {
-                alert('ليس لديك صلاحية تغيير باقة المتاجر.'); return;
+                alert(t('m116', 'ليس لديك صلاحية تغيير باقة المتاجر.')); return;
             }
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             if(!stores[name]) return;
@@ -10930,7 +11068,7 @@
         // --- تجديد اشتراك متجر معين لعدد أيام يحدده الأدمن بنفسه (بيضيفهم فوق باقي المدة الحالية
         // لو لسه مفيش فيه، أو من النهاردة لو الاشتراك خلص خالص) ---
         function renewStoreSubscription(name) {
-            if(!currentAdminHasPermission('renewSubscription')) { alert('ليس لديك صلاحية تجديد اشتراكات المتاجر.'); return; }
+            if(!currentAdminHasPermission('renewSubscription')) { alert(t('m117', 'ليس لديك صلاحية تجديد اشتراكات المتاجر.')); return; }
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             let store = stores[name];
             if(!store) return;
@@ -10938,7 +11076,7 @@
             let input = prompt(`لعدد كام يوم عايز تجدد اشتراك متجر "${name}"؟`, defaultDays);
             if(input === null) return; // المستخدم ضغط إلغاء
             let days = parseInt(input);
-            if(isNaN(days) || days <= 0) { alert('اكتب عدد أيام صحيح أكبر من صفر.'); return; }
+            if(isNaN(days) || days <= 0) { alert(t('m118', 'اكتب عدد أيام صحيح أكبر من صفر.')); return; }
 
             let now = Date.now();
             let currentExpiry = store.subscriptionExpiresAt || now;
@@ -10955,7 +11093,7 @@
         // --- الأدمن (بعكس التاجر) يقدر يغيّر اسم دخول أي متجر في أي وقت من غير قيد الـ 6 شهور،
         // لحالات الطوارئ (مثلاً التاجر نسي اسم دخوله أو فيه مشكلة أمنية) ---
         function adminChangeStoreLoginName(oldName) {
-            if(!currentAdminHasPermission('changeLoginName')) { alert('ليس لديك صلاحية تغيير اسم دخول التجار.'); return; }
+            if(!currentAdminHasPermission('changeLoginName')) { alert(t('m119', 'ليس لديك صلاحية تغيير اسم دخول التجار.')); return; }
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             if(!stores[oldName]) return;
             let newName = prompt(`اسم الدخول الجديد لمتجر "${getStoreDisplayName(oldName, stores[oldName])}" (الحالي: "${oldName}")؟`, oldName);
@@ -11038,11 +11176,11 @@
                     let allowed = (me && me.allowedStores) ? me.allowedStores : [];
                     targets = targets.filter(n => allowed.includes(n));
                 }
-                if(targets.length === 0) { alert('لا يوجد تجار مسموح لك بإرسال رسائل لهم.'); return; }
+                if(targets.length === 0) { alert(t('m120', 'لا يوجد تجار مسموح لك بإرسال رسائل لهم.')); return; }
             } else {
                 // ✅ بقى يدعم تحديد متجر واحد أو أكتر من قائمة الاختيار المتعدد فوق
                 document.querySelectorAll('.broadcast-target-cb').forEach(cb => { if(cb.checked) targets.push(cb.value); });
-                if(targets.length === 0) { alert('اختر متجرًا واحدًا على الأقل من القائمة، أو استخدم زرار "إرسال للجميع".'); return; }
+                if(targets.length === 0) { alert(t('m121', 'اختر متجرًا واحدًا على الأقل من القائمة، أو استخدم زرار "إرسال للجميع".')); return; }
             }
 
             // الرسالة تُحفظ في صندوق رسائل المتجر — يشوفها التاجر في لوحة التحكم
@@ -11159,7 +11297,7 @@
                         <div>
                             <strong>${getStoreDisplayName(name, s)}</strong>
                             <span style="font-size:11px; color:var(--text-muted); display:block; margin-top:2px;">
-                                حوّل عن طريق <strong>${methodLabels[req.method] || req.method}</strong> — الرقم/المعرّف: <strong>${req.senderInfo}</strong><br>
+                                حوّل عن طريق <strong>${methodLabels[req.method] || req.method}</strong> — الرقم/المعرّف: <strong>${req.senderInfo}</strong> ${transferInfoHtml()}<br>
                                 بتاريخ ${new Date(req.requestedAt).toLocaleString('ar-EG')}
                             </span>
                         </div>
@@ -11188,7 +11326,7 @@
             if(!stores[name]) return;
             delete stores[name].pendingRenewalRequest;
             if(!saveAllStores(stores)) return;
-            showToast('تم رفض البلاغ.');
+            showToast(t('m122', 'تم رفض البلاغ.'));
             renderAdminStores();
         }
 
@@ -11420,7 +11558,7 @@
             if(plan.allowColors) {
                 box.innerHTML = `<button type="button" onclick="openMerchantColorsModal()" style="width:auto; padding:8px 14px; margin:0;"><i class="fa fa-palette"></i> ${t('set_choose_colors_btn', 'اختار ألوان متجرك')}</button>`;
             } else {
-                box.innerHTML = `<p style="font-size:11.5px; color:#9a3412; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:8px 10px; margin:0;">🔒 ${t('set_colors_locked_tpl', 'باقتك الحالية ("{plan}") لا تشمل تخصيص الألوان. تواصل مع إدارة المنصة للترقية لباقة تدعمها.').replace('{plan}', plan.name)}</p>`;
+                box.innerHTML = `<p style="font-size:11.5px; color:#9a3412; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:8px 10px; margin:0;">🔒 ${t('set_colors_locked_tpl', 'باقتك الحالية ("{plan}") لا تشمل تخصيص الألوان. تواصل مع إدارة المنصة للترقية لباقة تدعمها.').replace('{plan}', planDisplayName(plan))}</p>`;
             }
         }
         function openMerchantColorsModal() {
@@ -11456,7 +11594,7 @@
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             let store = stores[name];
             if(!store) return;
-            if(!currentAdminHasPermission('manageColors')) { alert('ليس لديك صلاحية تخصيص ألوان المتاجر.'); return; }
+            if(!currentAdminHasPermission('manageColors')) { alert(t('m123', 'ليس لديك صلاحية تخصيص ألوان المتاجر.')); return; }
 
             // 🏷️ الألوان المخصصة ميزة مقصورة على باقات معينة (حسب ما يحدده الأدمن في
             // إعدادات كل باقة). لو باقة المتجر الحالية مش بتسمح بيها، بنمنع ونقترح الترقية.
@@ -11514,7 +11652,7 @@
             stores[name].themeColors = themeColors;
             stores[name].themeColor = themeColors.primary; // توافق مع الكود القديم
             if(!saveAllStores(stores)) return;
-            showToast('✅ تم حفظ ألوان المتجر بنجاح');
+            showToast(t('m124', '✅ تم حفظ ألوان المتجر بنجاح'));
             closeStoreColorsModal();
             renderAdminStores();
         }
@@ -11527,14 +11665,14 @@
             delete stores[name].themeColors;
             stores[name].themeColor = '#d97706';
             if(!saveAllStores(stores)) return;
-            showToast('✅ تمت استعادة الألوان الافتراضية');
+            showToast(t('m125', '✅ تمت استعادة الألوان الافتراضية'));
             closeStoreColorsModal();
             renderAdminStores();
         }
 
         // --- زيارة متجر تاجر معين مباشرة من لوحة الأدمن (تعود للوحة الأدمن بالضغط على "دخول التجار والمشرفين" مرة أخرى) ---
         function visitStoreAsAdmin(name) {
-            if(!currentAdminHasPermission('visit')) { alert('ليس لديك صلاحية معاينة المتاجر.'); return; }
+            if(!currentAdminHasPermission('visit')) { alert(t('m126', 'ليس لديك صلاحية معاينة المتاجر.')); return; }
             activeStore = name;
             setTabState('currentActiveStore', name);
             setTabState('viewMode', 'store');
@@ -11544,7 +11682,7 @@
         }
 
         function setStoreQuota(name, value) {
-            if(!currentAdminHasPermission('manageQuota')) { alert('ليس لديك صلاحية تعديل مساحة التخزين المسموحة.'); renderAdminStores(); return; }
+            if(!currentAdminHasPermission('manageQuota')) { alert(t('m127', 'ليس لديك صلاحية تعديل مساحة التخزين المسموحة.')); renderAdminStores(); return; }
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             stores[name].storageQuotaMB = parseFloat(value) || 20;
             if(!saveAllStores(stores)) return;
@@ -11552,11 +11690,11 @@
 
         // --- تحديد أقصى عدد صور إضافية مسموح بها لمنتج واحد في متجر معيّن (افتراضيًا 5 لكل المتاجر) ---
         function setStoreMaxImages(name, value) {
-            if(!currentAdminHasPermission('manageImageLimit')) { alert('ليس لديك صلاحية تعديل الحد الأقصى لصور المنتج.'); renderAdminStores(); return; }
+            if(!currentAdminHasPermission('manageImageLimit')) { alert(t('m128', 'ليس لديك صلاحية تعديل الحد الأقصى لصور المنتج.')); renderAdminStores(); return; }
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             let n = parseInt(value);
             if(!n || n < 1) n = 5;
-            if(n > 30) { n = 30; alert('أقصى حد ممكن هو 30 صورة للمنتج الواحد، حفاظًا على سرعة المتجر.'); }
+            if(n > 30) { n = 30; alert(t('m129', 'أقصى حد ممكن هو 30 صورة للمنتج الواحد، حفاظًا على سرعة المتجر.')); }
             stores[name].maxProductImages = n;
             if(!saveAllStores(stores)) return;
             renderAdminStores();
@@ -11564,18 +11702,18 @@
 
         // --- تحكم الأدمن (أو مشرف عنده الصلاحية) في وضع طلب رقم هاتف العميل لمتجر معيّن ---
         function setStorePhoneMode(name, value) {
-            if(!currentAdminHasPermission('managePhoneMode')) { alert('ليس لديك صلاحية تعديل وضع طلب رقم الهاتف.'); renderAdminStores(); return; }
+            if(!currentAdminHasPermission('managePhoneMode')) { alert(t('m130', 'ليس لديك صلاحية تعديل وضع طلب رقم الهاتف.')); renderAdminStores(); return; }
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             stores[name].phoneFieldMode = value;
             if(!saveAllStores(stores)) return;
-            showToast('✅ تم تحديث وضع رقم الهاتف لهذا المتجر');
+            showToast(t('m131', '✅ تم تحديث وضع رقم الهاتف لهذا المتجر'));
         }
 
         function resetStorePassword(name) {
-            if(!currentAdminHasPermission('resetPassword')) { alert('ليس لديك صلاحية تغيير كلمة سر التجار.'); return; }
+            if(!currentAdminHasPermission('resetPassword')) { alert(t('m132', 'ليس لديك صلاحية تغيير كلمة سر التجار.')); return; }
             let newPass = prompt(`أدخل كلمة سر جديدة للتاجر "${name}":`);
             if(newPass === null) return;
-            if(!newPass.trim()) { alert('كلمة السر لا يمكن أن تكون فارغة!'); return; }
+            if(!newPass.trim()) { alert(t('m133', 'كلمة السر لا يمكن أن تكون فارغة!')); return; }
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             stores[name].pass = newPass.trim();
             if(!saveAllStores(stores)) return;
@@ -11583,7 +11721,7 @@
         }
 
         function toggleStoreStatus(name) {
-            if(!currentAdminHasPermission('toggleStatus')) { alert('ليس لديك صلاحية تفعيل/إيقاف المتاجر.'); return; }
+            if(!currentAdminHasPermission('toggleStatus')) { alert(t('m134', 'ليس لديك صلاحية تفعيل/إيقاف المتاجر.')); return; }
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             stores[name].status = stores[name].status === 'active' ? 'stopped' : 'active';
             if(!saveAllStores(stores)) return;
@@ -11593,7 +11731,7 @@
         // --- تحكم الأدمن في ظهور متجر معين بدليل المتاجر في الرئيسية (مستقل عن تفعيل/إيقاف المتجر نفسه) ---
         // المتجر ممكن يفضل شغال بكامل رابطه الخاص، لكن الأدمن يقرر إنه ميظهرش ضمن الدليل العام في الرئيسية
         function toggleStoreHomepageVisibility(name) {
-            if(!currentAdminHasPermission('homepageVisibility')) { alert('ليس لديك صلاحية إظهار/إخفاء المتاجر من الرئيسية.'); return; }
+            if(!currentAdminHasPermission('homepageVisibility')) { alert(t('m135', 'ليس لديك صلاحية إظهار/إخفاء المتاجر من الرئيسية.')); return; }
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             stores[name].showOnHomepage = stores[name].showOnHomepage === false ? true : false;
             if(!saveAllStores(stores)) return;
@@ -11601,7 +11739,7 @@
         }
 
         function deleteStore(name) {
-            if(!currentAdminHasPermission('deleteStore')) { alert('ليس لديك صلاحية حذف المتاجر.'); return; }
+            if(!currentAdminHasPermission('deleteStore')) { alert(t('m136', 'ليس لديك صلاحية حذف المتاجر.')); return; }
             if(confirm(`تأكيد حذف متجر ${name}؟`)) {
                 let stores = JSON.parse(localStorage.getItem('allStores')) || {};
                 delete stores[name];
@@ -11621,7 +11759,7 @@
             document.getElementById('bulkDeleteStoresBtn').disabled = checked.length === 0;
         }
         function bulkDeleteSelectedStores() {
-            if(!currentAdminHasPermission('deleteStore')) { alert('ليس لديك صلاحية حذف المتاجر.'); return; }
+            if(!currentAdminHasPermission('deleteStore')) { alert(t('m136', 'ليس لديك صلاحية حذف المتاجر.')); return; }
             let checked = Array.from(document.querySelectorAll('.store-bulk-checkbox:checked')).map(cb => cb.dataset.storeKey);
             if(checked.length === 0) return;
             if(!confirm(`تأكيد حذف ${checked.length} متجر نهائيًا؟ الإجراء ده مينفعش يتراجع فيه.`)) return;
@@ -11636,16 +11774,16 @@
         function pauseNewRegistrations() {
             let duration = parseInt(document.getElementById('regPauseDurationInput').value);
             let unit = document.getElementById('regPauseUnitSelect').value;
-            if(!duration || duration <= 0) { alert('اكتب مدة صحيحة أكبر من صفر.'); return; }
+            if(!duration || duration <= 0) { alert(t('m137', 'اكتب مدة صحيحة أكبر من صفر.')); return; }
             let ms = unit === 'days' ? duration * 86400000 : (unit === 'hours' ? duration * 3600000 : duration * 60000);
             localStorage.setItem('registrationPausedUntil', String(Date.now() + ms));
             renderRegistrationPauseStatus();
-            showToast('⏸️ اتوقف تسجيل متاجر جديدة مؤقتًا');
+            showToast(t('m138', '⏸️ اتوقف تسجيل متاجر جديدة مؤقتًا'));
         }
         function resumeNewRegistrations() {
             localStorage.removeItem('registrationPausedUntil');
             renderRegistrationPauseStatus();
-            showToast('▶️ اتلغى إيقاف التسجيل');
+            showToast(t('m139', '▶️ اتلغى إيقاف التسجيل'));
         }
         function renderRegistrationPauseStatus() {
             let el = document.getElementById('regPauseStatusText');
@@ -11664,9 +11802,9 @@
         }
         function savePlatformLockoutMinutes() {
             let val = parseInt(document.getElementById('platformLockoutMinutesInput').value);
-            if(!val || val <= 0) { alert('اكتب رقم دقايق صحيح أكبر من صفر.'); return; }
+            if(!val || val <= 0) { alert(t('m140', 'اكتب رقم دقايق صحيح أكبر من صفر.')); return; }
             localStorage.setItem('platformLoginLockoutMinutes', String(val));
-            showToast('✅ اتحفظت مدة القفل الافتراضية للمنصة');
+            showToast(t('m141', '✅ اتحفظت مدة القفل الافتراضية للمنصة'));
         }
 
         // --- البحث السريع ---
@@ -12353,10 +12491,39 @@
             return { merchant: merchant, stores: stores, store: stores[merchant] };
         }
 
+        // 📥 تنزيل ملف عن طريق Blob + رابط مؤقت (أضمن من XLSX.writeFile اللي بينزّل ملف فاضي في بعض
+        // المتصفحات/المعاينات). لو مكتبة Excel مش متاحة بنرجع لملف CSV (UTF-8 مع BOM) بيفتح في Excel.
+        function __downloadBlob(blob, filename) {
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement('a');
+            a.href = url; a.download = filename; a.style.display = 'none';
+            document.body.appendChild(a); a.click();
+            setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+        }
+        function __csvEscape(v) { v = (v === null || v === undefined) ? '' : String(v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+        async function __saveRowsAsFile(rows, baseName) {
+            let ok = false;
+            try {
+                await loadXlsxLib();
+                let ws = XLSX.utils.json_to_sheet(rows, { header: PRODUCT_XLSX_COLS });
+                let wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'products');
+                let out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                if(out && out.byteLength > 0) {
+                    __downloadBlob(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), baseName + '.xlsx');
+                    ok = true;
+                }
+            } catch(e) { console.warn('xlsx export failed, using CSV', e); }
+            if(!ok) {
+                let lines = [PRODUCT_XLSX_COLS.join(',')];
+                rows.forEach(function(r) { lines.push(PRODUCT_XLSX_COLS.map(function(c) { return __csvEscape(r[c]); }).join(',')); });
+                __downloadBlob(new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }), baseName + '.csv');
+            }
+        }
+
         async function exportProductsToExcel() {
             let ctx = __currentMerchantStore();
             if(!ctx.store) return;
-            try { await loadXlsxLib(); } catch(e) { alert(t('import_lib_fail', 'تعذر تحميل مكتبة Excel، تأكد من اتصال الإنترنت.')); return; }
             let rows = (ctx.store.products || []).map(function(p) {
                 return {
                     category: p.category || '',
@@ -12370,18 +12537,11 @@
                 };
             });
             if(rows.length === 0) showToast(t('export_none_toast', 'لا توجد منتجات بعد، سنحمّل لك ملفًا فارغًا بالأعمدة.'));
-            let ws = XLSX.utils.json_to_sheet(rows, { header: PRODUCT_XLSX_COLS });
-            let wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'products');
-            XLSX.writeFile(wb, 'products-' + ctx.merchant + '-' + new Date().toISOString().slice(0, 10) + '.xlsx');
+            await __saveRowsAsFile(rows, 'products-' + ctx.merchant + '-' + new Date().toISOString().slice(0, 10));
         }
 
         async function downloadProductsTemplate() {
-            try { await loadXlsxLib(); } catch(e) { alert(t('import_lib_fail', 'تعذر تحميل مكتبة Excel، تأكد من اتصال الإنترنت.')); return; }
-            let ws = XLSX.utils.json_to_sheet([{ category: 'عام', name: 'Product 1', price: 100, description: '', image_url: '', stock: 10, discount: 0, cost_price: 60 }], { header: PRODUCT_XLSX_COLS });
-            let wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'products');
-            XLSX.writeFile(wb, 'products-template.xlsx');
+            await __saveRowsAsFile([{ category: 'عام', name: 'Product 1', price: 100, description: '', image_url: '', stock: 10, discount: 0, cost_price: 60 }], 'products-template');
         }
 
         let __importRunning = false;
@@ -12511,3 +12671,55 @@
                 setTimeout(function() { __setImportProgress(false); }, 1500);
             }
         }
+
+        // ============================================================
+        // ✍️ حماية الحقول من المسح أثناء الكتابة: أي تحديث تلقائي للوحة (مزامنة سحابية، عدّاد
+        // طلبات جديد...) كان بيعيد تعبئة الحقول من البيانات المحفوظة فيمسح اللي التاجر لسه
+        // كاتبه ومحفظوش. دلوقتي أي حقل اتعدّل ولسه ماتحفظش بنحفظ قيمته ونرجّعها بعد التحديث.
+        // ============================================================
+        (function() {
+            const SCOPE = '#dashboardSection .dash-sub, #customDomainAccordion, #adminSection .dash-accordion';
+            document.addEventListener('input', function(e) {
+                let el = e.target;
+                if(!el || !el.matches || !el.matches('input, textarea, select')) return;
+                if(el.type === 'file' || el.type === 'button') return;
+                if(el.closest && el.closest(SCOPE)) el.dataset.userDirty = '1';
+            }, true);
+            document.addEventListener('change', function(e) {
+                let el = e.target;
+                if(el && el.matches && el.matches('input[type=checkbox], input[type=radio], select') && el.closest && el.closest(SCOPE)) el.dataset.userDirty = '1';
+            }, true);
+            // أي ضغطة على زر حفظ تصفّر علامة التعديل (بعد لحظة، عشان الحفظ نفسه يقرأ القيم أولاً)
+            document.addEventListener('click', function(e) {
+                let b = e.target && e.target.closest ? e.target.closest('button') : null;
+                if(!b) return;
+                let oc = (b.getAttribute('onclick') || '') + ' ' + (b.className || '');
+                if(/save|Save|sub-save-btn|add[A-Z]|update|apply/.test(oc)) {
+                    setTimeout(function() {
+                        document.querySelectorAll('[data-user-dirty="1"]').forEach(function(x) { delete x.dataset.userDirty; });
+                    }, 900);
+                }
+            }, true);
+            function guard(fnName) {
+                let orig = window[fnName];
+                if(typeof orig !== 'function' || orig.__guarded) return;
+                let wrapped = function() {
+                    let saved = [];
+                    document.querySelectorAll('[data-user-dirty="1"]').forEach(function(el) {
+                        saved.push({ el: el, v: el.value, c: el.checked });
+                    });
+                    let r = orig.apply(this, arguments);
+                    saved.forEach(function(s) {
+                        try {
+                            if(!document.body.contains(s.el)) return;
+                            if(s.el.type === 'checkbox' || s.el.type === 'radio') s.el.checked = s.c; else s.el.value = s.v;
+                        } catch(e) {}
+                    });
+                    return r;
+                };
+                wrapped.__guarded = true;
+                window[fnName] = wrapped;
+            }
+            guard('loadDashboard');
+            guard('renderAdminPanel');
+        })();
