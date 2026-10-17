@@ -371,3 +371,39 @@ details.dash-sub[open] > summary { border-bottom: 1px solid var(--border-color);
 .xfer-info-text { display:none; background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; border-radius:8px; padding:6px 10px; margin-top:6px; font-size:11.5px; font-weight:normal; line-height:1.7; text-align:start; }
 .xfer-info.open { display:block; }
 .xfer-info.open .xfer-info-text { display:block; }
+
+/* ===== الجولة N ===== */
+.google-btn { display:flex; align-items:center; justify-content:center; gap:8px; }
+.google-btn .g-slot { display:inline-flex; }
+.google-btn i { color: inherit; }
+/* الأقسام: كروت بحجم ثابت (3 جنب بعض على الكمبيوتر، 2 على الموبايل) حتى لو قسم واحد */
+@media (min-width: 700px) {
+  .categories-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 220px)) !important; justify-content: center; gap: 16px !important; }
+  .cat-card img { height: 130px !important; }
+  .cat-card h4 { font-size: 15px !important; margin: 10px 0 !important; }
+}
+/* دعم فني: صفحة كاملة */
+#merchantChatModal.page-like { align-items: stretch; justify-content: center; padding: 0; backdrop-filter: none; overflow: hidden; z-index: 90; background: var(--page-bg, #f5f1eb); }
+#merchantChatModal.page-like .modal-content { max-width: 720px !important; width: calc(100% - 24px) !important; height: calc(100% - 20px) !important; max-height: none !important; margin: 10px auto !important; border-radius: 16px; box-shadow: 0 4px 18px rgba(0,0,0,.07); }
+/* ملخص حساب المشتري */
+.bsum-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-bottom:12px; }
+.bsum-cell { background:var(--bg-body); border:1px solid var(--border-color); border-radius:12px; padding:8px 4px; text-align:center; display:flex; flex-direction:column; gap:2px; }
+.bsum-cell b { font-size:15px; color:var(--primary-color); }
+.bsum-cell span { font-size:10.5px; color:var(--text-muted); }
+.boffer-box { background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:10px 12px; margin-bottom:12px; }
+.boffer-title { margin:0 0 6px; font-size:12.5px; font-weight:bold; color:#92400e; }
+.boffer-row { display:flex; justify-content:space-between; font-size:12.5px; padding:3px 0; border-bottom:1px dashed #fde68a; }
+.boffer-row b { color:#dc2626; }
+.boffer-more { margin:6px 0 0 !important; padding:5px 12px !important; width:auto !important; font-size:11.5px !important; }
+/* صفحة تتبع الطلب: صفحة كاملة متناسقة مع حجم الشاشة */
+#trackOrderModal.page-like .modal-content { max-width: 1000px; width: calc(100% - 24px); min-height: calc(100% - 24px); margin: 12px auto; padding: 28px 24px 32px; border-radius: 18px; }
+#trackOrderModal.page-like .modal-content > div:first-of-type { margin-top: 10px; }
+#trackOrderModal.page-like .modal-content h3 { font-size: 24px; }
+#trackOrderModal.page-like .modal-content > div:first-of-type > div { font-size: 64px !important; }
+#trackOrderModal.page-like .modal-content > div:first-of-type p { font-size: 15px !important; }
+#trackOrderModal.page-like .track-steps { gap: 14px; margin: 22px 0; }
+#trackOrderModal.page-like .track-step { padding: 18px 12px; font-size: 15px; }
+#trackOrderModal.page-like .track-step b { font-size: 16px; }
+#trackOrderModal.page-like .track-step span { font-size: 13px; }
+#trackOrderModal.page-like #trackOrderCodeInput { font-size: 22px !important; padding: 16px; }
+#trackOrderModal.page-like > .modal-content > button { font-size: 18px; padding: 16px; }

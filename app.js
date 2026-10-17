@@ -299,7 +299,7 @@
             if(!GOOGLE_SIGNIN_ENABLED || !window.google || !google.accounts || !google.accounts.id) return;
             try {
                 gisInitWith(handleGoogleMerchantCredential);
-                google.accounts.id.renderButton(document.getElementById('merchantGoogleSignInBtn'), { theme: 'outline', size: 'medium', text: 'signup_with' });
+                google.accounts.id.renderButton(document.getElementById('merchantGoogleSignInBtn'), { theme: 'outline', size: 'medium', text: 'signup_with', locale: (typeof currentAppLanguage !== 'undefined' ? currentAppLanguage : 'ar') });
             } catch(e) { /* لو حدث خطأ في الإعداد، تجاهله بأمان دون كسر الصفحة */ }
         }
 
@@ -947,6 +947,11 @@
         // ============================================================
         // 🌍 دالة ترجمة عامة للنصوص اللي بتتبني ديناميكيًا بالجافاسكريبت (مش نصوص HTML
         // ثابتة). بترجع النص المترجم لو موجود، وإلا بترجع النص الأصلي زي ما هو (احتياطي آمن).
+        // 🔵 شعار جوجل الرسمي الملوّن (بدل أيقونة الحرف الأحمر)
+        function googleG(size) {
+            size = size || 16;
+            return '<svg class="g-logo" width="' + size + '" height="' + size + '" viewBox="0 0 48 48" aria-hidden="true" style="vertical-align:middle;"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
+        }
         function t(key, fallback) {
             let dict = ensureLanguageLoaded(currentAppLanguage) || ensureLanguageLoaded('ar');
             if(dict[key] !== undefined) return dict[key];
@@ -1168,7 +1173,7 @@
                 }
             }
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
-            if(storeParam && stores[storeParam] && stores[storeParam].status !== 'stopped') {
+            if(storeParam && stores[storeParam] && !isStoreStopped(stores[storeParam])) {
                 activeStore = storeParam;
                 setTabState('currentActiveStore', storeParam);
                 setTabState('viewMode', 'store');
@@ -1177,7 +1182,7 @@
                 // المفروض يشوف متجره هو تلقائي بدل ما يتفاجئ بدليل كل متاجر المنصة
                 // (كان ده هو الخطأ: أي إعادة تحميل للصفحة كانت بترجّعه لدليل المتاجر رغم إنه مسجل دخول).
                 let loggedMerchant = localStorage.getItem('currentActiveMerchant');
-                if(loggedMerchant && stores[loggedMerchant] && stores[loggedMerchant].status !== 'stopped') {
+                if(loggedMerchant && stores[loggedMerchant] && !isStoreStopped(stores[loggedMerchant])) {
                     activeStore = loggedMerchant;
                     setTabState('currentActiveStore', loggedMerchant);
                     setTabState('viewMode', 'store');
@@ -1700,7 +1705,7 @@
                     return;
                 }
                 clearLoginAttempts(name);
-                if(stores[staffStoreKey].status === 'stopped') {
+                if(isStoreStopped(stores[staffStoreKey])) {
                     showAppModal(t('login_error_title', 'تعذّر تسجيل الدخول'), '🚫', t('store_stopped_msg', 'هذا المتجر موقوف حالياً.'));
                     return;
                 }
@@ -1731,7 +1736,7 @@
             }
             if(coOwnerMatch) {
                 clearLoginAttempts(name);
-                if(stores[coOwnerStoreKey].status === 'stopped') {
+                if(isStoreStopped(stores[coOwnerStoreKey])) {
                     alert(t('m012', 'هذا المتجر موقوف حالياً.'));
                     return;
                 }
@@ -1821,7 +1826,7 @@
                         localStorage.removeItem('currentStaffUsername');
                     }
                     clearLoginAttempts(name);
-                    if(stores[key].status === 'stopped') {
+                    if(isStoreStopped(stores[key])) {
                         showAppModal(t('login_error_title', 'تعذّر تسجيل الدخول'), '🚫', t('store_stopped_msg', 'هذا المتجر موقوف حالياً.'));
                         return;
                     }
@@ -1922,7 +1927,7 @@
 
         function completeMerchantLogin(matchedKey, stores, attemptedName) {
             clearLoginAttempts(attemptedName);
-            if(stores[matchedKey].status === 'stopped') {
+            if(isStoreStopped(stores[matchedKey])) {
                 alert(t('m012', 'هذا المتجر موقوف حالياً.'));
                 return;
             }
@@ -1943,7 +1948,7 @@
         // بيدخل عليه فورًا، لو أول مرة بيتعمله متجر جديد بنفس بنية أي متجر عادي (بيظهر
         // عند الأدمن والدعم زي بقية المتاجر). يتطلب تفعيل Google في Firebase > Authentication.
         // ============================================================
-        async function merchantGoogleSignIn() {
+        async function merchantGoogleSignIn(allowCreate) {
             let pausedUntil = parseInt(localStorage.getItem('registrationPausedUntil'));
             if(!window.firebaseAuth || !window.firebase || !firebase.auth) { alert(t('alert_no_internet', 'لا يوجد اتصال بالإنترنت حاليًا، حاول مرة أخرى.')); return; }
             try {
@@ -1961,7 +1966,7 @@
                     if(e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request')) return;
                     throw e;
                 }
-                await merchantGoogleAfterAuth(res, pausedUntil);
+                await merchantGoogleAfterAuth(res, pausedUntil, !!allowCreate);
             } catch(e) {
                 console.error('merchantGoogleSignIn error:', e);
                 let msg = (e && e.code === 'auth/operation-not-allowed') ? t('merchant_google_not_enabled', 'تسجيل الدخول بجوجل غير مفعّل بعد في إعدادات المنصة (Firebase Authentication).')
@@ -1970,7 +1975,7 @@
                 showAppModal(t('login_error_title', 'تعذّر تسجيل الدخول'), '❌', msg);
             }
         }
-        async function merchantGoogleAfterAuth(res, pausedUntil) {
+        async function merchantGoogleAfterAuth(res, pausedUntil, allowCreate) {
             let user = res && res.user;
             if(!user) return;
             let uid = user.uid;
@@ -1980,9 +1985,15 @@
             if(existing) { completeMerchantLogin(existing, stores, email); return; }
             let isNew = !(res.additionalUserInfo && res.additionalUserInfo.isNewUser === false);
             if(!isNew) { resolveMerchantAfterAuth(uid, email); return; }
+            if(!allowCreate) {
+                // دخول فقط: إنشاء متجر جديد بيتم من صفحة المنصة (نموذج التسجيل كتاجر) مش من هنا
+                try { window.firebaseAuth.signOut(); } catch(e) {}
+                showAppModal(t('login_error_title', 'تعذّر تسجيل الدخول'), 'ℹ️', t('merchant_google_no_store', 'لا يوجد متجر مرتبط بحساب جوجل هذا. لإنشاء متجر جديد سجّل من صفحة المنصة (التسجيل كتاجر).'));
+                return;
+            }
             pausedUntil = parseInt(localStorage.getItem('registrationPausedUntil'));
             if(pausedUntil && pausedUntil > Date.now()) {
-                showAppModal('التسجيل موقوف مؤقتًا', '⏸️',  t('m144', 'تسجيل متاجر جديدة موقوف مؤقتًا من إدارة المنصة. حاول لاحقًا.'));
+                showAppModal(t('n02','التسجيل موقوف مؤقتًا'), '⏸️',  t('m144', 'تسجيل متاجر جديدة موقوف مؤقتًا من إدارة المنصة. حاول لاحقًا.'));
                 return;
             }
             let adminAccounts = JSON.parse(localStorage.getItem('adminAccounts')) || [];
@@ -2086,7 +2097,7 @@
             let pausedUntil = parseInt(localStorage.getItem('registrationPausedUntil'));
             if(pausedUntil && pausedUntil > Date.now()) {
                 let mins = Math.ceil((pausedUntil - Date.now()) / 60000);
-                showAppModal('التسجيل موقوف مؤقتًا', '⏸️', `تسجيل متاجر جديدة موقوف مؤقتًا من إدارة المنصة. حاول تاني بعد حوالي ${mins} دقيقة.`);
+                showAppModal(t('n02','التسجيل موقوف مؤقتًا'), '⏸️', t('n01','تسجيل متاجر جديدة موقوف مؤقتًا من إدارة المنصة. حاول تاني بعد حوالي {mins} دقيقة.').replace('{mins}', mins));
                 return;
             }
             let name = document.getElementById('regStoreName').value.trim();
@@ -2135,7 +2146,7 @@
                     <div class="app-modal-icon">🔐</div>
                     <div class="app-modal-title">${t('reg_confirm_title', 'قبل ما نكمل - احفظ بياناتك!')}</div>
                     <div class="app-modal-body">
-                        <p>${email ? 'هتدخل للوحتك بعد كده من أي جهاز أو متصفح ببريدك الإلكتروني (أو اسم الدخول) وكلمة السر اللي كتبتهم. احفظهم في مكان آمن.' : 'اسم الدخول وكلمة السر اللي كتبتهم دول حسابك الحقيقي - تقدر تدخل بيهم من أي جهاز أو متصفح، حتى لو غيّرت موبايلك. احفظهم في مكان آمن. تقدر كمان تضيف بريدك لاحقًا من الإعدادات كوسيلة دخول إضافية.'}</p>
+                        <p>${email ? t('n23','هتدخل للوحتك بعد كده من أي جهاز أو متصفح ببريدك الإلكتروني (أو اسم الدخول) وكلمة السر اللي كتبتهم. احفظهم في مكان آمن.') : t('n24','اسم الدخول وكلمة السر اللي كتبتهم دول حسابك الحقيقي - تقدر تدخل بيهم من أي جهاز أو متصفح، حتى لو غيّرت موبايلك. احفظهم في مكان آمن. تقدر كمان تضيف بريدك لاحقًا من الإعدادات كوسيلة دخول إضافية.')}</p>
                         <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:8px 10px; margin-top:8px; font-family:monospace; direction:ltr; text-align:center; font-size:13px;">
                             ${email || name}
                         </div>
@@ -2559,7 +2570,7 @@
             }).catch(function(err) {
                 if(!silent) {
                     if(statusEl) statusEl.textContent = '❌ ' + (err.message || 'فشل التفعيل');
-                    showToast(t('m017', '⚠️ تعذر تفعيل الإشعارات: ') + (err.message || 'جرب تاني'));
+                    showToast(t('m017', '⚠️ تعذر تفعيل الإشعارات: ') + (err.message || t('n22','جرب تاني')));
                 } else if(statusEl) {
                     // في الوضع الصامت (فتح اللوحة عادي)، لو الإذن لسه ما اتطلبش خالص، منوريش
                     // خطأ - بنقول بس إن التفعيل محتاج ضغطة من التاجر نفسه (متطلب من المتصفح)
@@ -2975,7 +2986,16 @@
             let link = buildStaffLoginLink(merchant);
             let title = getStoreDisplayName(merchant, store);
             if(navigator.share) {
-                try { await navigator.share({ title: title, url: link }); return; } catch(e) { /* المستخدم لغى المشاركة - عادي */ return; }
+                // 🖼️ نحاول نشارك لوجو المتجر كصورة مع الرابط (عشان يظهر بجانب الرابط في واتساب وغيره)
+                try {
+                    if(store.logo && navigator.canShare) {
+                        let lb = await (await fetch(store.logo)).blob();
+                        let ext = (lb.type && lb.type.split('/')[1]) || 'png';
+                        let lf = new File([lb], 'logo.' + ext.replace('jpeg', 'jpg').replace(/[^a-z0-9]/gi, ''), { type: lb.type || 'image/png' });
+                        if(navigator.canShare({ files: [lf] })) { await navigator.share({ files: [lf], title: title, text: title + '\n' + link }); return; }
+                    }
+                } catch(e) { if(e && e.name === 'AbortError') return; }
+                try { await navigator.share({ title: title, text: title, url: link }); return; } catch(e) { /* المستخدم لغى المشاركة - عادي */ return; }
             }
             try {
                 await navigator.clipboard.writeText(link);
@@ -3063,10 +3083,11 @@
             let fileName = document.getElementById('storeQrModal').getAttribute('data-download-name') || 'qr-code';
             let dataUrl = canvas ? canvas.toDataURL('image/png') : (img ? img.src : null);
             if(!dataUrl) { showToast(t('m019', '⚠️ لسه الكود مش جاهز، جرب تاني بعد لحظة')); return; }
-            let a = document.createElement('a');
-            a.href = dataUrl;
-            a.download = fileName + '.png';
-            a.click();
+            fetch(dataUrl).then(function(r) { return r.blob(); }).then(function(b) {
+                deliverExport({ blob: b, filename: fileName + '.png' });
+            }).catch(function() {
+                let a = document.createElement('a'); a.href = dataUrl; a.download = fileName + '.png'; a.click();
+            });
         }
 
         // 📋 نسخ نص لأي حافظة بشكل موثوق: لو navigator.clipboard مش متاحة أصلاً (بيحصل في
@@ -3352,7 +3373,7 @@
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             let staff = (stores[merchant].staff || [])[index];
             if(!staff) return;
-            if(!confirm(`تأكيد حذف المساعد "${staff.username}"؟`)) return;
+            if(!confirm(t('x01','تأكيد حذف المساعد "{x}"؟').replace('{x}', staff.username))) return;
             stores[merchant].staff.splice(index, 1);
             recomputeAuthorizedUids(stores[merchant]);
             if(!saveAllStores(stores)) return;
@@ -3402,6 +3423,12 @@
         function goToEmailSecuritySection() {
             let box = document.getElementById('emailSecurityBox');
             if(!box) return;
+            // ⌨️ لو التاجر بيكتب في خانة جوه الصندوق ده (أو كاتب فيها) ومفيش تغيير فعلي في حالة
+            // البريد، منعيدش بناء الصندوق - ده اللي كان بيقفل الكيبورد ويمسح اللي بيكتبه.
+            let __sig = JSON.stringify([store.email || '', !!store.emailVerified, store.previousEmail || '', store.loginMethod || '']);
+            let __inp = box.querySelector('input');
+            if(box.dataset.sig === __sig && __inp && (box.contains(document.activeElement) || __inp.value)) return;
+            box.dataset.sig = __sig;
             let el = box;
             while(el && el.parentElement) {
                 el = el.parentElement;
@@ -3410,9 +3437,13 @@
             setTimeout(function() { box.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 120);
         }
 
-        function renderEmailSecurityBox(store) {
+        function renderEmailSecurityBox(store, force) {
             let box = document.getElementById('emailSecurityBox');
             if(!box) return;
+            // ⌨️ لا نعيد بناء الصندوق أثناء كتابة المستخدم (كان يخفي لوحة المفاتيح ويمسح ما كُتب)
+            let __sig = [store.email || '', store.emailVerified ? 1 : 0, store.previousEmail || '', store.loginMethod || '', currentAppLanguage].join('|');
+            if(!force && box.dataset.sig === __sig && box.firstElementChild) return;
+            box.dataset.sig = __sig;
 
             if(store.email && store.emailVerified) {
                 box.innerHTML = `
@@ -3661,7 +3692,7 @@
             let plan = plans[index];
             if(!plan) return;
             if(plan.id === 'free') { alert(t('m028', '⚠️ مينفعش تمسح الباقة المجانية لأنها الافتراضية لأي متجر جديد أو متجر قديم من غير باقة.')); return; }
-            if(!confirm(`تأكيد حذف باقة "${plan.name}"؟ أي متجر عليها هيترحّل تلقائيًا للباقة المجانية.`)) return;
+            if(!confirm(t('x02','تأكيد حذف باقة "{x}"؟ أي متجر عليها هيترحّل تلقائيًا للباقة المجانية.').replace('{x}', plan.name))) return;
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             Object.keys(stores).forEach(k => { if(stores[k].planId === plan.id) stores[k].planId = 'free'; });
             saveAllStores(stores);
@@ -3958,7 +3989,7 @@
             delete store.autoDeleteOrdersDays; // استبدال القديمة بالوحدة الموحدة الجديدة
             if(!saveAllStores(stores)) return;
             let unitLabel = unit === 'days' ? 'يوم' : (unit === 'hours' ? 'ساعة' : 'دقيقة');
-            showToast(`🧹 هيتم مسح الطلبات تلقائيًا بعد ${rawValue} ${unitLabel} من الآن فصاعدًا`);
+            showToast(t('n03','🧹 هيتم مسح الطلبات تلقائيًا بعد {v} {u} من الآن فصاعدًا').replace('{v}', rawValue).replace('{u}', unitLabel));
         }
 
         function runOrdersCleanupNow() {
@@ -3969,7 +4000,7 @@
             let changed = cleanupOldOrders(store);
             if(changed && !saveAllStores(stores)) return;
             renderOrderHistory(store);
-            showToast(changed ? '🧹 تم تنظيف الطلبات القديمة!' : 'مفيش طلبات قديمة محتاجة تنظيف دلوقتي.');
+            showToast(changed ? t('n04','🧹 تم تنظيف الطلبات القديمة!') : t('n05','مفيش طلبات قديمة محتاجة تنظيف دلوقتي.'));
         }
 
         // --- عرض سجل الطلبات السابقة للتاجر مع إمكانية تغيير حالة كل طلب ---
@@ -4171,7 +4202,7 @@
             let order = store.orderHistory[index];
 
             if(newAmount === undefined) {
-                let entered = prompt(`المبلغ الحالي المحسوب من هذا الطلب: ${(typeof order.countedAmount === 'number' ? order.countedAmount : order.total)} ${store.currency}\nاكتب المبلغ الصحيح بعد أي إرجاع (اكتب 0 لو اترجع بالكامل):`, (typeof order.countedAmount === 'number' ? order.countedAmount : order.total));
+                let entered = prompt(t('n06','المبلغ الحالي المحسوب من هذا الطلب: {a} {c}\nاكتب المبلغ الصحيح بعد أي إرجاع (اكتب 0 لو اترجع بالكامل):').replace('{a}', (typeof order.countedAmount === 'number' ? order.countedAmount : order.total)).replace('{c}', store.currency), (typeof order.countedAmount === 'number' ? order.countedAmount : order.total));
                 if(entered === null) return; // إلغاء
                 let parsed = parseFloat(entered);
                 if(isNaN(parsed) || parsed < 0) { alert(t('m035', 'المبلغ غير صحيح.')); return; }
@@ -4369,7 +4400,7 @@
                     showToast(t('m039', '✅ تم تغيير كلمة المرور بنجاح'));
                 }).catch(function(err) {
                     if(err.code === 'auth/wrong-password') alert(t('alert_wrong_current_pass'));
-                    else alert(t('m040', 'حصل خطأ أثناء تغيير كلمة المرور: ') + (err.message || 'جرب تاني.'));
+                    else alert(t('m040', 'حصل خطأ أثناء تغيير كلمة المرور: ') + (err.message || t('n22','جرب تاني')));
                 });
                 return;
             }
@@ -4407,7 +4438,7 @@
             let elapsed = Date.now() - lastChanged;
             if(elapsed < LOGIN_NAME_CHANGE_COOLDOWN_MS) {
                 let daysLeft = Math.ceil((LOGIN_NAME_CHANGE_COOLDOWN_MS - elapsed) / 86400000);
-                alert(`⏳ ممكن تغيّر اسم الدخول مرة كل 6 شهور بس. باقي ${daysLeft} يوم قبل ما تقدر تغيّره تاني.\n\nلو محتاج تغييره قبل كده لسبب ضروري، تواصل مع إدارة المنصة.`);
+                alert(t('n07','⏳ ممكن تغيّر اسم الدخول مرة كل 6 شهور بس. باقي {d} يوم قبل ما تقدر تغيّره تاني.\n\nلو محتاج تغييره قبل كده لسبب ضروري، تواصل مع إدارة المنصة.').replace('{d}', daysLeft));
                 return;
             }
 
@@ -4415,7 +4446,7 @@
             let nameTaken = stores[newName] || adminAccounts.some(a => a.username.toLowerCase() === newName.toLowerCase());
             if(nameTaken) { alert(t('alert_username_taken', 'اسم الدخول ده مستخدم بالفعل، اختار اسم تاني.')); return; }
 
-            if(!confirm(`متأكد إنك عايز تغيّر اسم الدخول من "${oldName}" لـ "${newName}"؟ ده هيغيّر رابط متجرك القديم، وأي رابط قديم اتبعت للعملاء مش هيشتغل تاني.\n\nملحوظة: مش هتقدر تغيّره تاني قبل مرور 6 شهور من دلوقتي.`)) return;
+            if(!confirm(t('n08','متأكد إنك عايز تغيّر اسم الدخول من "{o}" لـ "{n}"؟ ده هيغيّر رابط متجرك القديم، وأي رابط قديم اتبعت للعملاء مش هيشتغل تاني.\n\nملحوظة: مش هتقدر تغيّره تاني قبل مرور 6 شهور من دلوقتي.').replace('{o}', oldName).replace('{n}', newName))) return;
 
             stores[newName] = stores[oldName];
             stores[newName].loginNameChangedAt = Date.now();
@@ -4427,7 +4458,7 @@
             setTabState('currentActiveStore', newName);
             document.getElementById('storeLoginNameInput').value = newName;
             updateHeaderBrand();
-            showToast(`✅ تم تغيير اسم الدخول إلى "${newName}" بنجاح.`);
+            showToast(t('n09','✅ تم تغيير اسم الدخول إلى "{n}" بنجاح.').replace('{n}', newName));
         }
 
         // --- إزالة الأيقونة المخصصة (المرفوعة من الجهاز) والرجوع لاستخدام الإيموجي الجاهز ---
@@ -4494,7 +4525,7 @@
             store.staffLogRetentionMinutes = unitToMinutes(rawValue, unit);
             if(!saveAllStores(stores)) return;
             let unitLabel = unit === 'days' ? 'يوم' : (unit === 'hours' ? 'ساعة' : 'دقيقة');
-            showToast(`🧹 هيتم مسح سجل نشاط المساعدين تلقائيًا بعد ${rawValue} ${unitLabel}`);
+            showToast(t('n10','🧹 هيتم مسح سجل نشاط المساعدين تلقائيًا بعد {v} {u}').replace('{v}', rawValue).replace('{u}', unitLabel));
         }
 
         function clearStaffActivityLogNow() {
@@ -5270,14 +5301,14 @@
             let maxImgs = currentMaxGalleryImages || 5;
             let remaining = maxImgs - tempProductGallery.length;
             if(remaining <= 0) {
-                alert(`وصلت للحد الأقصى (${maxImgs} صور إضافية للمنتج الواحد). احذف صورة موجودة الأول لو عاوز تضيف غيرها.`);
+                alert(t('n11','وصلت للحد الأقصى ({m} صور إضافية للمنتج الواحد). احذف صورة موجودة الأول لو عاوز تضيف غيرها.').replace('{m}', maxImgs));
                 input.value = '';
                 return;
             }
 
             let toProcess = files.slice(0, remaining);
             if(files.length > remaining) {
-                alert(`اخترت ${files.length} صورة، لكن هيتضاف منهم بس ${remaining} (الحد الأقصى ${maxImgs} صور إضافية للمنتج الواحد). احذف بعض الصور الحالية لو عاوز تضيف أكتر.`);
+                alert(t('n12','اخترت {f} صورة، لكن هيتضاف منهم بس {r} (الحد الأقصى {m} صور إضافية للمنتج الواحد). احذف بعض الصور الحالية لو عاوز تضيف أكتر.').replace('{f}', files.length).replace('{r}', remaining).replace('{m}', maxImgs));
             }
 
             // كل صورة بتتعالج وتتضغط بشكل مستقل، وبتتضاف للمعرض أول ما تخلص (مش لازم ننتظر
@@ -5791,7 +5822,7 @@
             if(editIndex === "-1") {
                 let plan = getPlanForStore(stores[merchant]);
                 if(!plan.allowBanners) {
-                    alert(`⛔ باقتك الحالية ("${plan.name}") لا تشمل ميزة اللافتات الإعلانية. تواصل مع إدارة المنصة للترقية لباقة تدعمها.`);
+                    alert(t('n13','⛔ باقتك الحالية ("{plan}") لا تشمل ميزة اللافتات الإعلانية. تواصل مع إدارة المنصة للترقية لباقة تدعمها.').replace('{plan}', planDisplayName(plan)));
                     return;
                 }
             }
@@ -5865,8 +5896,8 @@
             let store = stores[activeStore];
             syncBuyerAccountIcon();
             syncTrackOrderNavVisibility();
-            if(!store || store.status === 'stopped') {
-                document.getElementById('homeCategoriesGrid').innerHTML = '<p style="text-align:center; color:red; grid-column:span 2;">هذا المتجر موقوف حالياً.</p>';
+            if(!store || isStoreStopped(store)) {
+                document.getElementById('homeCategoriesGrid').innerHTML = '<p style="text-align:center; color:red; grid-column:span 2;">' + t('store_suspended_msg', 'هذا المتجر موقوف حالياً.') + '</p>';
                 document.getElementById('amazonTopBarContainer').classList.add('hidden');
                 document.getElementById('merchantBannerContainer').innerHTML = '';
                 document.getElementById('footerSocialContainer').innerHTML = '';
@@ -5939,7 +5970,7 @@
 
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             // إحصائية "متجر نشط" في الهيرو بتحسب كل المتاجر المفعّلة (حتى لو الأدمن مخفيها من الدليل)
-            let activeNames = Object.keys(stores).filter(n => stores[n].status !== 'stopped');
+            let activeNames = Object.keys(stores).filter(n => !isStoreStopped(stores[n]));
             let productCount = activeNames.reduce((acc, n) => acc + (stores[n].products || []).length, 0);
             let statsBox = document.getElementById('platformHeroStats');
             if(activeNames.length > 0) {
@@ -7265,7 +7296,7 @@
         function deletePlatformSnippet(index) {
             let snippets = getPlatformSnippets();
             if(!snippets[index]) return;
-            if(!confirm(`حذف كود "${snippets[index].name}"؟`)) return;
+            if(!confirm(t('n14','حذف كود "{n}"؟').replace('{n}', snippets[index].name))) return;
             snippets.splice(index, 1);
             savePlatformSnippets(snippets);
             injectCustomCode();
@@ -7390,7 +7421,7 @@
             }
             saveStoreSnippetsAndRefresh(snippets);
             closeStoreSnippetForm();
-            showToast(`✅ تم حفظ الكود لمتجر "${storeSnippetModalTarget}".`);
+            showToast(t('n15','✅ تم حفظ الكود لمتجر "{n}".').replace('{n}', storeSnippetModalTarget));
         }
 
         function toggleStoreSnippet(index) {
@@ -7403,7 +7434,7 @@
         function deleteStoreSnippet(index) {
             let snippets = getStoreSnippets(storeSnippetModalTarget);
             if(!snippets[index]) return;
-            if(!confirm(`حذف كود "${snippets[index].name}"؟`)) return;
+            if(!confirm(t('n14','حذف كود "{n}"؟').replace('{n}', snippets[index].name))) return;
             snippets.splice(index, 1);
             saveStoreSnippetsAndRefresh(snippets);
         }
@@ -7436,7 +7467,7 @@
                 localStorage.setItem('allStores', JSON.stringify(stores));
                 localStorage.removeItem('supportLogs');
                 localStorage.setItem('supportLogs', JSON.stringify([]));
-                alert(`✅ تم التنظيف! تم تحرير حوالي ${Math.round(freed/1024)} كيلوبايت.\nجرّب التسجيل مجدداً.`);
+                alert(t('n16','✅ تم التنظيف! تم تحرير حوالي {k} كيلوبايت.\nجرّب التسجيل مجدداً.').replace('{k}', Math.round(freed/1024)));
                 checkStorageAndWarn();
             } catch(e) {
                 alert(t('m069', '⚠️ لم ينجح التنظيف. المساحة ممتلئة جداً. امسح بيانات الموقع يدوياً من إعدادات المتصفح ثم استورد النسخة الاحتياطية.'));
@@ -7888,7 +7919,7 @@
                 showToast(t('m071', 'تمت الإضافة للسلة 🛒'));
             } else if(idx !== -1) {
                 if(delta > 0 && typeof stock === 'number' && cart[idx].qty >= stock) {
-                    showToast(`⚠️ الكمية المتوفرة ${stock} فقط.`);
+                    showToast(t('n17','⚠️ الكمية المتوفرة {n} فقط.').replace('{n}', stock));
                     return;
                 }
                 cart[idx].qty += delta;
@@ -7932,7 +7963,7 @@
                         <div style="background:var(--bg-card); padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid var(--border-color);">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <span>
-                                    <strong style="font-size:12px; color:var(--text-main);">${rev.author || 'عميل'}${rev.viaGoogle ? ' <i class="fa-brands fa-google" title="' + t('review_via_google_label', 'تقييم موثّق عن طريق جوجل') + '" style="color:#4285F4; font-size:10px;"></i>' : ''}</strong>
+                                    <strong style="font-size:12px; color:var(--text-main);">${rev.author || 'عميل'}${rev.viaGoogle ? ' <span title="' + t('review_via_google_label', 'تقييم موثّق عن طريق جوجل') + '">' + googleG(12) + '</span>' : ''}</strong>
                                     ${rev.viaGoogle && rev.email ? `<br><span style="font-size:10px; color:var(--text-muted); direction:ltr; display:inline-block;">${escapeHtml(rev.email)}</span>` : ''}
                                 </span>
                                 <span style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:8px;">
@@ -8064,7 +8095,7 @@
                             let viaGoogle = __buyerSess.buyerId && __buyerSess.buyerId.includes('@') && __buyerSess.authProvider === 'google';
                             return `<p style="font-size:12px; margin-bottom:8px; background:#fff; padding:6px 10px; border-radius:8px;">
                                 ✅ ${t('review_posting_as_label', 'هتضيف التقييم باسم')}: <strong>${escapeHtml(__buyerSess.name || 'عميل')}</strong>
-                                ${viaGoogle ? ' <i class="fa-brands fa-google" style="color:#4285F4;"></i>' : ''}
+                                ${viaGoogle ? ' ' + googleG(13) : ''}
                                 ${viaGoogle ? `<br><span style="font-size:10.5px; color:var(--text-muted); direction:ltr; display:inline-block;">${escapeHtml(__buyerSess.buyerId)}</span>` : ''}
                             </p>`;
                         }
@@ -8099,7 +8130,7 @@
                 currentReviewerGoogleUser = null;
                 try {
                     gisInitWith(handleGoogleReviewCredential);
-                    google.accounts.id.renderButton(document.getElementById('googleSignInBtn'), { theme: 'outline', size: 'medium', text: 'signin_with' });
+                    google.accounts.id.renderButton(document.getElementById('googleSignInBtn'), { theme: 'outline', size: 'medium', text: 'signin_with', locale: (typeof currentAppLanguage !== 'undefined' ? currentAppLanguage : 'ar') });
                 } catch(e) { /* لو حدث خطأ في الإعداد، تجاهله بأمان دون كسر الصفحة */ }
             }
         }
@@ -8227,7 +8258,7 @@
             let product = store.products.find(p => p.name === prodName);
             let email = product.reviews[idx].email;
             if(!email) { alert(t('m075', 'هذه المراجعة غير مرتبطة بحساب جوجل، لا يمكن حظرها بهذه الطريقة (يمكنك حذفها فقط).')); return; }
-            if(!confirm(`هل تريد حظر "${product.reviews[idx].author}" (${email}) من إضافة أي مراجعات جديدة في متجرك؟`)) return;
+            if(!confirm(t('n18','هل تريد حظر "{a}" ({e}) من إضافة أي مراجعات جديدة في متجرك؟').replace('{a}', product.reviews[idx].author).replace('{e}', email))) return;
 
             if(!store.blockedReviewers) store.blockedReviewers = [];
             if(!store.blockedReviewers.includes(email)) store.blockedReviewers.push(email);
@@ -8519,6 +8550,10 @@
             //  - 'required': الخانة إجبارية زي أي متجر إلكتروني رسمي.
             // ============================================================
             let phoneMode = (store && store.phoneFieldMode) || 'optional';
+            // 📞 لو المتجر مفيهوش واتساب/ماسنجر/تيليجرام (الطلب بيتم مباشرة بدون وسيلة تواصل)، رقم
+            // الهاتف بيبقى إجباري دايمًا - مفيش أي طريقة تانية يوصل بيها التاجر للعميل.
+            let __directOnly = !(store && (store.whatsapp || store.messenger || store.telegram));
+            if(__directOnly) phoneMode = 'required';
             let phoneBox = document.getElementById('buyerPhoneFieldBox');
             let phoneLabel = document.getElementById('buyerPhoneLabel');
             let phoneHint = document.getElementById('buyerPhoneHint');
@@ -8529,8 +8564,8 @@
                 phoneInput.value = '';
             } else if(phoneMode === 'required') {
                 phoneBox.classList.remove('hidden');
-                phoneLabel.textContent = 'رقم هاتفك (مطلوب):';
-                phoneHint.textContent = 'التاجر يحتاج رقمك عشان يتواصل معك بخصوص طلبك ويكون واضح في فاتورتك.';
+                phoneLabel.textContent = t('req_phone_label', 'رقم هاتفك (مطلوب):');
+                phoneHint.textContent = __directOnly ? t('direct_phone_hint', 'هذا الطلب بدون واتساب/ماسنجر/تيليجرام، لذلك رقمك ضروري ليتواصل معك التاجر.') : t('req_phone_hint', 'التاجر يحتاج رقمك عشان يتواصل معك بخصوص طلبك ويكون واضح في فاتورتك.');
             } else {
                 phoneBox.classList.remove('hidden');
                 phoneLabel.textContent = t('optional_phone_label', 'رقم هاتفك (اختياري):');
@@ -8649,6 +8684,7 @@
             switchTab('auth');
         }
         function openUnifiedEntryChoiceModal() {
+            __closeOtherPageModals('unifiedEntryChoiceModal');
             document.getElementById('unifiedEntryChoiceModal').classList.remove('hidden');
             layoutPageModal('unifiedEntryChoiceModal');
         }
@@ -8668,7 +8704,7 @@
                 try {
                     gisInitWith(handleGoogleBuyerCredential);
                     let box = document.getElementById('buyerGoogleSignInBox');
-                    if(box) { box.innerHTML = ''; google.accounts.id.renderButton(box, { theme: 'outline', size: 'large', text: 'continue_with', width: 260 }); box.classList.remove('hidden'); }
+                    if(box) { box.innerHTML = ''; google.accounts.id.renderButton(box, { theme: 'outline', size: 'large', text: 'continue_with', width: 260, locale: (typeof currentAppLanguage !== 'undefined' ? currentAppLanguage : 'ar') }); box.classList.remove('hidden'); }
                 } catch(e) { /* تجاهل بأمان لو حصل أي خطأ في تهيئة جوجل */ }
             }
         }
@@ -8841,6 +8877,7 @@
             document.getElementById('buyerProfileOrdersList').innerHTML = '<p style="text-align:center; color:var(--text-muted); font-size:12px;">⏳ ' + t('loading_label', 'جاري التحميل...') + '</p>';
             document.getElementById('buyerProfileModal').classList.remove('hidden');
             layoutBuyerProfilePage();
+            try { renderBuyerMemberOffers(); } catch(e) {}
             if(window.fetchBuyerOrders) {
                 let orders = await window.fetchBuyerOrders(activeStore, sess.buyerId);
                 renderBuyerOrdersList(orders);
@@ -8857,6 +8894,11 @@
             let m = document.getElementById(id);
             if(!m) return;
             try { window.scrollTo(0, 0); } catch(e) {}
+            // صفحة واحدة بس مفتوحة في الوقت: أي صفحة كاملة تانية (دخول/تتبع/حساب/دعم) بتتقفل
+            // عشان ما تتغطاش ورا بعض (كان زر "تتبع الطلبات" بيفتح ورا صفحة الدخول فما يظهرش).
+            ['buyerProfileModal', 'buyerAuthModal', 'trackOrderModal', 'unifiedEntryChoiceModal', 'merchantChatModal'].forEach(function(oid) {
+                if(oid !== id) { let o = document.getElementById(oid); if(o) o.classList.add('hidden'); }
+            });
             m.classList.add('page-like');
             let hdr = document.querySelector('header');
             let nav = document.querySelector('.bottom-nav');
@@ -8866,7 +8908,7 @@
             try { m.style.setProperty('--page-bg', getComputedStyle(document.body).backgroundColor); } catch(e) {}
         }
         window.addEventListener('resize', function() {
-            ['buyerProfileModal', 'buyerAuthModal', 'trackOrderModal', 'buyerChatThreadsModal', 'buyerChatThreadModal', 'unifiedEntryChoiceModal'].forEach(function(id) {
+            ['buyerProfileModal', 'buyerAuthModal', 'trackOrderModal', 'buyerChatThreadsModal', 'buyerChatThreadModal', 'unifiedEntryChoiceModal', 'merchantChatModal'].forEach(function(id) {
                 let m = document.getElementById(id);
                 if(m && !m.classList.contains('hidden')) layoutPageModal(id);
             });
@@ -8994,8 +9036,60 @@
                     <div style="color:var(--text-muted); font-size:11px; margin:3px 0;">${escapeHtml(o.date || '')}</div>
                     <div>${(o.items || []).map(i => escapeHtml(i.name) + ' ×' + (i.qty || 1)).join('، ')}</div>
                     <div style="margin-top:4px; font-weight:bold;">${t('order_total_label', 'الإجمالي')}: ${o.total || 0} ${store.currency || ''}</div>
+                    ${(o.status || 'pending') === 'pending' && o.trackingCode ? `<button class="secondary" style="margin:8px 0 0; width:auto; padding:6px 12px; font-size:12px; color:#dc2626; border-color:#fecaca; background:#fef2f2;" onclick="cancelBuyerOrder('${String(o.trackingCode).replace(/[^A-Za-z0-9_-]/g, '')}')"><i class="fa fa-trash"></i> ${t('buyer_cancel_order_btn', 'إلغاء الطلب')}</button>` : ''}
                 </div>
             `).join('');
+            renderBuyerSummary(orders, store);
+        }
+
+        // 📊 ملخص سريع لحساب المشتري (عدد الطلبات + إجمالي مشترياته المكتملة) - صغير ومضغوط.
+        function renderBuyerSummary(orders, store) {
+            let box = document.getElementById('buyerSummaryStats');
+            if(!box) return;
+            orders = orders || [];
+            let valid = orders.filter(function(o) { return (o.status || 'pending') !== 'cancelled'; });
+            let spent = valid.reduce(function(a, o) { return a + (parseFloat(o.total) || 0); }, 0);
+            let active = orders.filter(function(o) { return (o.status || 'pending') === 'pending' || o.status === 'confirmed'; }).length;
+            let cur = (store && store.currency) || '';
+            box.innerHTML = `
+                <div class="bsum-cell"><b>${orders.length}</b><span>${t('buyer_stat_orders', 'طلباتك')}</span></div>
+                <div class="bsum-cell"><b>${active}</b><span>${t('buyer_stat_active', 'قيد التنفيذ')}</span></div>
+                <div class="bsum-cell"><b>${Math.round(spent * 100) / 100} ${escapeHtml(cur)}</b><span>${t('buyer_stat_spent', 'إجمالي مشترياتك')}</span></div>`;
+        }
+        function renderBuyerMemberOffers() {
+            let box = document.getElementById('buyerMemberOffersBox');
+            if(!box) return;
+            let stores = JSON.parse(localStorage.getItem('allStores')) || {};
+            let store = stores[activeStore] || {};
+            let offers = (store.products || []).filter(function(p) { return parseFloat(p.memberDiscount) > 0; });
+            if(offers.length === 0) { box.classList.add('hidden'); return; }
+            box.classList.remove('hidden');
+            let rows = offers.map(function(p, i) {
+                return `<div class="boffer-row ${i >= 3 ? 'boffer-extra hidden' : ''}"><span>${escapeHtml(p.name || '')}</span><b>-${parseFloat(p.memberDiscount)}%</b></div>`;
+            }).join('');
+            box.innerHTML = `<p class="boffer-title">🎁 ${t('buyer_member_offers_h', 'خصومات حصرية لأعضاء المتجر')}</p>${rows}` +
+                (offers.length > 3 ? `<button type="button" class="secondary boffer-more" onclick="toggleBuyerOffersMore(this)" data-more="${t('buyer_see_more', 'عرض المزيد')}" data-less="${t('buyer_see_less', 'عرض أقل')}">${t('buyer_see_more', 'عرض المزيد')}</button>` : '');
+        }
+        function toggleBuyerOffersMore(btn) {
+            let extra = document.querySelectorAll('#buyerMemberOffersBox .boffer-extra');
+            let showing = btn.getAttribute('data-open') === '1';
+            extra.forEach(function(e) { e.classList.toggle('hidden', showing); });
+            btn.setAttribute('data-open', showing ? '0' : '1');
+            btn.textContent = showing ? btn.getAttribute('data-more') : btn.getAttribute('data-less');
+        }
+        async function cancelBuyerOrder(code) {
+            if(!activeStore || !code) return;
+            if(!confirm(t('buyer_cancel_confirm', 'هل تريد إلغاء هذا الطلب؟ سيصل الإلغاء للتاجر تلقائيًا.'))) return;
+            let sess = getBuyerSession(activeStore);
+            if(!sess) return;
+            try {
+                let cur = window.getOrderByTrackingCode ? await window.getOrderByTrackingCode(activeStore, code) : null;
+                if(cur && cur.status && cur.status !== 'pending') { alert(t('buyer_cancel_not_allowed', 'لا يمكن إلغاء الطلب بعد تأكيده من التاجر.')); openBuyerProfileModal(); return; }
+                let ok = window.pushOrderStatusUpdate ? await window.pushOrderStatusUpdate(activeStore, code, { status: 'cancelled', cancelledBy: 'buyer', cancelledAt: Date.now() }) : false;
+                if(!ok) { alert(t('buyer_cancel_fail', 'تعذر إلغاء الطلب الآن، حاول مرة أخرى.')); return; }
+                showToast(t('buyer_cancel_done', '✅ تم إلغاء طلبك وإبلاغ التاجر.'));
+                openBuyerProfileModal();
+            } catch(e) { alert(t('buyer_cancel_fail', 'تعذر إلغاء الطلب الآن، حاول مرة أخرى.')); }
         }
 
         async function saveBuyerProfileEdits() {
@@ -9080,7 +9174,7 @@
                 <div class="box" style="padding:10px; margin-bottom:8px; font-size:12.5px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                         <div>
-                            <strong>${escapeHtml(b.name || '-')}</strong>${b.authProvider === 'google' ? ' <i class="fa-brands fa-google" style="color:#4285F4; font-size:10px;"></i>' : ''}<br>
+                            <strong>${escapeHtml(b.name || '-')}</strong>${b.authProvider === 'google' ? ' ' + googleG(12) : ''}<br>
                             <span style="color:var(--text-muted); direction:ltr; display:inline-block;">${escapeHtml(b.buyerId || '')}</span>
                         </div>
                         <button class="secondary" style="width:auto; margin:0; padding:5px 10px; font-size:11px; background:#dc2626; color:#fff; border-color:#dc2626;" onclick="deleteBuyerFromManagement('${bid}')"><i class="fa fa-trash"></i> ${t('buyer_mgmt_delete_btn', 'حذف')}</button>
@@ -9303,12 +9397,12 @@
             if(window.firebaseAuth) {
                 window.firebaseAuth.sendPasswordResetEmail(email).then(function() {
                     closeForgotPasswordModal();
-                    showAppModal('📧 تم إرسال رابط الاستعادة', '📧', `بعتنا رابط تغيير كلمة السر على بريدك (${email}). افتح الإيميل واضغط الرابط اللي جواه، وبعد ما تغيّر كلمة السر هناك، ارجع هنا وسجّل دخولك بكلمة السر الجديدة مباشرة.`);
+                    showAppModal(t('n19t','📧 تم إرسال رابط الاستعادة'), '📧', t('n19','بعتنا رابط تغيير كلمة السر على بريدك ({e}). افتح الإيميل واضغط الرابط اللي جواه، وبعد ما تغيّر كلمة السر هناك، ارجع هنا وسجّل دخولك بكلمة السر الجديدة مباشرة.').replace('{e}', email));
                 }).catch(function(err) {
                     if(err.code === 'auth/user-not-found') {
                         tryLegacyAdminPasswordReset(email);
                     } else {
-                        alert(t('m078', 'حصل خطأ أثناء إرسال رابط الاستعادة: ') + (err.message || 'جرب تاني بعد لحظات.'));
+                        alert(t('m078', 'حصل خطأ أثناء إرسال رابط الاستعادة: ') + (err.message || t('n22','جرب تاني')));
                     }
                 });
             } else {
@@ -9395,7 +9489,14 @@
         }
 
 
+        function __closeOtherPageModals(exceptId) {
+            ['buyerProfileModal', 'buyerAuthModal', 'trackOrderModal', 'buyerChatThreadsModal', 'buyerChatThreadModal', 'unifiedEntryChoiceModal', 'merchantChatModal'].forEach(function(id) {
+                if(id === exceptId) return;
+                let m = document.getElementById(id); if(m) m.classList.add('hidden');
+            });
+        }
         function openTrackOrderModal() {
+            __closeOtherPageModals('trackOrderModal');
             document.getElementById('trackOrderResultBox').innerHTML = '';
             document.getElementById('trackOrderCodeInput').value = '';
             document.getElementById('trackOrderModal').classList.remove('hidden');
@@ -9797,7 +9898,9 @@
             // ✅ رقم الهاتف بقى إجباري بس لو التاجر (أو الأدمن) اختار وضع "إجباري" لمتجره تحديدًا.
             // في الوضع الافتراضي (اختياري) أو وضع "مخفي"، العميل يقدر يكمل طلبه من غير ما يكتب رقمه.
             let phoneMode = store.phoneFieldMode || 'optional';
+            if(method === 'direct' || !(store.whatsapp || store.messenger || store.telegram)) phoneMode = 'required';
             if(phoneMode === 'required' && document.getElementById('buyerPhoneInput').value.trim() === '') {
+                try { document.getElementById('buyerPhoneFieldBox').classList.remove('hidden'); } catch(e) {}
                 alert(t('alert_phone_required'));
                 document.getElementById('buyerPhoneInput').focus();
                 return;
@@ -10313,7 +10416,7 @@
 
             try {
                 document.getElementById('adminWelcomeNote').innerText =
-                    `مرحباً "${username}" — صلاحيتك: ${role === 'super' ? 'مدير عام (كل الصلاحيات)' : 'دعم فني فقط'}`;
+                    t('x19','مرحباً "{x}" — صلاحيتك: {y}').replace('{x}', username).replace('{y}', role === 'super' ? t('x20','مدير عام (كل الصلاحيات)') : t('x21','دعم فني فقط'));
 
                 // الحاوية دي بتتقفل تمامًا بس لو الحساب مالوش ولا صلاحية واحدة من صلاحيات لوحة الإدارة
                 // المتقدمة أصلاً - غير كده بتفضل ظاهرة، والتحكم الدقيق في كل قسم لوحده بيحصل في
@@ -10609,7 +10712,7 @@
             if(accounts[index].username === currentUsername) { alert(t('m083', 'لا يمكنك حذف حسابك الحالي وأنت مسجل دخول به!')); return; }
             let superCount = accounts.filter(a => a.role === 'super').length;
             if(accounts[index].role === 'super' && superCount <= 1) { alert(t('m084', 'لا يمكن حذف آخر حساب مدير عام في المنصة!')); return; }
-            if(!confirm(`تأكيد حذف الحساب "${accounts[index].username}"؟`)) return;
+            if(!confirm(t('x03','تأكيد حذف الحساب "{x}"؟').replace('{x}', accounts[index].username))) return;
             accounts.splice(index, 1);
             localStorage.setItem('adminAccounts', JSON.stringify(accounts));
             renderAdminAccounts();
@@ -10801,12 +10904,8 @@
                 let slowNoticeTimer = setTimeout(() => showToast(t('m100', '⏳ لسه بيجمع البيانات... ممكن ياخد وقت أطول لو المتجر فيه منتجات/طلبات كتير.')), 15000);
                 let data = await withTimeout(window.merchantExportStoreCloudBackup(merchant), 180000, 'الاتصال بالسحابة بطيء جدًا أو غير متاح. تأكد إنك بتفتح المتجر من رابط حقيقي على الإنترنت (مش ملف محفوظ على الجهاز) وجرب تاني.');
                 clearTimeout(slowNoticeTimer);
-                let blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                let url = URL.createObjectURL(blob);
-                let a = document.createElement('a');
-                a.href = url; a.download = 'store_backup_' + merchant + '.json'; a.click();
-                URL.revokeObjectURL(url);
-                showToast(t('m101', '✅ تم تحميل نسخة متجرك'));
+                let __json = JSON.stringify(data, null, 2);
+                await deliverExport({ blob: new Blob([__json], { type: 'application/json' }), filename: 'store_backup_' + merchant + '.json', text: __json, copyMsgKey: 'exp_copied_store', doneToastKey: 'm101', doneToast: '✅ تم تحميل نسخة متجرك' });
             } catch(e) {
                 console.error('merchantExportCloudBackup error:', e);
                 alert(t('m093', '⚠️ حصل خطأ أثناء التصدير: ') + (e && e.message ? e.message : e));
@@ -11044,9 +11143,48 @@
             if(!saveAllStores(stores)) return;
             renderAdminStores();
             let plan = getSubscriptionPlans().find(p => p.id === planId);
-            showToast(`✅ تم نقل متجر "${name}" لباقة "${plan ? plan.name : planId}"`);
+            showToast(t('x04','✅ تم نقل متجر "{x}" لباقة "{y}"').replace('{x}', name).replace('{y}', plan ? plan.name : planId));
         }
 
+        // ⏸️ إيقاف تلقائي بعد انتهاء الباقة بعدد أيام يحدده الأدمن (suspendAfterDays متختّم على كل متجر)
+        function isAutoSuspended(st) {
+            if(!st) return false;
+            let g = parseInt(st.suspendAfterDays);
+            if(isNaN(g) || g < 1 || st.suspendExempt) return false;
+            let sub = computeSubscriptionStatus(st);
+            return sub.expired && (-sub.daysLeft) >= g;
+        }
+        function isStoreStopped(st) { return !!st && (st.status === 'stopped' || isAutoSuspended(st)); }
+        function setAutoSuspendDays(v) {
+            let n = parseInt(v);
+            if(isNaN(n) || n < 1) localStorage.removeItem('autoSuspendDays'); else localStorage.setItem('autoSuspendDays', String(n));
+            renderAdminStores();
+        }
+        function applyAutoSuspendStamp(stores) {
+            let g = parseInt(localStorage.getItem('autoSuspendDays'));
+            let changed = 0, flagged = 0;
+            Object.keys(stores).forEach(function(k) {
+                let st = stores[k];
+                if(!isNaN(g) && g >= 1) {
+                    if(st.suspendAfterDays !== g) { st.suspendAfterDays = g; flagged++; }
+                    if(isAutoSuspended(st) && st.status !== 'stopped') { st.status = 'stopped'; st.autoSuspended = true; changed++; }
+                } else {
+                    if(st.suspendAfterDays !== undefined) { delete st.suspendAfterDays; flagged++; }
+                    if(st.autoSuspended) { st.status = 'active'; delete st.autoSuspended; changed++; }
+                }
+            });
+            if(changed || flagged) {
+                saveAllStores(stores);
+                if(changed) showToast(t('admin_autosuspend_applied', '⏸️ تم تحديث حالة {n} متجر تلقائيًا حسب انتهاء الاشتراك').replace('{n}', changed));
+            }
+        }
+        function toggleAdminExpiryOnly() { window.__adminExpiryOnly = !window.__adminExpiryOnly; renderAdminStores(); }
+        function filterBroadcastTargets() {
+            let q = (document.getElementById('broadcastSearchInput')?.value || '').trim().toLowerCase();
+            document.querySelectorAll('#broadcastTargetsChecklist label[data-name]').forEach(function(l) {
+                l.style.display = (!q || l.getAttribute('data-name').indexOf(q) !== -1) ? 'flex' : 'none';
+            });
+        }
         function computeSubscriptionStatus(store) {
             let trialDays = parseInt(localStorage.getItem('trialDays')) || 15;
             let now = Date.now();
@@ -11073,7 +11211,7 @@
             let store = stores[name];
             if(!store) return;
             let defaultDays = parseInt(localStorage.getItem('renewalCycleDays')) || 30;
-            let input = prompt(`لعدد كام يوم عايز تجدد اشتراك متجر "${name}"؟`, defaultDays);
+            let input = prompt(t('x05','لعدد كام يوم عايز تجدد اشتراك متجر "{x}"؟').replace('{x}', name), defaultDays);
             if(input === null) return; // المستخدم ضغط إلغاء
             let days = parseInt(input);
             if(isNaN(days) || days <= 0) { alert(t('m118', 'اكتب عدد أيام صحيح أكبر من صفر.')); return; }
@@ -11085,8 +11223,10 @@
             let base = currentExpiry > now ? currentExpiry : now;
             store.subscriptionExpiresAt = base + days * 86400000;
             store.subscriptionActivatedOnce = true;
+            delete store.suspendExempt;
+            if(store.autoSuspended && !isAutoSuspended(store)) { store.status = 'active'; delete store.autoSuspended; }
             if(!saveAllStores(stores)) return;
-            showToast(`✅ تم تجديد اشتراك "${name}" لمدة ${days} يوم إضافية.`);
+            showToast(t('x06','✅ تم تجديد اشتراك "{x}" لمدة {y} يوم إضافية.').replace('{x}', name).replace('{y}', days));
             renderAdminStores();
         }
 
@@ -11096,7 +11236,7 @@
             if(!currentAdminHasPermission('changeLoginName')) { alert(t('m119', 'ليس لديك صلاحية تغيير اسم دخول التجار.')); return; }
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             if(!stores[oldName]) return;
-            let newName = prompt(`اسم الدخول الجديد لمتجر "${getStoreDisplayName(oldName, stores[oldName])}" (الحالي: "${oldName}")؟`, oldName);
+            let newName = prompt(t('x07','اسم الدخول الجديد لمتجر "{x}" (الحالي: "{y}")؟').replace('{x}', getStoreDisplayName(oldName, stores[oldName])).replace('{y}', oldName), oldName);
             if(newName === null) return;
             newName = newName.trim();
             if(!newName || newName === oldName) return;
@@ -11105,7 +11245,7 @@
             let nameTaken = stores[newName] || adminAccounts.some(a => a.username.toLowerCase() === newName.toLowerCase());
             if(nameTaken) { alert(t('alert_username_taken', 'اسم الدخول ده مستخدم بالفعل، اختار اسم تاني.')); return; }
 
-            if(!confirm(`متأكد إنك عايز تغيّر اسم دخول "${oldName}" إلى "${newName}"؟ ده هيغيّر رابط المتجر القديم.`)) return;
+            if(!confirm(t('x08','متأكد إنك عايز تغيّر اسم دخول "{x}" إلى "{y}"؟ ده هيغيّر رابط المتجر القديم.').replace('{x}', oldName).replace('{y}', newName))) return;
 
             stores[newName] = stores[oldName];
             stores[newName].loginNameChangedAt = Date.now();
@@ -11117,7 +11257,7 @@
                 activeStore = newName;
                 setTabState('currentActiveStore', newName);
             }
-            showToast(`✅ تم تغيير اسم دخول المتجر إلى "${newName}".`);
+            showToast(t('x09','✅ تم تغيير اسم دخول المتجر إلى "{x}".').replace('{x}', newName));
             renderAdminStores();
         }
 
@@ -11144,14 +11284,14 @@
             box.innerHTML = names.length === 0
                 ? '<p style="font-size:11px; color:var(--text-muted); margin:0;">لا يوجد تجار متاحين لك حاليًا.</p>'
                 : names.map(n => `
-                    <label style="display:flex; align-items:center; gap:6px; font-size:12px; padding:4px 0;">
+                    <label data-name="${escapeHtml((n + ' ' + getStoreDisplayName(n, stores[n])).toLowerCase())}" style="display:flex; align-items:center; gap:6px; font-size:12px; padding:4px 0;">
                         <input type="checkbox" class="broadcast-target-cb" value="${n}" style="width:auto; margin:0;"> ${getStoreDisplayName(n, stores[n])}
                     </label>
                 `).join('');
         }
 
         function toggleAllBroadcastTargets(checked) {
-            document.querySelectorAll('.broadcast-target-cb').forEach(cb => { cb.checked = checked; });
+            document.querySelectorAll('.broadcast-target-cb').forEach(cb => { let l = cb.closest('label'); if(!l || l.style.display !== 'none') cb.checked = checked; });
         }
 
         function sendMerchantBroadcast(lang, toAll) {
@@ -11196,7 +11336,7 @@
             });
 
             if(saveAllStores(stores)) {
-                showToast(`✅ تم إرسال الرسالة لـ ${sent} متجر. سيشوفها التجار في لوحة التحكم.`);
+                showToast(t('x10','✅ تم إرسال الرسالة لـ {x} متجر. سيشوفها التجار في لوحة التحكم.').replace('{x}', sent));
                 document.getElementById('broadcastMessageInput').value = '';
             }
         }
@@ -11321,7 +11461,7 @@
         }
 
         function rejectRenewalRequest(name) {
-            if(!confirm(`متأكد إنك عايز ترفض بلاغ التجديد بتاع "${name}"؟ (استخدم ده بس لو اتأكدت إن التحويل مش حقيقي أو غلط)`)) return;
+            if(!confirm(t('x11','متأكد إنك عايز ترفض بلاغ التجديد بتاع "{x}"؟ (استخدم ده بس لو اتأكدت إن التحويل مش حقيقي أو غلط)').replace('{x}', name))) return;
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             if(!stores[name]) return;
             delete stores[name].pendingRenewalRequest;
@@ -11335,6 +11475,8 @@
             document.getElementById('selectAllStoresCheckbox').checked = false;
             try { let ea=document.getElementById('expiryAlertDaysInput'); if(ea && !ea.value) ea.value = localStorage.getItem('expiryAlertDays') || 3; } catch(e){}
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
+            try { let sd = document.getElementById('autoSuspendDaysInput'); if(sd && document.activeElement !== sd) sd.value = localStorage.getItem('autoSuspendDays') || ''; } catch(e) {}
+            applyAutoSuspendStamp(stores);
             let list = document.getElementById('adminStoresList');
             list.innerHTML = '';
 
@@ -11353,6 +11495,22 @@
                 }
             }
             renderRenewalRequests(visibleNames, stores);
+
+            // ⚠️ شريط تنبيه: عدد المتاجر القريبة من انتهاء الاشتراك (حسب عدد الأيام اللي حدده الأدمن) والمنتهية
+            try {
+                let __ead = parseInt(localStorage.getItem('expiryAlertDays')) || 3, __near = [], __exp = 0;
+                visibleNames.forEach(function(n) { let sb = computeSubscriptionStatus(stores[n]); if(sb.expired) __exp++; else if(sb.daysLeft <= __ead) __near.push(n); });
+                let bn = document.getElementById('adminExpiryBanner');
+                if(bn) {
+                    if(__near.length + __exp === 0) { bn.classList.add('hidden'); window.__adminExpiryOnly = false; }
+                    else {
+                        bn.classList.remove('hidden');
+                        bn.innerHTML = '<span>⚠️ ' + t('admin_expiry_banner', '{n} متجر قارب اشتراكه على الانتهاء · {m} منتهي').replace('{n}', __near.length).replace('{m}', __exp) + '</span>' +
+                            '<button type="button" class="secondary" style="width:auto; margin:0; padding:5px 10px; font-size:11px;" onclick="toggleAdminExpiryOnly()">' + (window.__adminExpiryOnly ? t('admin_expiry_filter_off', 'عرض الكل') : t('admin_expiry_filter_btn', 'عرض هذه المتاجر فقط')) + '</button>';
+                    }
+                }
+                if(window.__adminExpiryOnly) visibleNames = visibleNames.filter(function(n) { let sb = computeSubscriptionStatus(stores[n]); return sb.expired || sb.daysLeft <= __ead; });
+            } catch(e) {}
 
             // ⏱️ فلترة إضافية اختيارية حسب آخر نشاط (تسجيل دخول) للمتجر، لمساعدة الأدمن يكتشف
             // المتاجر المهجورة اللي تجارها بطّلوا يدخلوا من مدة طويلة.
@@ -11397,6 +11555,7 @@
                     subText = `💳 مشترك: باقي ${sub.daysLeft} يوم`;
                     subColor = '#166534';
                 }
+                if(s.autoSuspended) subText += ' · ' + t('admin_autosuspended_note', '⏸️ أُوقف تلقائيًا لانتهاء الاشتراك');
                 let showsOnHome = s.showOnHomepage !== false;
                 let staffCount = (s.staff || []).length;
                 let lastActiveDays = s.lastActivityAt ? Math.floor((Date.now() - s.lastActivityAt) / 86400000) : null;
@@ -11568,7 +11727,7 @@
             if(!store) return;
             let plan = getPlanForStore(store);
             if(!plan.allowColors) {
-                alert(`⛔ باقتك الحالية ("${plan.name}") لا تشمل ميزة الألوان المخصصة. تواصل مع إدارة المنصة للترقية لباقة تدعمها.`);
+                alert(t('n20','⛔ باقتك الحالية ("{plan}") لا تشمل ميزة الألوان المخصصة. تواصل مع إدارة المنصة للترقية لباقة تدعمها.').replace('{plan}', planDisplayName(plan)));
                 return;
             }
             document.getElementById('storeColorsModalTarget').value = merchant;
@@ -11600,7 +11759,7 @@
             // إعدادات كل باقة). لو باقة المتجر الحالية مش بتسمح بيها، بنمنع ونقترح الترقية.
             let plan = getPlanForStore(store);
             if(!plan.allowColors) {
-                if(!confirm(`⚠️ باقة هذا المتجر الحالية ("${plan.name}") لا تشمل ميزة الألوان المخصصة. هل تريد المتابعة رغم ذلك على أي حال؟`)) return;
+                if(!confirm(t('n21','⚠️ باقة هذا المتجر الحالية ("{plan}") لا تشمل ميزة الألوان المخصصة. هل تريد المتابعة رغم ذلك على أي حال؟').replace('{plan}', planDisplayName(plan)))) return;
             }
 
             document.getElementById('storeColorsModalTarget').value = name;
@@ -11659,7 +11818,7 @@
 
         function resetStoreColors() {
             let name = document.getElementById('storeColorsModalTarget').value;
-            if(!confirm(`استعادة الألوان الافتراضية لمتجر "${name}"؟`)) return;
+            if(!confirm(t('x12','استعادة الألوان الافتراضية لمتجر "{x}"؟').replace('{x}', name))) return;
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             if(!stores[name]) return;
             delete stores[name].themeColors;
@@ -11678,7 +11837,7 @@
             setTabState('viewMode', 'store');
             pushStoreUrl(name);
             switchTab('home');
-            showToast(`أنت الآن تشاهد متجر "${name}" — اضغط "دخول التجار والمشرفين" للعودة للوحة الإدارة`);
+            showToast(t('x13','أنت الآن تشاهد متجر "{x}" — اضغط "دخول التجار والمشرفين" للعودة للوحة الإدارة').replace('{x}', name));
         }
 
         function setStoreQuota(name, value) {
@@ -11711,19 +11870,21 @@
 
         function resetStorePassword(name) {
             if(!currentAdminHasPermission('resetPassword')) { alert(t('m132', 'ليس لديك صلاحية تغيير كلمة سر التجار.')); return; }
-            let newPass = prompt(`أدخل كلمة سر جديدة للتاجر "${name}":`);
+            let newPass = prompt(t('x14','أدخل كلمة سر جديدة للتاجر "{x}":').replace('{x}', name));
             if(newPass === null) return;
             if(!newPass.trim()) { alert(t('m133', 'كلمة السر لا يمكن أن تكون فارغة!')); return; }
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             stores[name].pass = newPass.trim();
             if(!saveAllStores(stores)) return;
-            alert(`تم تحديث كلمة سر المتجر "${name}" بنجاح. أخبر التاجر بكلمة السر الجديدة.`);
+            alert(t('x15','تم تحديث كلمة سر المتجر "{x}" بنجاح. أخبر التاجر بكلمة السر الجديدة.').replace('{x}', name));
         }
 
         function toggleStoreStatus(name) {
             if(!currentAdminHasPermission('toggleStatus')) { alert(t('m134', 'ليس لديك صلاحية تفعيل/إيقاف المتاجر.')); return; }
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
-            stores[name].status = stores[name].status === 'active' ? 'stopped' : 'active';
+            let __wasStopped = isStoreStopped(stores[name]);
+            stores[name].status = __wasStopped ? 'active' : 'stopped';
+            if(__wasStopped) { delete stores[name].autoSuspended; if(isAutoSuspended(stores[name])) stores[name].suspendExempt = true; }
             if(!saveAllStores(stores)) return;
             renderAdminStores();
         }
@@ -11740,7 +11901,7 @@
 
         function deleteStore(name) {
             if(!currentAdminHasPermission('deleteStore')) { alert(t('m136', 'ليس لديك صلاحية حذف المتاجر.')); return; }
-            if(confirm(`تأكيد حذف متجر ${name}؟`)) {
+            if(confirm(t('x16','تأكيد حذف متجر {x}؟').replace('{x}', name))) {
                 let stores = JSON.parse(localStorage.getItem('allStores')) || {};
                 delete stores[name];
                 if(!saveAllStores(stores)) return;
@@ -11762,12 +11923,12 @@
             if(!currentAdminHasPermission('deleteStore')) { alert(t('m136', 'ليس لديك صلاحية حذف المتاجر.')); return; }
             let checked = Array.from(document.querySelectorAll('.store-bulk-checkbox:checked')).map(cb => cb.dataset.storeKey);
             if(checked.length === 0) return;
-            if(!confirm(`تأكيد حذف ${checked.length} متجر نهائيًا؟ الإجراء ده مينفعش يتراجع فيه.`)) return;
+            if(!confirm(t('x17','تأكيد حذف {x} متجر نهائيًا؟ الإجراء ده مينفعش يتراجع فيه.').replace('{x}', checked.length))) return;
             let stores = JSON.parse(localStorage.getItem('allStores')) || {};
             checked.forEach(name => delete stores[name]);
             if(!saveAllStores(stores)) return;
             renderAdminStores();
-            showToast(`✅ اتحذف ${checked.length} متجر`);
+            showToast(t('x18','✅ اتحذف {x} متجر').replace('{x}', checked.length));
         }
 
         // --- إيقاف تسجيل متاجر جديدة مؤقتًا (من دقايق لأيام) ---
@@ -12018,6 +12179,7 @@
         function openMerchantChatModal() {
             if(__platformChatConfig.enabled === false) return;
             document.getElementById('merchantChatModal').classList.remove('hidden');
+            layoutPageModal('merchantChatModal');
             let awayBanner = document.getElementById('merchantChatAwayBanner');
             if(__platformChatConfig.awayActive && __platformChatConfig.awayMessage) {
                 awayBanner.textContent = '🌙 ' + __platformChatConfig.awayMessage;
@@ -12493,6 +12655,44 @@
 
         // 📥 تنزيل ملف عن طريق Blob + رابط مؤقت (أضمن من XLSX.writeFile اللي بينزّل ملف فاضي في بعض
         // المتصفحات/المعاينات). لو مكتبة Excel مش متاحة بنرجع لملف CSV (UTF-8 مع BOM) بيفتح في Excel.
+        // 📲 تسليم ملف التصدير بطريقة تشتغل 100% على الجوال: على الكمبيوتر بينزل مباشرة، وعلى الموبايل
+        // بتظهر نافذة فيها (رابط تنزيل حقيقي بيضغط عليه المستخدم + مشاركة/حفظ + نسخ كنص). كده
+        // مفيش اعتماد على تنزيل blob خلفي بيتحجب في كروم الأندرويد.
+        function __isMobileUA() { return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '') || ((navigator.maxTouchPoints || 0) > 1 && window.innerWidth < 900); }
+        function __blobToDataUrl(blob) { return new Promise(function(res, rej) { let r = new FileReader(); r.onload = function() { res(r.result); }; r.onerror = rej; r.readAsDataURL(blob); }); }
+        function closeExportModal() { let o = document.getElementById('exportModalOverlay'); if(o) { o.classList.remove('show'); setTimeout(function() { o.remove(); }, 200); } }
+        async function deliverExport(opts) {
+            let blob = opts.blob, filename = opts.filename, text = opts.text || '';
+            if(!__isMobileUA()) { __downloadBlob(blob, filename); if(opts.doneToastKey) showToast(t(opts.doneToastKey, opts.doneToast || '')); return; }
+            let dataUrl = '';
+            try { dataUrl = await __blobToDataUrl(blob); } catch(e) {}
+            let canShareFile = false, fileObj = null;
+            try { fileObj = new File([blob], filename, { type: blob.type || 'application/octet-stream' }); canShareFile = !!(navigator.canShare && navigator.canShare({ files: [fileObj] })); } catch(e) {}
+            window.__exportCtx = { text: text, file: fileObj, filename: filename, copyMsg: opts.copyMsgKey ? t(opts.copyMsgKey, '') : t('exp_copied', '✅ تم نسخ البيانات بنجاح، يمكنك لصقها وحفظها في ملف.') };
+            let old = document.getElementById('exportModalOverlay'); if(old) old.remove();
+            let ov = document.createElement('div');
+            ov.id = 'exportModalOverlay'; ov.className = 'app-modal-overlay';
+            ov.innerHTML = '<div class="app-modal-card" style="max-width:380px;">' +
+                '<div class="app-modal-icon">📥</div>' +
+                '<div class="app-modal-title">' + t('exp_title', 'جاهز للتنزيل') + '</div>' +
+                '<div class="app-modal-body"><p style="margin:0 0 8px; direction:ltr; font-weight:bold; word-break:break-all;">' + escapeHtml(filename) + '</p>' +
+                '<p style="font-size:12px; color:var(--text-muted); margin:0 0 10px;">' + t('exp_mobile_hint', 'إن لم يبدأ التنزيل على هاتفك، استخدم «مشاركة» أو «نسخ كنص».') + '</p>' +
+                (dataUrl ? '<a class="app-modal-ok-btn" style="display:block; text-decoration:none; text-align:center; margin:0 0 8px;" href="' + dataUrl + '" download="' + escapeHtml(filename) + '"><i class="fa fa-download"></i> ' + t('exp_download_btn', 'تنزيل الملف') + '</a>' : '') +
+                (canShareFile ? '<button class="app-modal-ok-btn" style="background:#0ea5e9; margin:0 0 8px;" onclick="exportShareFile()"><i class="fa fa-share-nodes"></i> ' + t('exp_share_btn', 'مشاركة / حفظ في الجهاز') + '</button>' : '') +
+                (text ? '<button class="app-modal-ok-btn" style="background:#10b981; margin:0 0 8px;" onclick="exportCopyText()"><i class="fa fa-copy"></i> ' + t('exp_copy_btn', 'نسخ كنص') + '</button>' : '') +
+                '</div><button class="app-modal-ok-btn" style="background:#6b7280;" onclick="closeExportModal()">' + t('exp_close', 'إغلاق') + '</button></div>';
+            document.body.appendChild(ov);
+            requestAnimationFrame(function() { ov.classList.add('show'); });
+            if(text && navigator.clipboard && navigator.clipboard.writeText) { try { navigator.clipboard.writeText(text).then(function() { showToast(window.__exportCtx.copyMsg); }).catch(function() {}); } catch(e) {} }
+        }
+        async function exportShareFile() {
+            let c = window.__exportCtx; if(!c || !c.file) return;
+            try { await navigator.share({ files: [c.file], title: c.filename }); } catch(e) { /* المستخدم ألغى المشاركة */ }
+        }
+        function exportCopyText() {
+            let c = window.__exportCtx; if(!c) return;
+            copyTextRobust(c.text, c.copyMsg);
+        }
         function __downloadBlob(blob, filename) {
             let url = URL.createObjectURL(blob);
             let a = document.createElement('a');
@@ -12510,14 +12710,15 @@
                 XLSX.utils.book_append_sheet(wb, ws, 'products');
                 let out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
                 if(out && out.byteLength > 0) {
-                    __downloadBlob(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), baseName + '.xlsx');
+                    let __csvTxt = [PRODUCT_XLSX_COLS.join(',')].concat(rows.map(function(r) { return PRODUCT_XLSX_COLS.map(function(c) { return __csvEscape(r[c]); }).join(','); })).join('\r\n');
+                    await deliverExport({ blob: new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), filename: baseName + '.xlsx', text: __csvTxt });
                     ok = true;
                 }
             } catch(e) { console.warn('xlsx export failed, using CSV', e); }
             if(!ok) {
                 let lines = [PRODUCT_XLSX_COLS.join(',')];
                 rows.forEach(function(r) { lines.push(PRODUCT_XLSX_COLS.map(function(c) { return __csvEscape(r[c]); }).join(',')); });
-                __downloadBlob(new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }), baseName + '.csv');
+                await deliverExport({ blob: new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }), filename: baseName + '.csv', text: lines.join('\r\n') });
             }
         }
 
@@ -12708,7 +12909,16 @@
                     document.querySelectorAll('[data-user-dirty="1"]').forEach(function(el) {
                         saved.push({ el: el, v: el.value, c: el.checked });
                     });
+                    let ae = document.activeElement, aeId = ae && ae.id, aeVal = ae && ae.value, aeIsField = ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName);
+                    let aeSel = null; try { aeSel = aeIsField ? [ae.selectionStart, ae.selectionEnd] : null; } catch(e) {}
                     let r = orig.apply(this, arguments);
+                    // ⌨️ لو الحقل اللي بيتكتب فيه اتعاد بناؤه، نرجّع قيمته والتركيز عليه (عشان الكيبورد ما يقفلش)
+                    if(aeIsField && aeId && document.activeElement !== document.getElementById(aeId)) {
+                        let ne = document.getElementById(aeId);
+                        if(ne && /^(INPUT|TEXTAREA)$/.test(ne.tagName) && ne.type !== 'file') {
+                            ne.value = aeVal; try { ne.focus({ preventScroll: true }); if(aeSel && ne.setSelectionRange) ne.setSelectionRange(aeSel[0], aeSel[1]); } catch(e) {}
+                        }
+                    }
                     saved.forEach(function(s) {
                         try {
                             if(!document.body.contains(s.el)) return;
@@ -12722,4 +12932,11 @@
             }
             guard('loadDashboard');
             guard('renderAdminPanel');
+        })();
+
+        // 🔵 تعبئة شعار جوجل الملوّن في كل أزرار جوجل
+        (function() {
+            function fill() { document.querySelectorAll('.g-slot').forEach(function(e) { if(!e.firstChild) e.innerHTML = googleG(18); }); }
+            if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fill); else fill();
+            window.addEventListener('load', fill);
         })();

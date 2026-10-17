@@ -535,6 +535,11 @@ function pullNewOrdersAndReviews(storeKey) {
         snap.forEach(doc => {
             let order = doc.data();
             let key = order.trackingCode || doc.id;
+            // ❌ لو المشتري ألغى طلبه من حسابه، نحدّث حالته عند التاجر تلقائيًا
+            if (existingCodes.has(key) && order.status === 'cancelled' && order.cancelledBy === 'buyer') {
+                let local = store.orderHistory.find(o => (o.trackingCode || (String(o.orderNo) + '|' + o.timestamp)) === key);
+                if (local && local.status !== 'cancelled') { local.status = 'cancelled'; local.cancelledBy = 'buyer'; local.cancelledAt = order.cancelledAt || Date.now(); added = true; }
+            }
             if (!existingCodes.has(key)) {
                 store.orderHistory.unshift(order);
                 existingCodes.add(key);
@@ -603,6 +608,9 @@ function watchStoreForNewOrders(storeKey) {
         // ظهور التوست المرئي ويسيب الصوت شغال (أو العكس)، فمفيش داعي نربطهم في متغير واحد.
         let __notifVisibleOff = localStorage.getItem('newOrderNotifDisabled') === 'true';
         snapshot.docChanges().forEach(change => {
+            if (change.type === 'modified' && change.doc.data().cancelledBy === 'buyer' && !__notifVisibleOff && typeof showToast === 'function') {
+                showToast('❌ ' + (typeof t === 'function' ? t('order_cancelled_by_buyer_toast', 'عميل ألغى طلبه') : 'عميل ألغى طلبه'));
+            }
             if (change.type === 'added') {
                 if (!__notifVisibleOff && typeof showToast === 'function') showToast('🛒 طلب جديد وصل لمتجرك الآن!');
                 if (typeof playNewOrderSound === 'function') { try { playNewOrderSound(); } catch (e) {} }
